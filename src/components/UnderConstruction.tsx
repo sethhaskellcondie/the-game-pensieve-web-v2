@@ -1,13 +1,14 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import Header from "@/components/Header";
-import styles from "./page.module.css";
+import styles from "./UnderConstruction.module.css";
 
-export const metadata: Metadata = {
-  title: "Under Construction · The Game Pensieve",
+type UnderConstructionProps = {
+  label: string;
 };
 
-export default function UnderConstruction() {
+export default function UnderConstruction({ label }: UnderConstructionProps) {
+  const heading = `${label} is still being built`;
+
   return (
     <>
       <Header
@@ -47,7 +48,7 @@ export default function UnderConstruction() {
             </div>
           </div>
 
-          <h2 className={styles.ucH2}>This page is still being built</h2>
+          <h2 className={styles.ucH2}>{heading}</h2>
           <p className={styles.ucP}>
             Pardon our dust! We&apos;re working on this — check back later for
             updates.
