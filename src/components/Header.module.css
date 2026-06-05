@@ -1,0 +1,123 @@
+.header {
+  flex: 0 0 auto;
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  background: linear-gradient(120deg, var(--primary-600) 0%, var(--armor-navy) 78%);
+  padding: 46px 52px 40px;
+  font-family: var(--font-jetbrains-mono), monospace;
+}
+
+.heroTop {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  position: relative;
+}
+
+.heroMark {
+  flex: 0 0 88px;
+  width: 88px;
+  height: 88px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.94);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 14px 30px -16px rgba(14, 27, 58, 0.8);
+}
+
+.heroMark img {
+  width: 78px;
+  height: 78px;
+}
+
+/* Construction variant */
+.construction {
+  background: linear-gradient(120deg, var(--armor-navy) 0%, var(--ink-navy) 90%);
+}
+
+.markWarning {
+  background: var(--warning);
+}
+
+.markWarning svg {
+  width: 46px;
+  height: 46px;
+  color: var(--ink-navy);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--warning);
+  color: var(--ink-navy);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 999px;
+  margin-bottom: 18px;
+}
+
+.badgeDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-navy);
+  animation: ucblink 1.3s steps(1) infinite;
+}
+
+@keyframes ucblink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.heroTitle {
+  margin: 0;
+  font-family: var(--font-press-start), monospace;
+  font-size: 26px;
+  line-height: 1.4;
+  text-shadow: 3px 3px 0 rgba(14, 27, 58, 0.4);
+}
+
+.heroTitleEm {
+  color: var(--mm-cyan-bright);
+}
+
+.tag {
+  margin-top: 10px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.82);
+  letter-spacing: 0.5px;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 34px;
+  margin-top: 30px;
+  position: relative;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat b {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.stat span {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+}

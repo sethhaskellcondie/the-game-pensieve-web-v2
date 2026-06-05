@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, JetBrains_Mono, Press_Start_2P } from "next/font/google";
+import Sidebar from "@/components/Sidebar";
 import "./globals.css";
+import styles from "./layout.module.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,7 +35,12 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${jetBrainsMono.variable} ${pressStart2P.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        <div className={styles.layout}>
+          <Sidebar />
+          <div className={styles.main}>{children}</div>
+        </div>
+      </body>
     </html>
   );
 }

@@ -1,0 +1,87 @@
+.sidebar {
+  flex: 0 0 212px;
+  display: flex;
+  flex-direction: column;
+  padding: 26px 16px;
+  background: var(--black);
+  color: #fff;
+  font-family: var(--font-jetbrains-mono), monospace;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px 26px;
+  border-radius: 10px;
+  transition: 0.15s;
+}
+
+.brand:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.brandLogo {
+  width: 54px;
+  height: 54px;
+  display: block;
+}
+
+.brandText {
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.brandAccent {
+  color: var(--mm-cyan-bright);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-size: 15px;
+  color: #9aa3b4;
+  font-weight: 500;
+  transition: 0.15s;
+}
+
+.nav a:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #dfe5ee;
+}
+
+.nav a svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+}
+
+.grp {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #566;
+  margin: 18px 14px 6px;
+  text-transform: uppercase;
+}
+
+.sideFoot {
+  margin-top: auto;
+  padding: 16px 14px 0;
+  font-size: 10px;
+  color: #566;
+  letter-spacing: 1px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
