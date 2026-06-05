@@ -1,0 +1,33 @@
+# dependencies
+/node_modules
+.pnp.*
+
+# next.js
+/.next/
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files
+.env*
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# editors
+.idea/
+*.swp
+
+# logs
+*.log
+
+# caches
+.eslintcache
