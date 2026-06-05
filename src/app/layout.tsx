@@ -1,19 +1,9 @@
 import type { Metadata } from "next";
-import {
-  Geist,
-  Geist_Mono,
-  JetBrains_Mono,
-  Press_Start_2P,
-} from "next/font/google";
+import { Geist, JetBrains_Mono, Press_Start_2P } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
@@ -41,7 +31,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${jetBrainsMono.variable} ${pressStart2P.variable}`}
+      className={`${geistSans.variable} ${jetBrainsMono.variable} ${pressStart2P.variable}`}
     >
       <body>{children}</body>
     </html>
