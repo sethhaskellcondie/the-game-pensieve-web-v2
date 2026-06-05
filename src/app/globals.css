@@ -1,6 +1,26 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* The Game Pensieve palette (from design-inspiration) */
+  --mm-cyan-bright: #91e0f9;
+  --mm-cyan: #89c9f5;
+  --primary: #3e72cf;
+  --primary-600: #2f70ec;
+  --armor-navy: #284a9a;
+  --shadow-navy: #214675;
+  --ink-navy: #0e1b3a;
+  --cannon-red: #f42828;
+  --success: #2aa745;
+  --warning: #e0a92a;
+  --white: #fbfcfd;
+  --paper: #f4f6f8;
+  --line: #e6e9ee;
+  --gray-300: #c7cdd6;
+  --gray-500: #8a93a3;
+  --gray-700: #4a5161;
+  --black: #0c0f16;
+  --radius: 16px;
 }
 
 @media (prefers-color-scheme: dark) {

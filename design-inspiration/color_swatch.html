@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Game Pensieve — Color Swatch v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* ---- MEGA MAN CORE BLUES ---- */
+    --mm-cyan-bright:#91E0F9;   /* helmet highlight / body sheen */
+    --mm-cyan:#89C9F5;          /* light body blue */
+    --primary-400:#5A8FE0;
+    --primary:#3E72CF;          /* helmet blue — brand primary */
+    --primary-600:#2F70EC;      /* V1 UI blue / interactive */
+    --armor-navy:#284A9A;       /* deep armor */
+    --shadow-navy:#214675;      /* eye / cast shadow */
+    --ink-navy:#0E1B3A;         /* near-black navy */
+
+    /* ---- ACCENTS ---- */
+    --cannon-red:#F42828;       /* buster cannon — destructive/alert */
+    --cannon-red-soft:#FDE2E2;
+
+    /* ---- SEMANTIC ---- */
+    --success:#2AA745;          /* "New" / Yes */
+    --success-soft:#D4EDDA;
+    --warning:#E0A92A;          /* derived from "No" cream */
+    --warning-soft:#FDF3CD;
+
+    /* ---- NEUTRALS ---- */
+    --white:#FBFCFD;            /* softened, faint cool tone */
+    --paper:#F4F6F8;
+    --line:#E6E9EE;
+    --gray-300:#C7CDD6;
+    --gray-500:#8A93A3;
+    --gray-700:#4A5161;
+    --black:#0C0F16;            /* sidebar — near-black, faint navy */
+
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink-navy);
+    font-family:'JetBrains Mono',monospace;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:56px 40px 80px;}
+
+  /* ---------- HEADER ---------- */
+  header{
+    background:linear-gradient(120deg,var(--primary-600) 0%,var(--armor-navy) 100%);
+    border-radius:var(--radius);
+    padding:44px 48px;
+    color:#fff;
+    position:relative;
+    overflow:hidden;
+    box-shadow:0 18px 40px -22px rgba(40,74,154,.7);
+  }
+  header::after{
+    content:"";position:absolute;inset:0;
+    background:
+      repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 2px,transparent 2px 8px);
+    mix-blend-mode:overlay;opacity:.5;
+  }
+  .kicker{
+    font-size:11px;letter-spacing:3px;text-transform:uppercase;
+    color:var(--mm-cyan-bright);font-weight:700;margin-bottom:18px;
+  }
+  h1{
+    font-family:'Press Start 2P',monospace;
+    font-size:30px;line-height:1.35;margin:0;
+    text-shadow:3px 3px 0 rgba(14,27,58,.45);
+  }
+  h1 .em{color:var(--mm-cyan-bright);}
+  .sub{margin-top:18px;font-size:14px;max-width:640px;color:rgba(255,255,255,.82);line-height:1.6;}
+
+  /* ---------- SECTION ---------- */
+  section{margin-top:48px;}
+  .sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:20px;flex-wrap:wrap;}
+  .sec-head h2{
+    font-size:18px;font-weight:800;color:var(--primary-600);margin:0;
+    letter-spacing:.5px;position:relative;padding-bottom:10px;white-space:nowrap;
+  }
+  .sec-head h2::after{content:"";position:absolute;left:0;bottom:0;width:46px;height:3px;background:var(--primary-600);}
+  .sec-head p{margin:0;font-size:12px;color:var(--gray-500);}
+
+  /* ---------- SWATCH GRID ---------- */
+  .grid{display:grid;gap:16px;}
+  .g5{grid-template-columns:repeat(5,1fr);}
+  .g4{grid-template-columns:repeat(4,1fr);}
+
+  .swatch{
+    border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--white);
+    box-shadow:0 6px 18px -14px rgba(14,27,58,.4);
+    display:flex;flex-direction:column;
+  }
+  .chip{height:104px;display:flex;align-items:flex-end;padding:12px;position:relative;}
+  .chip .role{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+  .meta{padding:12px 14px 14px;display:flex;flex-direction:column;gap:3px;}
+  .meta .name{font-size:13px;font-weight:700;}
+  .meta .hex{font-size:12px;color:var(--gray-700);text-transform:uppercase;letter-spacing:.5px;}
+  .meta .use{font-size:11px;color:var(--gray-500);line-height:1.4;margin-top:4px;}
+
+  /* token dot for on-color legibility */
+  .onlight{color:var(--ink-navy);}
+  .ondark{color:#fff;}
+
+  /* ---------- APPLIED PREVIEW ---------- */
+  .preview{
+    margin-top:14px;background:var(--white);border:1px solid var(--line);border-radius:var(--radius);
+    padding:28px 30px;display:grid;grid-template-columns:240px 1fr;gap:0;
+    overflow:hidden;box-shadow:0 10px 30px -22px rgba(14,27,58,.5);
+  }
+  .pv-side{background:var(--black);margin:-28px 0 -28px -30px;padding:24px 20px;display:flex;flex-direction:column;gap:6px;}
+  .pv-logo{display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+  .pv-logo .badge{width:34px;height:34px;border-radius:9px;background:var(--primary-600);display:flex;align-items:center;justify-content:center;}
+  .pv-logo .badge::before{content:"";width:14px;height:10px;border-radius:4px;background:var(--mm-cyan-bright);box-shadow:0 0 0 3px var(--armor-navy);}
+  .pv-logo span{color:#fff;font-size:11px;font-weight:700;letter-spacing:1px;}
+  .nav{font-size:12px;color:#9aa3b4;padding:9px 12px;border-radius:8px;}
+  .nav.active{background:var(--primary-600);color:#fff;font-weight:700;}
+  .pv-main{padding:6px 8px 6px 30px;}
+  .pv-title{font-family:'Press Start 2P',monospace;font-size:13px;color:var(--primary-600);margin:0 0 18px;}
+  .pv-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+  .btn{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;padding:9px 16px;border-radius:9px;border:none;cursor:pointer;}
+  .btn-primary{background:var(--primary-600);color:#fff;}
+  .btn-success{background:var(--success);color:#fff;}
+  .btn-ghost{background:#fff;color:var(--gray-700);border:1px solid var(--gray-300);}
+  .btn-danger{background:var(--cannon-red);color:#fff;}
+  .pill{font-size:11px;font-weight:700;padding:5px 12px;border-radius:999px;}
+  .pill-yes{background:var(--success-soft);color:#1d7a32;}
+  .pill-no{background:var(--warning-soft);color:#8a6a12;}
+  .pill-alert{background:var(--cannon-red-soft);color:#b51d1d;}
+  .pv-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .pv-table th{background:var(--primary-600);color:#fff;text-align:left;padding:10px 12px;font-weight:700;}
+  .pv-table th:first-child{border-radius:8px 0 0 8px;}
+  .pv-table th:last-child{border-radius:0 8px 8px 0;}
+  .pv-table td{padding:11px 12px;border-bottom:1px solid var(--line);}
+  .pv-table td:first-child{color:var(--primary-600);font-weight:700;}
+
+  footer{margin-top:56px;text-align:center;font-size:11px;color:var(--gray-500);letter-spacing:1px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">Design System · Version 2</div>
+    <h1>THE GAME <span class="em">PENSIEVE</span></h1>
+    <p class="sub">A color palette for V2, built from the Version&nbsp;1 interface roles and recolored around Mega Man's metallic blue armor, cyan sheen, and red buster accent. Mono-pixel energy, kept legible.</p>
+  </header>
+
+  <!-- CORE BLUES -->
+  <section>
+    <div class="sec-head">
+      <h2>Core Blues</h2>
+      <p>The spine of the brand — drawn straight from the armor.</p>
+    </div>
+    <div class="grid g5">
+      <div class="swatch">
+        <div class="chip ondark" style="background:var(--mm-cyan-bright)"><span class="role onlight">Highlight</span></div>
+        <div class="meta"><span class="name">Helmet Sheen</span><span class="hex">#91E0F9</span><span class="use">Glints, focus rings, hover wash</span></div>
+      </div>
+      <div class="swatch">
+        <div class="chip"><span class="role onlight">Light</span></div>
+        <div class="meta"><span class="name">Body Cyan</span><span class="hex">#89C9F5</span><span class="use">Tints, selected rows, charts</span></div>
+        <style>.swatch:nth-child(2) .chip{background:var(--mm-cyan)}</style>
+      </div>
+      <div class="swatch">
+        <div class="chip ondark" style="background:var(--primary)"><span class="role ondark">Primary</span></div>
+        <div class="meta"><span class="name">Helmet Blue</span><span class="hex">#3E72CF</span><span class="use">Brand anchor, headings</span></div>
+      </div>
+      <div class="swatch">
+        <div class="chip ondark" style="background:var(--primary-600)"><span class="role ondark">Interactive</span></div>
+        <div class="meta"><span class="name">Action Blue</span><span class="hex">#2F70EC</span><span class="use">Buttons, links, table header</span></div>
+      </div>
+      <div class="swatch">
+        <div class="chip ondark" style="background:var(--armor-navy)"><span class="role ondark">Deep</span></div>
+        <div class="meta"><span class="name">Armor Navy</span><span class="hex">#284A9A</span><span class="use">Gradients, pressed states</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACCENTS + SEMANTIC -->
+  <section>
+    <div class="sec-head">
+      <h2>Accents &amp; Status</h2>
+      <p>The buster-cannon red, plus the V1 yes/no system roles.</p>
+    </div>
+    <div class="grid g5">
+      <div class="swatch">
+        <div class="chip ondark" style="background:var(--cannon-red)"><span class="role ondark">Alert</span></div>
+        <div class="meta"><span class="name">Cannon Red</span><span class="hex">#F42828</span><span class="use">Destructive, errors, key CTA</span></div>
+      </div>
+      <div class="swatch">
+        <div class="chip ondark" style="background:var(--success)"><span class="role ondark">Success</span></div>
+        <div class="meta"><span class="name">Power Green</span><span class="hex">#2AA745</span><span class="use">"New", Yes, confirmations</span></div>
+      </div>
+      <div class="swatch">
+        <div class="chip" style="background:var(--success-soft)"><span class="role onlight">Yes · soft</span></div>
+        <div class="meta"><span class="name">Yes Tint</span><span class="hex">#D4EDDA</span><span class="use">Positive badge fill</span></div>
+      </div>
+      <div class="swatch">
+        <div class="chip" style="background:var(--warning-soft)"><span class="role onlight">No · soft</span></div>
+        <div class="meta"><span class="name">No Cream</span><span class="hex">#FDF3CD</span><span class="use">Neutral/empty badge fill</span></div>
+      </div>
+      <div class="swatch">
+        <div class="chip" style="background:var(--warning)"><span class="role onlight">Warning</span></div>
+        <div class="meta"><span class="name">Cream Deep</span><span class="hex">#E0A92A</span><span class="use">Warning text, icons</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NEUTRALS -->
+  <section>
+    <div class="sec-head">
+      <h2>Neutrals &amp; Surfaces</h2>
+      <p>Black sidebar, paper canvas, navy ink — the quiet structure.</p>
+    </div>
+    <div class="grid g5">
+      <div class="swatch">
+        <div class="chip ondark" style="background:var(--black)"><span class="role ondark">Sidebar</span></div>
+        <div class="meta"><span class="name">Near Black</span><span class="hex">#0C0F16</span><span class="use">Nav rail, deep contrast</span></div>
+      </div>
+      <div class="swatch">
+        <div class="chip ondark" style="background:var(--ink-navy)"><span class="role ondark">Text</span></div>
+        <div class="meta"><span class="name">Ink Navy</span><span class="hex">#0E1B3A</span><span class="use">Body text, on white</span></div>
+      </div>
+      <div class="swatch">
+        <div class="chip" style="background:var(--gray-500)"><span class="role ondark">Muted</span></div>
+        <div class="meta"><span class="name">Slate Gray</span><span class="hex">#8A93A3</span><span class="use">Secondary text, footers</span></div>
+      </div>
+      <div class="swatch">
+        <div class="chip" style="background:var(--paper);border-bottom:1px solid var(--line)"><span class="role onlight">Canvas</span></div>
+        <div class="meta"><span class="name">Paper</span><span class="hex">#F8F9FA</span><span class="use">App background, alt rows</span></div>
+      </div>
+      <div class="swatch">
+        <div class="chip" style="background:var(--white);border-bottom:1px solid var(--line)"><span class="role onlight">Surface</span></div>
+        <div class="meta"><span class="name">Soft White</span><span class="hex">#FBFCFD</span><span class="use">Cards, panels, fields</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- APPLIED PREVIEW -->
+  <section>
+    <div class="sec-head">
+      <h2>In Context</h2>
+      <p>The palette wired into V2 shell, buttons and status pills.</p>
+    </div>
+    <div class="preview">
+      <div class="pv-side">
+        <div class="pv-logo"><div class="badge"></div><span>PENSIEVE</span></div>
+        <div class="nav active">Video Games</div>
+        <div class="nav">Board Games</div>
+        <div class="nav">Systems</div>
+        <div class="nav">Toys</div>
+        <div class="nav">Options</div>
+      </div>
+      <div class="pv-main">
+        <p class="pv-title">VIDEO GAMES</p>
+        <div class="pv-row">
+          <button class="btn btn-ghost">Switch View</button>
+          <button class="btn btn-success">New</button>
+          <button class="btn btn-primary">Filter</button>
+          <button class="btn btn-danger">Delete</button>
+        </div>
+        <table class="pv-table">
+          <thead><tr><th>Title</th><th>System</th><th>Physical</th><th>Hall of Fame</th></tr></thead>
+          <tbody>
+            <tr><td>Mega Man 2</td><td>NES</td><td><span class="pill pill-yes">Yes</span></td><td><span class="pill pill-yes">Yes</span></td></tr>
+            <tr><td>Bubble Bobble</td><td>NES</td><td><span class="pill pill-yes">Yes</span></td><td><span class="pill pill-no">No</span></td></tr>
+            <tr><td>Battletoads</td><td>SNES</td><td><span class="pill pill-no">No</span></td><td><span class="pill pill-alert">Lost</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer>A Seth Condie Project — Palette v2</footer>
+</div>
+</body>
+</html>

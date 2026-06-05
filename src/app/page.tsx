@@ -3,64 +3,123 @@ import styles from "./page.module.css";
 
 export default function Home() {
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
+    <div className={styles.layout}>
+      <aside className={styles.sidebar}>
+        <a href="#" className={styles.brand}>
+          <Image
+            className={styles.brandLogo}
+            src="/blue_pensieve.svg"
+            alt="Pensieve"
+            width={54}
+            height={54}
+          />
+          <div className={styles.brandText}>
+            THE GAME
+            <br />
+            <span className={styles.brandAccent}>PENSIEVE</span>
+          </div>
+        </a>
+
+        <nav className={styles.nav}>
+          <div className={styles.grp}>Collections</div>
+          <a href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="13" rx="2" />
+              <path d="M8 21h8" />
+            </svg>
+            Video Games
           </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
+          <a href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 3l9 5-9 5-9-5 9-5z" />
+              <path d="M3 13l9 5 9-5" />
+            </svg>
+            Board Games
           </a>
-        </div>
-      </main>
+          <a href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M5 21v-2a5 5 0 0110 0v2" />
+            </svg>
+            Toys
+          </a>
+
+          <div className={styles.grp}>Manage</div>
+          <a href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="5" y="5" width="14" height="14" rx="2" />
+              <path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" />
+            </svg>
+            Systems
+          </a>
+          <a href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M14 4l6 6M3 21l3-1 11-11-2-2L4 18l-1 3z" />
+            </svg>
+            Custom Fields
+          </a>
+          <a href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+              <circle cx="9" cy="7" r="2" fill="currentColor" />
+              <circle cx="15" cy="17" r="2" fill="currentColor" />
+            </svg>
+            Options
+          </a>
+        </nav>
+
+        <div className={styles.sideFoot}>A Seth Condie Project</div>
+      </aside>
+
+      <div className={styles.main}>
+        <header className={styles.header}>
+          <div className={styles.heroTop}>
+            <div className={styles.heroMark}>
+              <Image
+                src="/blue_pensieve.svg"
+                alt=""
+                width={78}
+                height={78}
+              />
+            </div>
+            <div>
+              <h1 className={styles.heroTitle}>
+                THE GAME <span className={styles.heroTitleEm}>PENSIEVE</span>
+              </h1>
+              <div className={styles.tag}>
+                Explore ALL your games — not just how they appear on the shelf.
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.stats}>
+            <div className={styles.stat}>
+              <b>520</b>
+              <span>Video Games on Shelf</span>
+            </div>
+            <div className={styles.stat}>
+              <b>612</b>
+              <span>All Video Games</span>
+            </div>
+            <div className={styles.stat}>
+              <b>83</b>
+              <span>Board Games on Shelf</span>
+            </div>
+            <div className={styles.stat}>
+              <b>97</b>
+              <span>All Board Games</span>
+            </div>
+            <div className={styles.stat}>
+              <b>61</b>
+              <span>Toys</span>
+            </div>
+          </div>
+        </header>
+
+        <main className={styles.content}>
+          {/* Page content */}
+        </main>
+      </div>
     </div>
   );
 }
