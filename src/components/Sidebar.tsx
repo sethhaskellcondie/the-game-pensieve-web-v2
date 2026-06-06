@@ -1,8 +1,17 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import styles from "./Sidebar.module.css";
 
 export default function Sidebar() {
+  const pathname = usePathname();
+
+  // Returns the active class only when the link matches the current URL.
+  const navClass = (href: string) =>
+    pathname === href ? styles.active : undefined;
+
   return (
     <aside className={styles.sidebar}>
       <Link href="/" className={styles.brand}>
@@ -22,21 +31,21 @@ export default function Sidebar() {
 
       <nav className={styles.nav}>
         <div className={styles.grp}>Collections</div>
-        <Link href="/video-games">
+        <Link href="/video-games" className={navClass("/video-games")}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="3" y="4" width="18" height="13" rx="2" />
             <path d="M8 21h8" />
           </svg>
           Video Games
         </Link>
-        <Link href="/board-games">
+        <Link href="/board-games" className={navClass("/board-games")}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 3l9 5-9 5-9-5 9-5z" />
             <path d="M3 13l9 5 9-5" />
           </svg>
           Board Games
         </Link>
-        <Link href="/toys">
+        <Link href="/toys" className={navClass("/toys")}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="8" r="4" />
             <path d="M5 21v-2a5 5 0 0110 0v2" />
@@ -45,20 +54,20 @@ export default function Sidebar() {
         </Link>
 
         <div className={styles.grp}>Manage</div>
-        <Link href="/systems">
+        <Link href="/systems" className={navClass("/systems")}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="5" y="5" width="14" height="14" rx="2" />
             <path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" />
           </svg>
           Systems
         </Link>
-        <Link href="/custom-fields">
+        <Link href="/custom-fields" className={navClass("/custom-fields")}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M14 4l6 6M3 21l3-1 11-11-2-2L4 18l-1 3z" />
           </svg>
           Custom Fields
         </Link>
-        <Link href="/options">
+        <Link href="/options" className={navClass("/options")}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M4 7h16M4 12h16M4 17h16" />
             <circle cx="9" cy="7" r="2" fill="currentColor" />
