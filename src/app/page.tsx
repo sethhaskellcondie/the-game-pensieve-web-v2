@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Header from "@/components/Header";
+import Stats from "@/components/Stats";
 import styles from "./page.module.css";
 
 export default function Home() {
@@ -10,14 +11,17 @@ export default function Home() {
         title="THE GAME"
         titleAccent="PENSIEVE"
         tagline="Explore ALL your games — not just how they appear on the shelf."
-        stats={[
-          { value: "520", label: "Video Games on Shelf" },
-          { value: "612", label: "All Video Games" },
-          { value: "83", label: "Board Games on Shelf" },
-          { value: "97", label: "All Board Games" },
-          { value: "61", label: "Toys" },
-        ]}
-      />
+      >
+        <Stats
+          stats={[
+            { value: "520", label: "Video Games on Shelf" },
+            { value: "612", label: "All Video Games" },
+            { value: "83", label: "Board Games on Shelf" },
+            { value: "97", label: "All Board Games" },
+            { value: "61", label: "Toys" },
+          ]}
+        />
+      </Header>
 
       <main className={styles.content}>
         {/* Page content */}

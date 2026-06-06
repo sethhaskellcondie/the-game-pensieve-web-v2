@@ -1,16 +1,13 @@
 import type { ReactNode } from "react";
 import styles from "./Header.module.css";
 
-type Stat = { value: string; label: string };
-
 type HeaderProps = {
   icon: ReactNode;
   title: string;
   titleAccent: string;
   tagline: string;
   variant?: "default" | "construction";
-  badge?: string;
-  stats?: Stat[];
+  children?: ReactNode;
 };
 
 export default function Header({
@@ -19,8 +16,7 @@ export default function Header({
   titleAccent,
   tagline,
   variant = "default",
-  badge,
-  stats,
+  children,
 }: HeaderProps) {
   const isConstruction = variant === "construction";
 
@@ -35,12 +31,6 @@ export default function Header({
           {icon}
         </div>
         <div>
-          {badge && (
-            <div className={styles.badge}>
-              <span className={styles.badgeDot} />
-              {badge}
-            </div>
-          )}
           <h1 className={styles.heroTitle}>
             {title} <span className={styles.heroTitleEm}>{titleAccent}</span>
           </h1>
@@ -48,16 +38,7 @@ export default function Header({
         </div>
       </div>
 
-      {stats && (
-        <div className={styles.stats}>
-          {stats.map((stat) => (
-            <div key={stat.label} className={styles.stat}>
-              <b>{stat.value}</b>
-              <span>{stat.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      {children}
     </header>
   );
 }

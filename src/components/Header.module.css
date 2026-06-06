@@ -47,35 +47,6 @@
   color: var(--ink-navy);
 }
 
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--warning);
-  color: var(--ink-navy);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  padding: 6px 12px;
-  border-radius: 999px;
-  margin-bottom: 18px;
-}
-
-.badgeDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--ink-navy);
-  animation: ucblink 1.3s steps(1) infinite;
-}
-
-@keyframes ucblink {
-  50% {
-    opacity: 0.25;
-  }
-}
-
 .heroTitle {
   margin: 0;
   font-family: var(--font-press-start), monospace;
@@ -93,31 +64,4 @@
   font-size: 13px;
   color: rgba(255, 255, 255, 0.82);
   letter-spacing: 0.5px;
-}
-
-.stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 34px;
-  margin-top: 30px;
-  position: relative;
-}
-
-.stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.stat b {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-}
-
-.stat span {
-  font-size: 10px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.7);
 }

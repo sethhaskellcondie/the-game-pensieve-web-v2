@@ -13,7 +13,6 @@ export default function UnderConstruction({ label }: UnderConstructionProps) {
     <>
       <Header
         variant="construction"
-        badge="Coming Soon"
         icon={
           <svg
             viewBox="0 0 24 24"
@@ -31,7 +30,12 @@ export default function UnderConstruction({ label }: UnderConstructionProps) {
         title="UNDER"
         titleAccent="CONSTRUCTION"
         tagline="This part of the Pensieve is still being built."
-      />
+      >
+        <div className={styles.badge}>
+          <span className={styles.badgeDot} />
+          Coming Soon
+        </div>
+      </Header>
 
       <main className={styles.content}>
         <div className={styles.ucWrap}>

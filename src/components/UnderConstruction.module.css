@@ -5,6 +5,35 @@
   background: var(--paper);
 }
 
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--warning);
+  color: var(--ink-navy);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 999px;
+  margin-top: 30px;
+}
+
+.badgeDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-navy);
+  animation: ucblink 1.3s steps(1) infinite;
+}
+
+@keyframes ucblink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
 .ucWrap {
   max-width: 760px;
   margin: 0 auto;
