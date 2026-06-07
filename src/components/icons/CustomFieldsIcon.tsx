@@ -3,8 +3,10 @@ import IconBase from "./IconBase";
 
 export default function CustomFieldsIcon(props: SVGProps<SVGSVGElement>) {
   return (
-    <IconBase {...props}>
-      <path d="M14 4l6 6M3 21l3-1 11-11-2-2L4 18l-1 3z" />
+    <IconBase strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M15 12l-8.5 8.5a2.12 2.12 0 1 1-3-3L12 9" />
+      <path d="M17.64 15 22 10.64" />
+      <path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h.86c.85 0 1.65.34 2.25.93l1.25 1.25" />
     </IconBase>
   );
 }
