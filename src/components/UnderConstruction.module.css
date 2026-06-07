@@ -11,7 +11,7 @@
   gap: 8px;
   background: var(--warning);
   color: var(--ink-navy);
-  font-size: var(--text-xs);
+  font-size: var(--text-caption);
   font-weight: 800;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -79,13 +79,13 @@
 
 .panelIn b {
   font-family: var(--font-press-start), monospace;
-  font-size: var(--text-sm);
+  font-size: var(--text-label);
   color: var(--ink-navy);
   letter-spacing: 1px;
 }
 
 .ucH2 {
-  font-size: var(--text-xl);
+  font-size: var(--text-title);
   font-weight: 800;
   margin: 34px 0 0;
   letter-spacing: 0.5px;
@@ -93,7 +93,7 @@
 }
 
 .ucP {
-  font-size: var(--text-md);
+  font-size: var(--text-body);
   line-height: 1.7;
   color: var(--gray-700);
   margin: 14px 0 0;
@@ -109,7 +109,7 @@
 }
 
 .ucBtn {
-  font-size: var(--text-sm);
+  font-size: var(--text-label);
   font-weight: 700;
   padding: 13px 22px;
   border-radius: 12px;

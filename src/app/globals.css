@@ -23,11 +23,11 @@
   --radius: 16px;
 
   /* Type scale */
-  --text-xs: 10px;
-  --text-sm: 12px;
-  --text-md: 14px;
-  --text-lg: 17px;
-  --text-xl: 24px;
+  --text-caption: 10px;
+  --text-label: 12px;
+  --text-body: 14px;
+  --text-subtitle: 17px;
+  --text-title: 24px;
 
   /* Font fallbacks. The real values are injected at runtime by next/font
      (see src/app/layout.tsx); these placeholders let the IDE resolve the

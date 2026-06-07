@@ -27,7 +27,7 @@
 }
 
 .brandText {
-  font-size: var(--text-sm);
+  font-size: var(--text-label);
   line-height: 1.4;
   font-weight: 700;
   letter-spacing: 1px;
@@ -51,7 +51,7 @@
   gap: 12px;
   padding: 11px 14px;
   border-radius: 10px;
-  font-size: var(--text-md);
+  font-size: var(--text-body);
   color: #9aa3b4;
   font-weight: 500;
   transition: 0.15s;
@@ -75,7 +75,7 @@
 }
 
 .grp {
-  font-size: var(--text-xs);
+  font-size: var(--text-caption);
   letter-spacing: 2px;
   color: #566;
   margin: 18px 14px 6px;
@@ -85,7 +85,7 @@
 .sideFoot {
   margin-top: auto;
   padding: 16px 14px 0;
-  font-size: var(--text-xs);
+  font-size: var(--text-caption);
   color: #566;
   letter-spacing: 1px;
   border-top: 1px solid rgba(255, 255, 255, 0.07);

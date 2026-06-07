@@ -11,7 +11,7 @@
 }
 
 .title {
-  font-size: var(--text-lg);
+  font-size: var(--text-subtitle);
   font-weight: 800;
   color: var(--primary-600);
   letter-spacing: 0.5px;
@@ -20,7 +20,7 @@
 }
 
 .description {
-  font-size: var(--text-sm);
+  font-size: var(--text-label);
   color: var(--gray-500);
 }
 
