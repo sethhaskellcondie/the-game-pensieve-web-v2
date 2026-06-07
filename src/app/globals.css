@@ -22,6 +22,16 @@
   --black: #0c0f16;
   --radius: 16px;
 
+  /* Pure white (text) + RGB channels for composing rgba() with varying alpha */
+  --white-pure: #fff;
+  --white-rgb: 255, 255, 255;
+  --ink-navy-rgb: 14, 27, 58; /* matches --ink-navy; used for shadows */
+
+  /* Sidebar (dark theme) text */
+  --sidebar-link: #9aa3b4;
+  --sidebar-link-hover: #dfe5ee;
+  --sidebar-dim: #556666;
+
   /* Type scale */
   --text-caption: 12px;
   --text-label: 14px;

@@ -77,7 +77,7 @@
   border: none;
   border-radius: 10px;
   background: var(--primary-600);
-  color: #fff;
+  color: var(--white-pure);
   font-size: var(--text-label);
   font-weight: 700;
   letter-spacing: 0.5px;

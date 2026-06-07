@@ -68,7 +68,7 @@
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 14px 34px -18px rgba(14, 27, 58, 0.7);
+  box-shadow: 0 14px 34px -18px rgba(var(--ink-navy-rgb), 0.7);
 }
 
 .panelIn svg {
@@ -114,7 +114,7 @@
   padding: 13px 22px;
   border-radius: 12px;
   background: var(--primary-600);
-  color: #fff;
+  color: var(--white-pure);
   border: 1px solid transparent;
   transition: 0.15s;
   cursor: pointer;

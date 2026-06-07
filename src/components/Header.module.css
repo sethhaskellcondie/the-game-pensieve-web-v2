@@ -2,7 +2,7 @@
   flex: 0 0 auto;
   position: relative;
   overflow: hidden;
-  color: #fff;
+  color: var(--white-pure);
   background: linear-gradient(120deg, var(--primary-600) 0%, var(--armor-navy) 78%);
   padding: 46px 52px 40px;
 }
@@ -20,12 +20,12 @@
   width: 88px;
   height: 88px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(var(--white-rgb), 0.94);
   color: var(--primary-600);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 14px 30px -16px rgba(14, 27, 58, 0.8);
+  box-shadow: 0 14px 30px -16px rgba(var(--ink-navy-rgb), 0.8);
 }
 
 .heroMark svg {
@@ -43,7 +43,7 @@
   font-family: var(--font-press-start), monospace;
   font-size: var(--text-title);
   line-height: 1.4;
-  text-shadow: 3px 3px 0 rgba(14, 27, 58, 0.4);
+  text-shadow: 3px 3px 0 rgba(var(--ink-navy-rgb), 0.4);
 }
 
 .heroTitleEm {
@@ -53,6 +53,6 @@
 .tag {
   margin-top: 10px;
   font-size: var(--text-label);
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(var(--white-rgb), 0.82);
   letter-spacing: 0.5px;
 }
