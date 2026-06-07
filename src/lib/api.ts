@@ -1,9 +1,6 @@
 // Single source of truth for talking to The Game Pensieve backend.
 // Routes and the response envelope are documented in backend-documentation/openapi.yaml.
 
-// Resolves the API base URL (including the /v1 prefix). In development, we fall
-// back to the local backend; in production API_BASE_URL MUST be set so a
-// misconfigured deployment fails loudly instead of silently calling localhost.
 function getBaseUrl(): string {
   const url = process.env.API_BASE_URL;
   if (url) return url;
@@ -16,14 +13,12 @@ function getBaseUrl(): string {
 }
 
 // The backend wraps every response as { data, errors }.
-type ApiResponse<T> = { data: T; errors: string[] | null };
+type ApiResponse<T> = {
+  data: T; errors: string[] | null
+};
 
-// Fetches a path relative to the API base (e.g. "/toys") and unwraps the
-// { data, errors } envelope, throwing on transport or API-level errors.
 export async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(`${getBaseUrl()}${path}`, {
-    // Read live data from the backend rather than a cached copy. (Next.js 16
-    // does not cache fetch by default, but we state the intent explicitly.)
     cache: "no-store",
   });
 

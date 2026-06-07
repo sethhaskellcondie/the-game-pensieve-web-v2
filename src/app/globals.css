@@ -21,6 +21,19 @@
   --gray-700: #4a5161;
   --black: #0c0f16;
   --radius: 16px;
+
+  /* Type scale */
+  --text-xs: 10px;
+  --text-sm: 12px;
+  --text-md: 14px;
+  --text-lg: 17px;
+  --text-xl: 24px;
+
+  /* Font fallbacks. The real values are injected at runtime by next/font
+     (see src/app/layout.tsx); these placeholders let the IDE resolve the
+     custom properties and provide a graceful fallback. */
+  --font-jetbrains-mono: "JetBrains Mono", monospace;
+  --font-press-start: "Press Start 2P", monospace;
 }
 
 @media (prefers-color-scheme: dark) {

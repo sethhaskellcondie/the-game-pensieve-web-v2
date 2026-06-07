@@ -35,12 +35,12 @@
 }
 
 .title {
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 700;
   color: var(--ink-navy);
 }
 
 .description {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--gray-500);
 }

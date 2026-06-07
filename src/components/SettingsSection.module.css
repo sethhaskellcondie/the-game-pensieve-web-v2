@@ -11,7 +11,7 @@
 }
 
 .title {
-  font-size: 17px;
+  font-size: var(--text-lg);
   font-weight: 800;
   color: var(--primary-600);
   letter-spacing: 0.5px;
@@ -20,7 +20,7 @@
 }
 
 .description {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--gray-500);
 }
 

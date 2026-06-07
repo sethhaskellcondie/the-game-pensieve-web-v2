@@ -41,7 +41,7 @@
 .heroTitle {
   margin: 0;
   font-family: var(--font-press-start), monospace;
-  font-size: 26px;
+  font-size: var(--text-xl);
   line-height: 1.4;
   text-shadow: 3px 3px 0 rgba(14, 27, 58, 0.4);
 }
@@ -52,7 +52,7 @@
 
 .tag {
   margin-top: 10px;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: rgba(255, 255, 255, 0.82);
   letter-spacing: 0.5px;
 }
