@@ -1,5 +1,5 @@
 .sidebar {
-  flex: 0 0 212px;
+  flex: 0 0 220px;
   display: flex;
   flex-direction: column;
   padding: 26px 16px;
@@ -85,7 +85,7 @@
 .sideFoot {
   margin-top: auto;
   padding: 16px 14px 0;
-  font-size: var(--text-caption);
+  font-size: 10px;
   color: #566;
   letter-spacing: 1px;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
