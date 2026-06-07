@@ -109,7 +109,6 @@
 }
 
 .ucBtn {
-  font-family: var(--font-jetbrains-mono), monospace;
   font-size: 13px;
   font-weight: 700;
   padding: 13px 22px;

@@ -2,7 +2,7 @@
   flex: 1;
   display: flex;
   width: 100%;
-  font-family: var(--font-geist-sans);
+  font-family: var(--font-jetbrains-mono), monospace;
 }
 
 .main {

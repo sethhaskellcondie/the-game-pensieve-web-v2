@@ -5,7 +5,6 @@
   color: #fff;
   background: linear-gradient(120deg, var(--primary-600) 0%, var(--armor-navy) 78%);
   padding: 46px 52px 40px;
-  font-family: var(--font-jetbrains-mono), monospace;
 }
 
 .heroTop {

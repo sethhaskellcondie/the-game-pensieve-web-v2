@@ -1,13 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, JetBrains_Mono, Press_Start_2P } from "next/font/google";
+import { JetBrains_Mono, Press_Start_2P } from "next/font/google";
 import Sidebar from "@/components/Sidebar";
 import "./globals.css";
 import styles from "./layout.module.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
 
 const jetBrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
@@ -33,7 +28,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${jetBrainsMono.variable} ${pressStart2P.variable}`}
+      className={`${jetBrainsMono.variable} ${pressStart2P.variable}`}
     >
       <body>
         <div className={styles.layout}>
