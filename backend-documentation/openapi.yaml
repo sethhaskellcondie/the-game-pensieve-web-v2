@@ -1,0 +1,2181 @@
+openapi: 3.0.3
+info:
+  title: The Game Pensieve API
+  description: |
+    The Game Pensieve is a comprehensive collection management system for gaming items including toys, video games, board games, and gaming systems. 
+    
+    This API provides full CRUD operations for managing your gaming collection with support for custom fields, advanced filtering, and data backup/import functionality.
+    
+    ## Response Format
+    All responses follow a consistent JSON API-inspired format:
+    ```json
+    {
+      "data": <response_data>,
+      "errors": null
+    }
+    ```
+
+    ## Entity Relationships
+    - **Systems** are gaming platforms (Nintendo Switch, PlayStation, etc.)
+    - **Video Game Boxes** contain one or more Video Games and belong to a System
+    - **Board Game Boxes** contain exactly one Board Game
+    - **Toys** are standalone collectibles
+    - **Custom Fields** can be attached to any entity for additional metadata
+
+    ## Filter System
+    The API provides advanced filtering capabilities through `/function/search` endpoints:
+    - **Text filters**: equals, not_equals, contains, starts_with, ends_with
+    - **Number filters**: equals, not_equals, greater_than, less_than, etc.
+    - **Boolean filters**: equals
+    - **Time filters**: since, before
+    - **System filters**: equals, not_equals (for video games and video game boxes)
+    - **Sort and Pagination**: order_by, order_by_desc, limit, offset — multiple sort filters are supported and applied in request order
+  version: 1.0.0
+  contact:
+    name: The Game Pensieve API Support
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+security:
+  - BearerAuth: []
+paths:
+  /v1/heartbeat:
+    get:
+      tags:
+        - System
+      summary: Health check endpoint
+      description: Simple health check that returns "thump thump"
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "thump thump"
+
+  /v1/toys:
+    post:
+      tags:
+        - Toys
+      summary: Create a new toy
+      description: Create a new toy with name, set, and optional custom fields
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                toy:
+                  $ref: '#/components/schemas/ToyRequest'
+              required:
+                - toy
+      responses:
+        '201':
+          description: Toy created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToyDataResponse'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/toys/{id}:
+    get:
+      tags:
+        - Toys
+      summary: Get a toy by ID
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200':
+          description: Toy found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToyDataResponse'
+        '404':
+          description: Toy not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Toys
+      summary: Update a toy
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                toy:
+                  $ref: '#/components/schemas/ToyRequest'
+              required:
+                - toy
+      responses:
+        '200':
+          description: Toy updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToyDataResponse'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Toy not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Toys
+      summary: Delete a toy
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '204':
+          description: Toy deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Toy not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/toys/function/search:
+    post:
+      tags:
+        - Toys
+      summary: Search toys with filters
+      description: Search and filter toys using various criteria
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilterRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ToyResponse'
+                  errors:
+                    type: 'null'
+
+  /v1/systems:
+    post:
+      tags:
+        - Systems
+      summary: Create a new system
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                system:
+                  $ref: '#/components/schemas/SystemRequest'
+              required:
+                - system
+      responses:
+        '201':
+          description: System created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemDataResponse'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/systems/{id}:
+    get:
+      tags:
+        - Systems
+      summary: Get a system by ID
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200':
+          description: System found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemDataResponse'
+        '404':
+          description: System not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Systems
+      summary: Update a system
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                system:
+                  $ref: '#/components/schemas/SystemRequest'
+              required:
+                - system
+      responses:
+        '200':
+          description: System updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemDataResponse'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: System not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Systems
+      summary: Delete a system
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '204':
+          description: System deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: System not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/systems/function/search:
+    post:
+      tags:
+        - Systems
+      summary: Search systems with filters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilterRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SystemResponse'
+                  errors:
+                    type: 'null'
+
+  /v1/videoGameBoxes:
+    post:
+      tags:
+        - Video Game Boxes
+      summary: Create a new video game box
+      description: Create a new video game box with associated video games
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                videoGameBox:
+                  $ref: '#/components/schemas/VideoGameBoxRequest'
+              required:
+                - videoGameBox
+      responses:
+        '201':
+          description: Video game box created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoGameBoxDataResponse'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/videoGameBoxes/{id}:
+    get:
+      tags:
+        - Video Game Boxes
+      summary: Get a video game box by ID
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200':
+          description: Video game box found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoGameBoxDataResponse'
+        '404':
+          description: Video game box not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Video Game Boxes
+      summary: Update a video game box
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                videoGameBox:
+                  $ref: '#/components/schemas/VideoGameBoxRequest'
+              required:
+                - videoGameBox
+      responses:
+        '200':
+          description: Video game box updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoGameBoxDataResponse'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Video game box not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Video Game Boxes
+      summary: Delete a video game box
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '204':
+          description: Video game box deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Video game box not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/videoGameBoxes/function/search:
+    post:
+      tags:
+        - Video Game Boxes
+      summary: Search video game boxes with filters
+      description: |
+        Search video game boxes using various filters including system filtering.
+
+        **System Filter Example**: Filter video game boxes by their gaming system:
+        ```json
+        {
+          "filters": [
+            {
+              "key": "videoGameBox",
+              "field": "system_id",
+              "operator": "not_equals",
+              "operand": "3"
+            }
+          ]
+        }
+        ```
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilterRequest'
+            example:
+              filters:
+                - key: videoGameBox
+                  field: system_id
+                  operator: equals
+                  operand: "2"
+                - key: videoGameBox
+                  field: isPhysical
+                  operator: equals
+                  operand: "true"
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/VideoGameBoxResponse'
+                  errors:
+                    type: 'null'
+
+  /v1/videoGames/{id}:
+    get:
+      tags:
+        - Video Games
+      summary: Get a video game by ID
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200':
+          description: Video game found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoGameDataResponse'
+        '404':
+          description: Video game not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Video Games
+      summary: Update a video game
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                videoGame:
+                  $ref: '#/components/schemas/VideoGameRequest'
+              required:
+                - videoGame
+      responses:
+        '200':
+          description: Video game updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoGameDataResponse'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Video game not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/videoGames/function/search:
+    post:
+      tags:
+        - Video Games
+      summary: Search video games with filters
+      description: |
+        Search video games using various filters including system filtering.
+
+        **System Filter Example**: Filter video games by their gaming system:
+        ```json
+        {
+          "filters": [
+            {
+              "key": "videoGame",
+              "field": "system_id",
+              "operator": "equals",
+              "operand": "1"
+            }
+          ]
+        }
+        ```
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilterRequest'
+            example:
+              filters:
+                - key: videoGame
+                  field: system_id
+                  operator: equals
+                  operand: "1"
+                - key: videoGame
+                  field: title
+                  operator: contains
+                  operand: "Mario"
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/VideoGameResponse'
+                  errors:
+                    type: 'null'
+
+  /v1/boardGameBoxes:
+    post:
+      tags:
+        - Board Game Boxes
+      summary: Create a new board game box
+      description: Create a new board game box with associated board game
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                boardGameBox:
+                  $ref: '#/components/schemas/BoardGameBoxRequest'
+              required:
+                - boardGameBox
+      responses:
+        '201':
+          description: Board game box created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardGameBoxDataResponse'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/boardGameBoxes/{id}:
+    get:
+      tags:
+        - Board Game Boxes
+      summary: Get a board game box by ID
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200':
+          description: Board game box found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardGameBoxDataResponse'
+        '404':
+          description: Board game box not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Board Game Boxes
+      summary: Update a board game box
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                boardGameBox:
+                  $ref: '#/components/schemas/BoardGameBoxUpdateRequest'
+              required:
+                - boardGameBox
+      responses:
+        '200':
+          description: Board game box updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardGameBoxDataResponse'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Board game box not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Board Game Boxes
+      summary: Delete a board game box
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '204':
+          description: Board game box deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Board game box not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/boardGameBoxes/function/search:
+    post:
+      tags:
+        - Board Game Boxes
+      summary: Search board game boxes with filters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilterRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BoardGameBoxResponse'
+                  errors:
+                    type: 'null'
+
+  /v1/boardGames/{id}:
+    get:
+      tags:
+        - Board Games
+      summary: Get a board game by ID
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200':
+          description: Board game found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardGameDataResponse'
+        '404':
+          description: Board game not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Board Games
+      summary: Update a board game
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                boardGame:
+                  $ref: '#/components/schemas/BoardGameRequest'
+              required:
+                - boardGame
+      responses:
+        '200':
+          description: Board game updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardGameDataResponse'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Board game not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/boardGames/function/search:
+    post:
+      tags:
+        - Board Games
+      summary: Search board games with filters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilterRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BoardGameResponse'
+                  errors:
+                    type: 'null'
+
+  /v1/custom_fields:
+    post:
+      tags:
+        - Custom Fields
+      summary: Create a new custom field
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                custom_field:
+                  $ref: '#/components/schemas/CustomFieldRequest'
+              required:
+                - custom_field
+            example:
+              custom_field:
+                name: "Completion Status"
+                type: "dropdown"
+                entityKey: "videoGame"
+                options:
+                  - "Not Started"
+                  - "In Progress"
+                  - "Completed"
+      responses:
+        '201':
+          description: Custom field created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomFieldDataResponse'
+              example:
+                data:
+                  id: 1
+                  name: "Completion Status"
+                  type: "dropdown"
+                  entityKey: "videoGame"
+                  options:
+                    - id: 1
+                      customFieldId: 1
+                      name: "Not Started"
+                      isDefault: true
+                    - id: 2
+                      customFieldId: 1
+                      name: "In Progress"
+                      isDefault: false
+                    - id: 3
+                      customFieldId: 1
+                      name: "Completed"
+                      isDefault: false
+                errors: null
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Custom Fields
+      summary: Get all custom fields
+      responses:
+        '200':
+          description: List of all custom fields
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CustomFieldResponse'
+                  errors:
+                    type: 'null'
+
+  /v1/custom_fields/entity/{key}:
+    get:
+      tags:
+        - Custom Fields
+      summary: Get custom fields by entity key
+      description: Retrieve all custom fields associated with a specific entity type
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [toy, system, videoGame, videoGameBox, boardGame, boardGameBox]
+          description: Entity key to get custom fields for
+      responses:
+        '200':
+          description: List of custom fields for the entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CustomFieldResponse'
+                  errors:
+                    type: 'null'
+        '404':
+          description: Invalid entity key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/custom_fields/{id}:
+    get:
+      tags:
+        - Custom Fields
+      summary: Get a custom field by ID
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200':
+          description: Custom field found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomFieldDataResponse'
+        '404':
+          description: Custom field not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Custom Fields
+      summary: Update a custom field's name and order
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                custom_field:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: New name for the custom field
+                    order:
+                      type: integer
+                      description: Display order for the custom field
+                    options:
+                      type: array
+                      description: |
+                        Full replacement list of options for enum-type fields (dropdown, radio_button, progress_bar).
+                        Omit this field entirely to leave options unchanged.
+                        Options absent from the list are deleted (values cascade to the default option).
+                        Exactly one option must have isDefault set to true.
+                        Use id: null to create a new option inline.
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            nullable: true
+                            description: ID of an existing option; null to create a new option
+                          name:
+                            type: string
+                            description: Display name of the option
+                          order:
+                            type: integer
+                            description: Display order for the option
+                          isDefault:
+                            type: boolean
+                            description: Whether this option is the default
+                        required:
+                          - name
+                          - order
+                          - isDefault
+                  required:
+                    - name
+                    - order
+              required:
+                - custom_field
+            example:
+              custom_field:
+                name: "Updated Field Name"
+                order: 2
+                options:
+                  - id: 1
+                    name: "Option A"
+                    order: 0
+                    isDefault: true
+                  - id: null
+                    name: "New Option"
+                    order: 1
+                    isDefault: false
+      responses:
+        '200':
+          description: Custom field updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomFieldDataResponse'
+        '404':
+          description: Custom field not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Custom Fields
+      summary: Delete a custom field
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '204':
+          description: Custom field deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Custom field not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/filters/{entity}:
+    get:
+      tags:
+        - Filters
+      summary: Get available filters for an entity
+      description: Returns available filter fields and operators for the specified entity type
+      parameters:
+        - name: entity
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [toy, system, videoGame, videoGameBox, boardGame, boardGameBox]
+          description: Entity type to get filters for
+      responses:
+        '200':
+          description: Filter specifications for the entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/FilterSpecification'
+                  errors:
+                    type: 'null'
+
+  /v1/function/backup:
+    post:
+      tags:
+        - Data Management
+      summary: Create backup of all data
+      description: Export all collection data in JSON format
+      responses:
+        '200':
+          description: Backup data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/BackupData'
+                  errors:
+                    type: 'null'
+
+  /v1/function/import:
+    post:
+      tags:
+        - Data Management
+      summary: Import data from request body
+      description: Import collection data from JSON in request body
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: '#/components/schemas/BackupData'
+              required:
+                - data
+      responses:
+        '200':
+          description: Import results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ImportResults'
+                  errors:
+                    type: 'null'
+
+  /v1/function/importFromFile:
+    post:
+      tags:
+        - Data Management
+      summary: Import data from backup.json file
+      description: Import collection data from backup.json file in the application directory
+      responses:
+        '200':
+          description: Import results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ImportResults'
+                  errors:
+                    type: 'null'
+
+  /v1/function/seedSampleData:
+    post:
+      tags:
+        - Data Management
+      summary: Seed database with sample data
+      description: Populate the database with sample gaming collection data
+      responses:
+        '200':
+          description: Sample data seeded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /v1/function/seedMyCollection:
+    post:
+      tags:
+        - Data Management
+      summary: Seed database with personal collection data
+      description: Populate the database with the author's personal gaming collection data from myCollection.json file
+      responses:
+        '200':
+          description: Personal collection data seeded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ImportResults'
+                  errors:
+                    type: 'null'
+
+  /v1/metadata:
+    post:
+      tags:
+        - Metadata
+      summary: Create new metadata
+      description: Create a new metadata entry with a unique key and JSON value
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                metadata:
+                  $ref: '#/components/schemas/MetadataRequest'
+              required:
+                - metadata
+      responses:
+        '201':
+          description: Metadata created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetadataDataResponse'
+        '400':
+          description: Invalid input data or invalid JSON value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Metadata
+      summary: Get all metadata
+      description: Retrieve all metadata entries
+      responses:
+        '200':
+          description: List of all metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MetadataResponse'
+                  errors:
+                    type: 'null'
+
+  /v1/metadata/{key}:
+    get:
+      tags:
+        - Metadata
+      summary: Get metadata by key
+      description: Retrieve a specific metadata entry by its unique key
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique key for the metadata entry
+      responses:
+        '200':
+          description: Metadata found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetadataDataResponse'
+        '404':
+          description: Metadata not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags:
+        - Metadata
+      summary: Update metadata value
+      description: Update the JSON value of an existing metadata entry
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique key for the metadata entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                value:
+                  type: string
+                  description: New JSON value (must be valid JSON)
+              required:
+                - value
+      responses:
+        '200':
+          description: Metadata updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetadataDataResponse'
+        '400':
+          description: Invalid JSON value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Metadata not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Metadata
+      summary: Delete metadata
+      description: Soft delete a metadata entry by its unique key
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique key for the metadata entry
+      responses:
+        '204':
+          description: Metadata deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Metadata not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Bearer token authentication
+
+  parameters:
+    EntityId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+      description: Unique identifier for the entity
+
+  schemas:
+    # Common Components
+    CustomFieldValue:
+      type: object
+      properties:
+        customFieldId:
+          type: integer
+          description: ID of the custom field definition
+        customFieldName:
+          type: string
+          description: Name of the custom field
+        customFieldType:
+          type: string
+          enum: [text, number, boolean, dropdown, radio_button, progress_bar]
+          description: Data type of the custom field
+        value:
+          type: string
+          description: String representation of the field value
+      required:
+        - customFieldId
+        - customFieldName
+        - customFieldType
+        - value
+
+    FilterRequestDto:
+      type: object
+      properties:
+        key:
+          type: string
+          enum: [toy, system, videoGame, videoGameBox, boardGame, boardGameBox]
+          description: Entity type to filter
+        field:
+          type: string
+          description: Field name to filter on
+        operator:
+          type: string
+          enum: [equals, not_equals, contains, starts_with, ends_with, greater_than, less_than, greater_than_equal_to, less_than_equal_to, since, before, order_by, order_by_desc, limit, offset]
+          description: |
+            Filter operator. Available operators depend on field type:
+            - **Text fields**: equals, not_equals, contains, starts_with, ends_with
+            - **Number fields**: equals, not_equals, greater_than, less_than, greater_than_equal_to, less_than_equal_to
+            - **Boolean fields**: equals
+            - **Time fields**: since, before
+            - **System fields**: equals, not_equals (for system_id on video games and video game boxes)
+            - **Sort fields**: order_by, order_by_desc — multiple sort filters are allowed and applied in the order they appear in the request array (first = primary sort, second = tiebreaker, etc.)
+            - **Pagination fields**: limit, offset
+        operand:
+          type: string
+          description: |
+            Value to filter by. Format depends on field type:
+            - **Text**: Any string value
+            - **Number**: Numeric string (e.g., "123")
+            - **Boolean**: "true" or "false"
+            - **Time**: ISO datetime string (e.g., "2023-01-01T00:00:00")
+            - **System**: System ID as string (e.g., "1")
+      required:
+        - key
+        - field
+        - operator
+        - operand
+
+    FilterRequest:
+      type: object
+      properties:
+        filters:
+          type: array
+          items:
+            $ref: '#/components/schemas/FilterRequestDto'
+          description: Array of filters to apply
+      required:
+        - filters
+
+    # Base Entity Schemas
+    EntityTimestamps:
+      type: object
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          description: When the entity was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the entity was last updated
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the entity was soft-deleted (null if not deleted)
+
+    # Toy Schemas
+    ToyRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the toy
+          minLength: 1
+        set:
+          type: string
+          description: Set or series the toy belongs to
+        customFieldValues:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomFieldValue'
+          description: Custom field values for this toy
+      required:
+        - name
+        - set
+        - customFieldValues
+
+    ToyResponse:
+      allOf:
+        - type: object
+          properties:
+            key:
+              type: string
+              enum: [toy]
+              description: Entity type identifier
+            id:
+              type: integer
+              description: Unique identifier
+        - $ref: '#/components/schemas/ToyRequest'
+        - $ref: '#/components/schemas/EntityTimestamps'
+
+    ToyDataResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ToyResponse'
+        errors:
+          type: 'null'
+
+    # System Schemas
+    SystemRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the gaming system
+          minLength: 1
+        generation:
+          type: integer
+          description: Console generation number
+        handheld:
+          type: boolean
+          description: Whether this is a handheld system
+        customFieldValues:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomFieldValue'
+          description: Custom field values for this system
+      required:
+        - name
+        - generation
+        - handheld
+        - customFieldValues
+
+    SystemResponse:
+      allOf:
+        - type: object
+          properties:
+            key:
+              type: string
+              enum: [system]
+              description: Entity type identifier
+            id:
+              type: integer
+              description: Unique identifier
+        - $ref: '#/components/schemas/SystemRequest'
+        - $ref: '#/components/schemas/EntityTimestamps'
+
+    SystemDataResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SystemResponse'
+        errors:
+          type: 'null'
+
+    # Video Game Schemas
+    VideoGameRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Title of the video game
+          minLength: 1
+        systemId:
+          type: integer
+          description: ID of the gaming system this game runs on
+        customFieldValues:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomFieldValue'
+          description: Custom field values for this video game
+      required:
+        - title
+        - systemId
+        - customFieldValues
+
+    SlimVideoGame:
+      allOf:
+        - type: object
+          properties:
+            id:
+              type: integer
+              description: Unique identifier
+            title:
+              type: string
+              description: Title of the video game
+            system:
+              $ref: '#/components/schemas/SystemResponse'
+        - $ref: '#/components/schemas/EntityTimestamps'
+        - type: object
+          properties:
+            customFieldValues:
+              type: array
+              items:
+                $ref: '#/components/schemas/CustomFieldValue'
+
+    VideoGameResponse:
+      allOf:
+        - type: object
+          properties:
+            key:
+              type: string
+              enum: [videoGame]
+              description: Entity type identifier
+        - $ref: '#/components/schemas/SlimVideoGame'
+
+    VideoGameDataResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/VideoGameResponse'
+        errors:
+          type: 'null'
+
+    # Video Game Box Schemas
+    VideoGameBoxRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Title of the video game box
+          minLength: 1
+        systemId:
+          type: integer
+          description: ID of the gaming system
+        existingVideoGameIds:
+          type: array
+          items:
+            type: integer
+          description: IDs of existing video games to include
+        newVideoGames:
+          type: array
+          items:
+            $ref: '#/components/schemas/VideoGameRequest'
+          description: New video games to create and include
+        isPhysical:
+          type: boolean
+          description: Whether this is a physical copy
+        customFieldValues:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomFieldValue'
+          description: Custom field values for this video game box
+      required:
+        - title
+        - systemId
+        - existingVideoGameIds
+        - newVideoGames
+        - isPhysical
+        - customFieldValues
+
+    VideoGameBoxResponse:
+      allOf:
+        - type: object
+          properties:
+            key:
+              type: string
+              enum: [videoGameBox]
+              description: Entity type identifier
+            id:
+              type: integer
+              description: Unique identifier
+            title:
+              type: string
+              description: Title of the video game box
+            system:
+              $ref: '#/components/schemas/SystemResponse'
+            videoGames:
+              type: array
+              items:
+                $ref: '#/components/schemas/SlimVideoGame'
+            isPhysical:
+              type: boolean
+              description: Whether this is a physical copy
+            isCollection:
+              type: boolean
+              description: Whether this box contains multiple games
+        - $ref: '#/components/schemas/EntityTimestamps'
+        - type: object
+          properties:
+            customFieldValues:
+              type: array
+              items:
+                $ref: '#/components/schemas/CustomFieldValue'
+
+    VideoGameBoxDataResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/VideoGameBoxResponse'
+        errors:
+          type: 'null'
+
+    # Board Game Schemas
+    BoardGameRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Title of the board game
+          minLength: 1
+        customFieldValues:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomFieldValue'
+          description: Custom field values for this board game
+      required:
+        - title
+        - customFieldValues
+
+    SlimBoardGameBox:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier of the board game box
+        title:
+          type: string
+          description: Title of the board game box
+
+    SlimBoardGame:
+      allOf:
+        - type: object
+          properties:
+            id:
+              type: integer
+              description: Unique identifier of the board game
+            title:
+              type: string
+              description: Title of the board game
+        - $ref: '#/components/schemas/EntityTimestamps'
+        - type: object
+          properties:
+            customFieldValues:
+              type: array
+              items:
+                $ref: '#/components/schemas/CustomFieldValue'
+              description: Custom field values for this board game
+
+    BoardGameResponse:
+      allOf:
+        - type: object
+          properties:
+            key:
+              type: string
+              enum: [boardGame]
+              description: Entity type identifier
+            id:
+              type: integer
+              description: Unique identifier
+            title:
+              type: string
+              description: Title of the board game
+            boardGameBoxes:
+              type: array
+              items:
+                $ref: '#/components/schemas/SlimBoardGameBox'
+              description: Boxes containing this board game
+        - $ref: '#/components/schemas/EntityTimestamps'
+        - type: object
+          properties:
+            customFieldValues:
+              type: array
+              items:
+                $ref: '#/components/schemas/CustomFieldValue'
+
+    BoardGameDataResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/BoardGameResponse'
+        errors:
+          type: 'null'
+
+    # Board Game Box Schemas
+    BoardGameBoxRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Title of the board game box
+          minLength: 1
+        isExpansion:
+          type: boolean
+          description: Whether this is an expansion
+        isStandAlone:
+          type: boolean
+          description: Whether this can be played standalone
+        baseSetId:
+          type: integer
+          nullable: true
+          description: ID of the base set if this is an expansion
+        boardGameId:
+          type: integer
+          nullable: true
+          description: ID of existing board game to use
+        boardGame:
+          $ref: '#/components/schemas/BoardGameRequest'
+          nullable: true
+          description: New board game to create (if boardGameId is null)
+        customFieldValues:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomFieldValue'
+          description: Custom field values for this board game box
+      required:
+        - title
+        - isExpansion
+        - isStandAlone
+        - customFieldValues
+
+    BoardGameBoxUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Title of the board game box
+          minLength: 1
+        isExpansion:
+          type: boolean
+          description: Whether this is an expansion
+        isStandAlone:
+          type: boolean
+          description: Whether this can be played standalone
+        baseSetId:
+          type: integer
+          nullable: true
+          description: ID of the base set if this is an expansion
+        boardGameId:
+          type: integer
+          description: ID of existing board game (required for updates)
+          minimum: 1
+        customFieldValues:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomFieldValue'
+          description: Custom field values for this board game box
+      required:
+        - title
+        - isExpansion
+        - isStandAlone
+        - boardGameId
+        - customFieldValues
+
+    BoardGameBoxResponse:
+      allOf:
+        - type: object
+          properties:
+            key:
+              type: string
+              enum: [boardGameBox]
+              description: Entity type identifier
+            id:
+              type: integer
+              description: Unique identifier
+            title:
+              type: string
+              description: Title of the board game box
+            isExpansion:
+              type: boolean
+              description: Whether this is an expansion
+            isStandAlone:
+              type: boolean
+              description: Whether this can be played standalone
+            baseSetId:
+              type: integer
+              nullable: true
+              description: ID of the base set if this is an expansion
+            boardGame:
+              $ref: '#/components/schemas/SlimBoardGame'
+        - $ref: '#/components/schemas/EntityTimestamps'
+        - type: object
+          properties:
+            customFieldValues:
+              type: array
+              items:
+                $ref: '#/components/schemas/CustomFieldValue'
+
+    BoardGameBoxDataResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/BoardGameBoxResponse'
+        errors:
+          type: 'null'
+
+    # Custom Field Schemas
+    CustomFieldOption:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the option
+        customFieldId:
+          type: integer
+          description: ID of the parent custom field
+        name:
+          type: string
+          description: Display name of the option
+        isDefault:
+          type: boolean
+          description: Whether this is the default option for the field
+        order:
+          type: integer
+          description: Display order for the option
+      required:
+        - id
+        - customFieldId
+        - name
+        - isDefault
+        - order
+
+    CustomFieldRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the custom field
+          minLength: 1
+        type:
+          type: string
+          enum: [text, number, boolean, dropdown, radio_button, progress_bar]
+          description: |
+            Data type of the custom field.
+            Enum types (dropdown, radio_button, progress_bar) require at least one entry in the `options` list.
+        entityKey:
+          type: string
+          enum: [toy, system, videoGame, videoGameBox, boardGame, boardGameBox]
+          description: Entity type this field applies to
+        options:
+          type: array
+          description: |
+            Initial options for enum-type fields (dropdown, radio_button, progress_bar).
+            Required and must contain at least one entry when `type` is an enum type.
+            Exactly one option must have isDefault set to true.
+            Ignored for non-enum types.
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                description: Display name of the option
+              order:
+                type: integer
+                description: Display order for the option
+              isDefault:
+                type: boolean
+                description: Whether this is the default option; exactly one must be true
+            required:
+              - name
+              - order
+              - isDefault
+          example:
+            - name: "Option A"
+              order: 0
+              isDefault: true
+            - name: "Option B"
+              order: 1
+              isDefault: false
+      required:
+        - name
+        - type
+        - entityKey
+
+    CustomFieldResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier
+        name:
+          type: string
+          description: Name of the custom field
+        type:
+          type: string
+          enum: [text, number, boolean, dropdown, radio_button, progress_bar]
+          description: Data type of the custom field
+        entityKey:
+          type: string
+          description: Entity type this field applies to
+        order:
+          type: integer
+          description: Display order for the custom field
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomFieldOption'
+          description: Options for enum-type fields. Always present; empty list for non-enum types.
+
+    CustomFieldDataResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/CustomFieldResponse'
+        errors:
+          type: 'null'
+
+    # Filter Specification Schema
+    FilterSpecification:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Filter type name
+        fields:
+          type: object
+          additionalProperties:
+            type: string
+          description: |
+            Map of field names to their data types. Possible types include:
+            - **text**: String fields supporting text operations
+            - **number**: Numeric fields supporting comparison operations
+            - **boolean**: Boolean fields supporting equality operations
+            - **time**: Timestamp fields supporting temporal operations
+            - **system**: System ID fields supporting equality operations (video games and video game boxes only)
+            - **sort**: Special field for result ordering
+            - **pagination**: Special field for result limiting
+        filters:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: |
+            Map of field names to available operators:
+            - **Text fields**: ["equals", "not_equals", "contains", "starts_with", "ends_with"]
+            - **Number fields**: ["equals", "not_equals", "greater_than", "less_than", "greater_than_equal_to", "less_than_equal_to"]
+            - **Boolean fields**: ["equals"]
+            - **Time fields**: ["since", "before"]
+            - **System fields**: ["equals", "not_equals"]
+            - **Sort fields**: ["order_by", "order_by_desc"] — multiple sort filters may be combined; order in the request array determines priority
+            - **Pagination fields**: ["limit", "offset"]
+      example:
+        type: "videoGame"
+        fields:
+          title: "text"
+          system_id: "system"
+          created_at: "time"
+          updated_at: "time"
+          all_fields: "sort"
+          pagination_fields: "pagination"
+        filters:
+          title: ["equals", "not_equals", "contains", "starts_with", "ends_with"]
+          system_id: ["equals", "not_equals"]
+          created_at: ["since", "before"]
+          updated_at: ["since", "before"]
+          all_fields: ["order_by", "order_by_desc"]
+          pagination_fields: ["limit", "offset"]
+
+    # Data Management Schemas
+    BackupData:
+      type: object
+      properties:
+        customFields:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomFieldResponse'
+        toys:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToyResponse'
+        systems:
+          type: array
+          items:
+            $ref: '#/components/schemas/SystemResponse'
+        videoGameBoxes:
+          type: array
+          items:
+            $ref: '#/components/schemas/VideoGameBoxResponse'
+        boardGameBoxes:
+          type: array
+          items:
+            $ref: '#/components/schemas/BoardGameBoxResponse'
+
+    ImportResults:
+      type: object
+      properties:
+        existingCustomFields:
+          type: integer
+          description: Number of existing custom fields found
+        createdCustomFields:
+          type: integer
+          description: Number of custom fields created
+        existingToys:
+          type: integer
+          description: Number of existing toys found
+        createdToys:
+          type: integer
+          description: Number of toys created
+        existingSystems:
+          type: integer
+          description: Number of existing systems found
+        createdSystems:
+          type: integer
+          description: Number of systems created
+        existingVideoGamesBoxes:
+          type: integer
+          description: Number of existing video game boxes found
+        createdVideoGamesBoxes:
+          type: integer
+          description: Number of video game boxes created
+        existingBoardGameBoxes:
+          type: integer
+          description: Number of existing board game boxes found
+        createdBoardGameBoxes:
+          type: integer
+          description: Number of board game boxes created
+        exceptionBackupImport:
+          type: object
+          description: Details of any import errors
+
+    # Metadata Schemas
+    MetadataRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+          nullable: true
+          description: Unique identifier (null for new entries)
+        key:
+          type: string
+          description: Unique key for the metadata entry
+          minLength: 1
+        value:
+          type: string
+          description: JSON value as string (must be valid JSON)
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Creation timestamp (auto-generated)
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Update timestamp (auto-generated)
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Deletion timestamp (null if not deleted)
+      required:
+        - key
+        - value
+
+    MetadataResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier
+        key:
+          type: string
+          description: Unique key for the metadata entry
+        value:
+          type: string
+          description: JSON value as string
+        createdAt:
+          type: string
+          format: date-time
+          description: When the metadata was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the metadata was last updated
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the metadata was soft-deleted (null if not deleted)
+      required:
+        - id
+        - key
+        - value
+        - createdAt
+        - updatedAt
+
+    MetadataDataResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/MetadataResponse'
+        errors:
+          type: 'null'
+
+    # Response Schemas
+    SuccessResponse:
+      type: object
+      properties:
+        data:
+          type: string
+        errors:
+          type: 'null'
+
+    ErrorResponse:
+      type: object
+      properties:
+        data:
+          type: 'null'
+        errors:
+          type: object
+          description: Error details
+
+tags:
+  - name: System
+    description: Health check and system status endpoints
+  - name: Toys
+    description: Manage toy collectibles
+  - name: Systems
+    description: Manage gaming systems and platforms
+  - name: Video Games
+    description: Manage individual video games
+  - name: Video Game Boxes
+    description: Manage video game box collections
+  - name: Board Games
+    description: Manage individual board games
+  - name: Board Game Boxes
+    description: Manage board game box collections
+  - name: Custom Fields
+    description: Manage custom metadata fields
+  - name: Metadata
+    description: Manage arbitrary JSON metadata by key
+  - name: Filters
+    description: Get filtering capabilities for entities
+  - name: Data Management
+    description: Backup, import, and data seeding operations

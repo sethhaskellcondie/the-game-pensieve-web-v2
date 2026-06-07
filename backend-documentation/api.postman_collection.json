@@ -1,0 +1,911 @@
+{
+	"info": {
+		"_postman_id": "88f779bc-a165-472f-ae58-9821e14352eb",
+		"name": "The Game Pensieve",
+		"description": "This contains a basic collection of example endpoints for The Game Pensieve. This will be updated and polished up before a version 1 release.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "14591034"
+	},
+	"item": [
+		{
+			"name": "heartbeat check",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "*/*"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/vnd.api+json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": "http://localhost:8080/v1/heartbeat"
+			},
+			"response": []
+		},
+		{
+			"name": "create new toy",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "*/*"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/vnd.api+json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"toy\": {\r\n        \"name\": \"Shovel Knight\",\r\n        \"set\": \"Amiibo\",\r\n        \"customFieldValues\": [\r\n                    {\r\n                        \"customFieldId\": 1,\r\n                        \"customFieldName\": \"Broken\",\r\n                        \"customFieldType\": \"boolean\",\r\n                        \"value\": \"false\"\r\n                    }\r\n            ]\r\n        }\r\n}"
+				},
+				"url": "http://localhost:8080/v1/toys"
+			},
+			"response": []
+		},
+		{
+			"name": "read one toy",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8080/v1/toys/1"
+			},
+			"response": []
+		},
+		{
+			"name": "read all toys",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"filters\": []\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/toys/function/search"
+			},
+			"response": []
+		},
+		{
+			"name": "read all toys (filters example)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"filters\": [\r\n        {\r\n            \"key\": \"toy\",\r\n            \"field\": \"name\",\r\n            \"operator\": \"starts_with\",\r\n            \"operand\": \"Super\"\r\n        },\r\n        {\r\n            \"key\": \"toy\",\r\n            \"field\": \"name\",\r\n            \"operator\": \"ends_with\",\r\n            \"operand\": \"Mario\"\r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/toys/function/search"
+			},
+			"response": []
+		},
+		{
+			"name": "update one toy",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"toy\": {\r\n        \"name\": \"New Name\",\r\n        \"set\": \"New Set\",\r\n        \"customFieldValues\": []\r\n        }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/toys/1"
+			},
+			"response": []
+		},
+		{
+			"name": "delete one toy",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": "http://localhost:8080/v1/toys/1"
+			},
+			"response": []
+		},
+		{
+			"name": "create new system",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var responseJSON = pm.response.json();",
+							"var responseData = responseJSON.data;",
+							"",
+							"// Test the response status code",
+							"pm.test(\"Response status code is 201\", function () {",
+							"  pm.response.to.have.status(201);",
+							"});",
+							"",
+							"// Test the response body structure and values",
+							"pm.test(\"Response body structure is valid\", function () {",
+							"    pm.expect(responseData).to.have.property('key');",
+							"    pm.expect(responseData).to.have.property('id');",
+							"    pm.expect(responseData).to.have.property('name');",
+							"    pm.expect(responseData).to.have.property('generation');",
+							"    pm.expect(responseData).to.have.property('handheld');",
+							"    pm.expect(responseData).to.have.property('createdAt');",
+							"    pm.expect(responseData).to.have.property('updatedAt');",
+							"    pm.expect(responseData).to.have.property('deletedAt');",
+							"    pm.expect(responseData).to.have.property('customFieldValues');",
+							"});",
+							"",
+							"// Check that the name property is not empty",
+							"pm.test(\"Name property is not empty\", function () {",
+							"  pm.expect(responseData.name).to.exist.and.to.have.lengthOf.at.least(1, \"Name should not be empty\");",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"system\": {\r\n        \"name\": \"Switch\",\r\n        \"generation\": 9,\r\n        \"handheld\": true,\r\n        \"customFieldValues\": [\r\n                    {\r\n                        \"customFieldId\": 2,\r\n                        \"customFieldName\": \"Release Year\",\r\n                        \"customFieldType\": \"number\",\r\n                        \"value\": \"2017\"\r\n                    }\r\n        ]\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/systems"
+			},
+			"response": []
+		},
+		{
+			"name": "read one system",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8080/v1/systems/1"
+			},
+			"response": []
+		},
+		{
+			"name": "read all systems",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"filters\": []\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/systems/function/search"
+			},
+			"response": []
+		},
+		{
+			"name": "update one system",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"system\": {\r\n        \"name\": \"Updated System Name\",\r\n        \"generation\": 3,\r\n        \"handheld\": false,\r\n        \"customFieldValues\": []\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/systems/1"
+			},
+			"response": []
+		},
+		{
+			"name": "delete one system",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": "http://localhost:8080/v1/systems/1"
+			},
+			"response": []
+		},
+		{
+			"name": "create video game box and video game",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"videoGameBox\": {\r\n        \"title\": \"New Video Game Box\",\r\n        \"systemId\": 1,\r\n        \"existingVideoGameIds\": [],\r\n        \"newVideoGames\": [\r\n                {\r\n                    \"title\": \"New Video Game\",\r\n                    \"systemId\": 1,\r\n                    \"customFieldValues\": []\r\n                }\r\n            ],\r\n        \"isPhysical\": true,\r\n        \"customFieldValues\": []\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/videoGameBoxes"
+			},
+			"response": []
+		},
+		{
+			"name": "read one video game box",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8080/v1/videoGameBoxes/1"
+			},
+			"response": []
+		},
+		{
+			"name": "read all video game boxes",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"filters\": []\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/videoGameBoxes/function/search"
+			},
+			"response": []
+		},
+		{
+			"name": "read all video game boxes (system filter example)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"filters\": [\r\n        {\r\n            \"entityKey\": \"videoGameBox\",\r\n            \"type\": \"system\",\r\n            \"field\": \"system_id\",\r\n            \"operator\": \"equals\",\r\n            \"operand\": \"1\"\r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/videoGameBoxes/function/search"
+			},
+			"response": []
+		},
+		{
+			"name": "read all video game boxes (system not equals filter)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"filters\": [\r\n        {\r\n            \"entityKey\": \"videoGameBox\",\r\n            \"type\": \"system\",\r\n            \"field\": \"system_id\",\r\n            \"operator\": \"not_equals\",\r\n            \"operand\": \"1\"\r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/videoGameBoxes/function/search"
+			},
+			"response": []
+		},
+		{
+			"name": "update one video game box",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"videoGameBox\": {\r\n        \"title\": \"Updated Video Game Box\",\r\n        \"systemId\": 1,\r\n        \"existingVideoGameIds\": [],\r\n        \"newVideoGames\": [\r\n                {\r\n                    \"title\": \"Another New Video Game\",\r\n                    \"systemId\": 1,\r\n                    \"customFieldValues\": []\r\n                }\r\n            ],\r\n        \"isPhysical\": true,\r\n        \"customFieldValues\": []\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/videoGameBoxes/1"
+			},
+			"response": []
+		},
+		{
+			"name": "delete one video game box",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": "http://localhost:8080/v1/videoGameBoxes/2"
+			},
+			"response": []
+		},
+		{
+			"name": "read one video game",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8080/v1/videoGames/2"
+			},
+			"response": []
+		},
+		{
+			"name": "read all video games",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"filters\": []\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/videoGames/function/search"
+			},
+			"response": []
+		},
+		{
+			"name": "read all video games (system filter example)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"filters\": [\r\n        {\r\n            \"entityKey\": \"videoGame\",\r\n            \"type\": \"system\",\r\n            \"field\": \"system_id\",\r\n            \"operator\": \"equals\",\r\n            \"operand\": \"2\"\r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/videoGames/function/search"
+			},
+			"response": []
+		},
+		{
+			"name": "read all video games (system not equals filter)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"filters\": [\r\n        {\r\n            \"entityKey\": \"videoGame\",\r\n            \"type\": \"system\",\r\n            \"field\": \"system_id\",\r\n            \"operator\": \"not_equals\",\r\n            \"operand\": \"2\"\r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/videoGames/function/search"
+			},
+			"response": []
+		},
+		{
+			"name": "update one video game",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"videoGame\": {\r\n        \"title\": \"Updated Video Game Title\",\r\n        \"systemId\": 1,\r\n        \"customFieldValues\": []\r\n        }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/videoGames/2"
+			},
+			"response": []
+		},
+		{
+			"name": "read filters for entity",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8080/v1/filters/videoGame"
+			},
+			"response": []
+		},
+		{
+			"name": "create new custom field (text)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"custom_field\": {\r\n        \"name\": \"new custom field\",\r\n        \"type\": \"text\",\r\n        \"entityKey\": \"videoGame\"\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/custom_fields"
+			},
+			"response": []
+		},
+		{
+			"name": "create new custom field (dropdown)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"custom_field\": {\r\n        \"name\": \"Completion Status\",\r\n        \"type\": \"dropdown\",\r\n        \"entityKey\": \"videoGame\",\r\n        \"options\": [\"Not Started\", \"In Progress\", \"Completed\"]\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/custom_fields"
+			},
+			"response": []
+		},
+		{
+			"name": "read one custom field",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8080/v1/custom_fields/1"
+			},
+			"response": []
+		},
+		{
+			"name": "read all custom fields",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8080/v1/custom_fields"
+			},
+			"response": []
+		},
+		{
+			"name": "read custom fields by entity key",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8080/v1/custom_fields/entity/toy"
+			},
+			"response": []
+		},
+		{
+			"name": "patch custom field name",
+			"request": {
+				"method": "PATCH",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\": \"updated custom field\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/custom_fields/7"
+			},
+			"response": []
+		},
+		{
+			"name": "delete one custom field",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/custom_fields/7"
+			},
+			"response": []
+		},
+		{
+			"name": "add option to custom field",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"custom_field_option\": {\r\n        \"name\": \"New Option\"\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/custom_fields/1/options"
+			},
+			"response": []
+		},
+		{
+			"name": "rename custom field option",
+			"request": {
+				"method": "PATCH",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\": \"Renamed Option\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/custom_fields/1/options/1"
+			},
+			"response": []
+		},
+		{
+			"name": "set default custom field option",
+			"request": {
+				"method": "PATCH",
+				"header": [],
+				"url": "http://localhost:8080/v1/custom_fields/1/options/1/default"
+			},
+			"response": []
+		},
+		{
+			"name": "delete custom field option",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": "http://localhost:8080/v1/custom_fields/1/options/2"
+			},
+			"response": []
+		},
+		{
+			"name": "backup data",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": "http://localhost:8080/v1/function/backup"
+			},
+			"response": []
+		},
+		{
+			"name": "import from body",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"data\": {\n        \"customFields\": [\n            {\n                \"id\": 1,\n                \"name\": \"Broken\",\n                \"type\": \"boolean\",\n                \"entityKey\": \"toy\"\n            },\n            {\n                \"id\": 2,\n                \"name\": \"Release Year\",\n                \"type\": \"number\",\n                \"entityKey\": \"system\"\n            },\n            {\n                \"id\": 3,\n                \"name\": \"Developer\",\n                \"type\": \"text\",\n                \"entityKey\": \"videoGameBox\"\n            },\n            {\n                \"id\": 4,\n                \"name\": \"Publisher\",\n                \"type\": \"text\",\n                \"entityKey\": \"videoGameBox\"\n            },\n            {\n                \"id\": 6,\n                \"name\": \"Notes\",\n                \"type\": \"text\",\n                \"entityKey\": \"videoGameBox\"\n            },\n            {\n                \"id\": 5,\n                \"name\": \"Release Year\",\n                \"type\": \"number\",\n                \"entityKey\": \"videoGameBox\"\n            },\n            {\n                \"id\": 7,\n                \"name\": \"notes\",\n                \"type\": \"text\",\n                \"entityKey\": \"videoGame\"\n            },\n            {\n                \"id\": 8,\n                \"name\": \"enhanced_port\",\n                \"type\": \"boolean\",\n                \"entityKey\": \"videoGame\"\n            }\n        ],\n        \"toys\": [\n            {\n                \"key\": \"toy\",\n                \"id\": 1,\n                \"name\": \"Darkwing Duck\",\n                \"set\": \"Misc\",\n                \"createdAt\": \"2025-07-15T16:33:36.948+00:00\",\n                \"updatedAt\": \"2025-07-15T16:33:36.948+00:00\",\n                \"deletedAt\": null,\n                \"customFieldValues\": [\n                    {\n                        \"customFieldId\": 1,\n                        \"customFieldName\": \"Broken\",\n                        \"customFieldType\": \"boolean\",\n                        \"value\": \"true\"\n                    }\n                ]\n            },\n            {\n                \"key\": \"toy\",\n                \"id\": 2,\n                \"name\": \"Iron Man\",\n                \"set\": \"Disney Infinity\",\n                \"createdAt\": \"2025-07-15T16:33:54.485+00:00\",\n                \"updatedAt\": \"2025-07-15T16:33:54.485+00:00\",\n                \"deletedAt\": null,\n                \"customFieldValues\": [\n                    {\n                        \"customFieldId\": 1,\n                        \"customFieldName\": \"Broken\",\n                        \"customFieldType\": \"boolean\",\n                        \"value\": \"true\"\n                    }\n                ]\n            },\n            {\n                \"key\": \"toy\",\n                \"id\": 3,\n                \"name\": \"Mickey Mouse\",\n                \"set\": \"Disney Infinity\",\n                \"createdAt\": \"2025-07-15T16:34:08.960+00:00\",\n                \"updatedAt\": \"2025-07-15T16:34:08.960+00:00\",\n                \"deletedAt\": null,\n                \"customFieldValues\": [\n                    {\n                        \"customFieldId\": 1,\n                        \"customFieldName\": \"Broken\",\n                        \"customFieldType\": \"boolean\",\n                        \"value\": \"false\"\n                    }\n                ]\n            },\n            {\n                \"key\": \"toy\",\n                \"id\": 4,\n                \"name\": \"Minnie Mouse\",\n                \"set\": \"Disney Infinity\",\n                \"createdAt\": \"2025-07-15T16:34:16.880+00:00\",\n                \"updatedAt\": \"2025-07-15T16:34:16.881+00:00\",\n                \"deletedAt\": null,\n                \"customFieldValues\": [\n                    {\n                        \"customFieldId\": 1,\n                        \"customFieldName\": \"Broken\",\n                        \"customFieldType\": \"boolean\",\n                        \"value\": \"false\"\n                    }\n                ]\n            },\n            {\n                \"key\": \"toy\",\n                \"id\": 5,\n                \"name\": \"Super Mario\",\n                \"set\": \"Amiibo\",\n                \"createdAt\": \"2025-07-15T16:34:32.252+00:00\",\n                \"updatedAt\": \"2025-07-15T16:34:32.252+00:00\",\n                \"deletedAt\": null,\n                \"customFieldValues\": [\n                    {\n                        \"customFieldId\": 1,\n                        \"customFieldName\": \"Broken\",\n                        \"customFieldType\": \"boolean\",\n                        \"value\": \"false\"\n                    }\n                ]\n            },\n            {\n                \"key\": \"toy\",\n                \"id\": 6,\n                \"name\": \"Shovel Knight\",\n                \"set\": \"Amiibo\",\n                \"createdAt\": \"2025-07-15T16:34:46.292+00:00\",\n                \"updatedAt\": \"2025-07-15T16:34:46.293+00:00\",\n                \"deletedAt\": null,\n                \"customFieldValues\": [\n                    {\n                        \"customFieldId\": 1,\n                        \"customFieldName\": \"Broken\",\n                        \"customFieldType\": \"boolean\",\n                        \"value\": \"false\"\n                    }\n                ]\n            }\n        ],\n        \"systems\": [\n            {\n                \"key\": \"system\",\n                \"id\": 1,\n                \"name\": \"NES\",\n                \"generation\": 3,\n                \"handheld\": false,\n                \"createdAt\": \"2025-07-15T16:51:53.372+00:00\",\n                \"updatedAt\": \"2025-07-15T16:51:53.372+00:00\",\n                \"deletedAt\": null,\n                \"customFieldValues\": [\n                    {\n                        \"customFieldId\": 2,\n                        \"customFieldName\": \"Release Year\",\n                        \"customFieldType\": \"number\",\n                        \"value\": \"1986\"\n                    }\n                ]\n            },\n            {\n                \"key\": \"system\",\n                \"id\": 2,\n                \"name\": \"SNES\",\n                \"generation\": 4,\n                \"handheld\": false,\n                \"createdAt\": \"2025-07-15T16:54:02.498+00:00\",\n                \"updatedAt\": \"2025-07-15T16:54:02.498+00:00\",\n                \"deletedAt\": null,\n                \"customFieldValues\": [\n                    {\n                        \"customFieldId\": 2,\n                        \"customFieldName\": \"Release Year\",\n                        \"customFieldType\": \"number\",\n                        \"value\": \"1991\"\n                    }\n                ]\n            },\n            {\n                \"key\": \"system\",\n                \"id\": 3,\n                \"name\": \"Wii\",\n                \"generation\": 7,\n                \"handheld\": false,\n                \"createdAt\": \"2025-07-15T16:55:07.624+00:00\",\n                \"updatedAt\": \"2025-07-15T16:55:07.624+00:00\",\n                \"deletedAt\": null,\n                \"customFieldValues\": [\n                    {\n                        \"customFieldId\": 2,\n                        \"customFieldName\": \"Release Year\",\n                        \"customFieldType\": \"number\",\n                        \"value\": \"2006\"\n                    }\n                ]\n            },\n            {\n                \"key\": \"system\",\n                \"id\": 4,\n                \"name\": \"Switch\",\n                \"generation\": 9,\n                \"handheld\": true,\n                \"createdAt\": \"2025-07-15T16:55:53.764+00:00\",\n                \"updatedAt\": \"2025-07-15T16:55:53.764+00:00\",\n                \"deletedAt\": null,\n                \"customFieldValues\": [\n                    {\n                        \"customFieldId\": 2,\n                        \"customFieldName\": \"Release Year\",\n                        \"customFieldType\": \"number\",\n                        \"value\": \"2017\"\n                    }\n                ]\n            },\n            {\n                \"key\": \"system\",\n                \"id\": 5,\n                \"name\": \"Game Boy\",\n                \"generation\": 3,\n                \"handheld\": true,\n                \"createdAt\": \"2025-07-15T17:35:31.307+00:00\",\n                \"updatedAt\": \"2025-07-15T17:35:31.307+00:00\",\n                \"deletedAt\": null,\n                \"customFieldValues\": [\n                    {\n                        \"customFieldId\": 2,\n                        \"customFieldName\": \"Release Year\",\n                        \"customFieldType\": \"number\",\n                        \"value\": \"1989\"\n                    }\n                ]\n            }\n        ],\n        \"videoGameBoxes\": [\n            {\n                \"key\": \"videoGameBox\",\n                \"id\": 2,\n                \"title\": \"Super Mario Bros. / Duck Hunt\",\n                \"system\": {\n                    \"key\": \"system\",\n                    \"id\": 1,\n                    \"name\": \"NES\",\n                    \"generation\": 3,\n                    \"handheld\": false,\n                    \"createdAt\": \"2025-07-15T16:51:53.372+00:00\",\n                    \"updatedAt\": \"2025-07-15T16:51:53.372+00:00\",\n                    \"deletedAt\": null,\n                    \"customFieldValues\": [\n                        {\n                            \"customFieldId\": 2,\n                            \"customFieldName\": \"Release Year\",\n                            \"customFieldType\": \"number\",\n                            \"value\": \"1986\"\n                        }\n                    ]\n                },\n                \"videoGames\": [\n                    {\n                        \"id\": 3,\n                        \"title\": \"Super Mario Bros.\",\n                        \"system\": {\n                            \"key\": \"system\",\n                            \"id\": 1,\n                            \"name\": \"NES\",\n                            \"generation\": 3,\n                            \"handheld\": false,\n                            \"createdAt\": \"2025-07-15T16:51:53.372+00:00\",\n                            \"updatedAt\": \"2025-07-15T16:51:53.372+00:00\",\n                            \"deletedAt\": null,\n                            \"customFieldValues\": [\n                                {\n                                    \"customFieldId\": 2,\n                                    \"customFieldName\": \"Release Year\",\n                                    \"customFieldType\": \"number\",\n                                    \"value\": \"1986\"\n                                }\n                            ]\n                        },\n                        \"createdAt\": \"2025-07-15T17:42:28.590+00:00\",\n                        \"updatedAt\": \"2025-07-15T17:42:28.590+00:00\",\n                        \"deletedAt\": null,\n                        \"customFieldValues\": [\n                            {\n                                \"customFieldId\": 7,\n                                \"customFieldName\": \"notes\",\n                                \"customFieldType\": \"text\",\n                                \"value\": \"\"\n                            },\n                            {\n                                \"customFieldId\": 8,\n                                \"customFieldName\": \"enhanced_port\",\n                                \"customFieldType\": \"boolean\",\n                                \"value\": \"false\"\n                            }\n                        ]\n                    },\n                    {\n                        \"id\": 4,\n                        \"title\": \"Duck Hunt\",\n                        \"system\": {\n                            \"key\": \"system\",\n                            \"id\": 1,\n                            \"name\": \"NES\",\n                            \"generation\": 3,\n                            \"handheld\": false,\n                            \"createdAt\": \"2025-07-15T16:51:53.372+00:00\",\n                            \"updatedAt\": \"2025-07-15T16:51:53.372+00:00\",\n                            \"deletedAt\": null,\n                            \"customFieldValues\": [\n                                {\n                                    \"customFieldId\": 2,\n                                    \"customFieldName\": \"Release Year\",\n                                    \"customFieldType\": \"number\",\n                                    \"value\": \"1986\"\n                                }\n                            ]\n                        },\n                        \"createdAt\": \"2025-07-15T17:42:28.609+00:00\",\n                        \"updatedAt\": \"2025-07-15T17:42:28.609+00:00\",\n                        \"deletedAt\": null,\n                        \"customFieldValues\": [\n                            {\n                                \"customFieldId\": 7,\n                                \"customFieldName\": \"notes\",\n                                \"customFieldType\": \"text\",\n                                \"value\": \"Requires the Zapper\"\n                            },\n                            {\n                                \"customFieldId\": 8,\n                                \"customFieldName\": \"enhanced_port\",\n                                \"customFieldType\": \"boolean\",\n                                \"value\": \"false\"\n                            }\n                        ]\n                    }\n                ],\n                \"isPhysical\": true,\n                \"isCollection\": true,\n                \"createdAt\": \"2025-07-15T17:42:28.618+00:00\",\n                \"updatedAt\": \"2025-07-15T17:42:28.618+00:00\",\n                \"deletedAt\": null,\n                \"customFieldValues\": [\n                    {\n                        \"customFieldId\": 3,\n                        \"customFieldName\": \"Developer\",\n                        \"customFieldType\": \"text\",\n                        \"value\": \"Nintendo\"\n                    },\n                    {\n                        \"customFieldId\": 4,\n                        \"customFieldName\": \"Publisher\",\n                        \"customFieldType\": \"text\",\n                        \"value\": \"Nintendo\"\n                    },\n                    {\n                        \"customFieldId\": 5,\n                        \"customFieldName\": \"Release Year\",\n                        \"customFieldType\": \"number\",\n                        \"value\": \"1985\"\n                    },\n                    {\n                        \"customFieldId\": 6,\n                        \"customFieldName\": \"Notes\",\n                        \"customFieldType\": \"text\",\n                        \"value\": \"My first video game!\"\n                    }\n                ]\n            },\n            {\n                \"key\": \"videoGameBox\",\n                \"id\": 3,\n                \"title\": \"Secret of Mana\",\n                \"system\": {\n                    \"key\": \"system\",\n                    \"id\": 2,\n                    \"name\": \"SNES\",\n                    \"generation\": 4,\n                    \"handheld\": false,\n                    \"createdAt\": \"2025-07-15T16:54:02.498+00:00\",\n                    \"updatedAt\": \"2025-07-15T16:54:02.498+00:00\",\n                    \"deletedAt\": null,\n                    \"customFieldValues\": [\n                        {\n                            \"customFieldId\": 2,\n                            \"customFieldName\": \"Release Year\",\n                            \"customFieldType\": \"number\",\n                            \"value\": \"1991\"\n                        }\n                    ]\n                },\n                \"videoGames\": [\n                    {\n                        \"id\": 5,\n                        \"title\": \"Secret of Mana\",\n                        \"system\": {\n                            \"key\": \"system\",\n                            \"id\": 2,\n                            \"name\": \"SNES\",\n                            \"generation\": 4,\n                            \"handheld\": false,\n                            \"createdAt\": \"2025-07-15T16:54:02.498+00:00\",\n                            \"updatedAt\": \"2025-07-15T16:54:02.498+00:00\",\n                            \"deletedAt\": null,\n                            \"customFieldValues\": [\n                                {\n                                    \"customFieldId\": 2,\n                                    \"customFieldName\": \"Release Year\",\n                                    \"customFieldType\": \"number\",\n                                    \"value\": \"1991\"\n                                }\n                            ]\n                        },\n                        \"createdAt\": \"2025-07-15T17:53:25.542+00:00\",\n                        \"updatedAt\": \"2025-07-15T17:53:25.542+00:00\",\n                        \"deletedAt\": null,\n                        \"customFieldValues\": [\n                            {\n                                \"customFieldId\": 7,\n                                \"customFieldName\": \"notes\",\n                                \"customFieldType\": \"text\",\n                                \"value\": \"\"\n                            },\n                            {\n                                \"customFieldId\": 8,\n                                \"customFieldName\": \"enhanced_port\",\n                                \"customFieldType\": \"boolean\",\n                                \"value\": \"false\"\n                            }\n                        ]\n                    }\n                ],\n                \"isPhysical\": true,\n                \"isCollection\": false,\n                \"createdAt\": \"2025-07-15T17:53:25.554+00:00\",\n                \"updatedAt\": \"2025-07-15T17:53:25.554+00:00\",\n                \"deletedAt\": null,\n                \"customFieldValues\": [\n                    {\n                        \"customFieldId\": 3,\n                        \"customFieldName\": \"Developer\",\n                        \"customFieldType\": \"text\",\n                        \"value\": \"Square\"\n                    },\n                    {\n                        \"customFieldId\": 4,\n                        \"customFieldName\": \"Publisher\",\n                        \"customFieldType\": \"text\",\n                        \"value\": \"Square\"\n                    },\n                    {\n                        \"customFieldId\": 5,\n                        \"customFieldName\": \"Release Year\",\n                        \"customFieldType\": \"number\",\n                        \"value\": \"1993\"\n                    }\n                ]\n            },\n            {\n                \"key\": \"videoGameBox\",\n                \"id\": 4,\n                \"title\": \"Secret of Mana 2\",\n                \"system\": {\n                    \"key\": \"system\",\n                    \"id\": 2,\n                    \"name\": \"SNES\",\n                    \"generation\": 4,\n                    \"handheld\": false,\n                    \"createdAt\": \"2025-07-15T16:54:02.498+00:00\",\n                    \"updatedAt\": \"2025-07-15T16:54:02.498+00:00\",\n                    \"deletedAt\": null,\n                    \"customFieldValues\": [\n                        {\n                            \"customFieldId\": 2,\n                            \"customFieldName\": \"Release Year\",\n                            \"customFieldType\": \"number\",\n                            \"value\": \"1991\"\n                        }\n                    ]\n                },\n                \"videoGames\": [\n                    {\n                        \"id\": 6,\n                        \"title\": \"Trials of Mana\",\n                        \"system\": {\n                            \"key\": \"system\",\n                            \"id\": 2,\n                            \"name\": \"SNES\",\n                            \"generation\": 4,\n                            \"handheld\": false,\n                            \"createdAt\": \"2025-07-15T16:54:02.498+00:00\",\n                            \"updatedAt\": \"2025-07-15T16:54:02.498+00:00\",\n                            \"deletedAt\": null,\n                            \"customFieldValues\": [\n                                {\n                                    \"customFieldId\": 2,\n                                    \"customFieldName\": \"Release Year\",\n                                    \"customFieldType\": \"number\",\n                                    \"value\": \"1991\"\n                                }\n                            ]\n                        },\n                        \"createdAt\": \"2025-07-15T17:56:23.162+00:00\",\n                        \"updatedAt\": \"2025-07-15T17:56:23.162+00:00\",\n                        \"deletedAt\": null,\n                        \"customFieldValues\": [\n                            {\n                                \"customFieldId\": 7,\n                                \"customFieldName\": \"notes\",\n                                \"customFieldType\": \"text\",\n                                \"value\": \"I got this as a reproduction cart\"\n                            }\n                        ]\n                    }\n                ],\n                \"isPhysical\": true,\n                \"isCollection\": false,\n                \"createdAt\": \"2025-07-15T17:56:23.169+00:00\",\n                \"updatedAt\": \"2025-07-15T17:56:23.169+00:00\",\n                \"deletedAt\": null,\n                \"customFieldValues\": [\n                    {\n                        \"customFieldId\": 3,\n                        \"customFieldName\": \"Developer\",\n                        \"customFieldType\": \"text\",\n                        \"value\": \"Square\"\n                    },\n                    {\n                        \"customFieldId\": 4,\n                        \"customFieldName\": \"Publisher\",\n                        \"customFieldType\": \"text\",\n                        \"value\": \"Square\"\n                    },\n                    {\n                        \"customFieldId\": 5,\n                        \"customFieldName\": \"Release Year\",\n                        \"customFieldType\": \"number\",\n                        \"value\": \"0\"\n                    }\n                ]\n            },\n            {\n                \"key\": \"videoGameBox\",\n                \"id\": 5,\n                \"title\": \"Super Mario All-Stars\",\n                \"system\": {\n                    \"key\": \"system\",\n                    \"id\": 2,\n                    \"name\": \"SNES\",\n                    \"generation\": 4,\n                    \"handheld\": false,\n                    \"createdAt\": \"2025-07-15T16:54:02.498+00:00\",\n                    \"updatedAt\": \"2025-07-15T16:54:02.498+00:00\",\n                    \"deletedAt\": null,\n                    \"customFieldValues\": [\n                        {\n                            \"customFieldId\": 2,\n                            \"customFieldName\": \"Release Year\",\n                            \"customFieldType\": \"number\",\n                            \"value\": \"1991\"\n                        }\n                    ]\n                },\n                \"videoGames\": [\n                    {\n                        \"id\": 3,\n                        \"title\": \"Super Mario Bros.\",\n                        \"system\": {\n                            \"key\": \"system\",\n                            \"id\": 1,\n                            \"name\": \"NES\",\n                            \"generation\": 3,\n                            \"handheld\": false,\n                            \"createdAt\": \"2025-07-15T16:51:53.372+00:00\",\n                            \"updatedAt\": \"2025-07-15T16:51:53.372+00:00\",\n                            \"deletedAt\": null,\n                            \"customFieldValues\": [\n                                {\n                                    \"customFieldId\": 2,\n                                    \"customFieldName\": \"Release Year\",\n                                    \"customFieldType\": \"number\",\n                                    \"value\": \"1986\"\n                                }\n                            ]\n                        },\n                        \"createdAt\": \"2025-07-15T17:42:28.590+00:00\",\n                        \"updatedAt\": \"2025-07-15T17:42:28.590+00:00\",\n                        \"deletedAt\": null,\n                        \"customFieldValues\": [\n                            {\n                                \"customFieldId\": 7,\n                                \"customFieldName\": \"notes\",\n                                \"customFieldType\": \"text\",\n                                \"value\": \"\"\n                            },\n                            {\n                                \"customFieldId\": 8,\n                                \"customFieldName\": \"enhanced_port\",\n                                \"customFieldType\": \"boolean\",\n                                \"value\": \"false\"\n                            }\n                        ]\n                    },\n                    {\n                        \"id\": 7,\n                        \"title\": \"Super Mario Bros. 2\",\n                        \"system\": {\n                            \"key\": \"system\",\n                            \"id\": 1,\n                            \"name\": \"NES\",\n                            \"generation\": 3,\n                            \"handheld\": false,\n                            \"createdAt\": \"2025-07-15T16:51:53.372+00:00\",\n                            \"updatedAt\": \"2025-07-15T16:51:53.372+00:00\",\n                            \"deletedAt\": null,\n                            \"customFieldValues\": [\n                                {\n                                    \"customFieldId\": 2,\n                                    \"customFieldName\": \"Release Year\",\n                                    \"customFieldType\": \"number\",\n                                    \"value\": \"1986\"\n                                }\n                            ]\n                        },\n                        \"createdAt\": \"2025-07-15T18:08:49.398+00:00\",\n                        \"updatedAt\": \"2025-07-15T18:08:49.398+00:00\",\n                        \"deletedAt\": null,\n                        \"customFieldValues\": []\n                    },\n                    {\n                        \"id\": 8,\n                        \"title\": \"Super Mario Bros. 3\",\n                        \"system\": {\n                            \"key\": \"system\",\n                            \"id\": 1,\n                            \"name\": \"NES\",\n                            \"generation\": 3,\n                            \"handheld\": false,\n                            \"createdAt\": \"2025-07-15T16:51:53.372+00:00\",\n                            \"updatedAt\": \"2025-07-15T16:51:53.372+00:00\",\n                            \"deletedAt\": null,\n                            \"customFieldValues\": [\n                                {\n                                    \"customFieldId\": 2,\n                                    \"customFieldName\": \"Release Year\",\n                                    \"customFieldType\": \"number\",\n                                    \"value\": \"1986\"\n                                }\n                            ]\n                        },\n                        \"createdAt\": \"2025-07-15T18:08:49.415+00:00\",\n                        \"updatedAt\": \"2025-07-15T18:08:49.415+00:00\",\n                        \"deletedAt\": null,\n                        \"customFieldValues\": []\n                    },\n                    {\n                        \"id\": 9,\n                        \"title\": \"Super Mario Bros. The Lost Levels\",\n                        \"system\": {\n                            \"key\": \"system\",\n                            \"id\": 2,\n                            \"name\": \"SNES\",\n                            \"generation\": 4,\n                            \"handheld\": false,\n                            \"createdAt\": \"2025-07-15T16:54:02.498+00:00\",\n                            \"updatedAt\": \"2025-07-15T16:54:02.498+00:00\",\n                            \"deletedAt\": null,\n                            \"customFieldValues\": [\n                                {\n                                    \"customFieldId\": 2,\n                                    \"customFieldName\": \"Release Year\",\n                                    \"customFieldType\": \"number\",\n                                    \"value\": \"1991\"\n                                }\n                            ]\n                        },\n                        \"createdAt\": \"2025-07-15T18:08:49.417+00:00\",\n                        \"updatedAt\": \"2025-07-15T18:08:49.417+00:00\",\n                        \"deletedAt\": null,\n                        \"customFieldValues\": []\n                    }\n                ],\n                \"isPhysical\": true,\n                \"isCollection\": true,\n                \"createdAt\": \"2025-07-15T18:08:49.420+00:00\",\n                \"updatedAt\": \"2025-07-15T18:08:49.420+00:00\",\n                \"deletedAt\": null,\n                \"customFieldValues\": [\n                    {\n                        \"customFieldId\": 3,\n                        \"customFieldName\": \"Developer\",\n                        \"customFieldType\": \"text\",\n                        \"value\": \"Nintendo\"\n                    },\n                    {\n                        \"customFieldId\": 4,\n                        \"customFieldName\": \"Publisher\",\n                        \"customFieldType\": \"text\",\n                        \"value\": \"Nintendo\"\n                    },\n                    {\n                        \"customFieldId\": 5,\n                        \"customFieldName\": \"Release Year\",\n                        \"customFieldType\": \"number\",\n                        \"value\": \"1993\"\n                    }\n                ]\n            },\n            {\n                \"key\": \"videoGameBox\",\n                \"id\": 6,\n                \"title\": \"Kirby's Return to Dream Land\",\n                \"system\": {\n                    \"key\": \"system\",\n                    \"id\": 3,\n                    \"name\": \"Wii\",\n                    \"generation\": 7,\n                    \"handheld\": false,\n                    \"createdAt\": \"2025-07-15T16:55:07.624+00:00\",\n                    \"updatedAt\": \"2025-07-15T16:55:07.624+00:00\",\n                    \"deletedAt\": null,\n                    \"customFieldValues\": [\n                        {\n                            \"customFieldId\": 2,\n                            \"customFieldName\": \"Release Year\",\n                            \"customFieldType\": \"number\",\n                            \"value\": \"2006\"\n                        }\n                    ]\n                },\n                \"videoGames\": [\n                    {\n                        \"id\": 10,\n                        \"title\": \"Kirby's Return to Dream Land\",\n                        \"system\": {\n                            \"key\": \"system\",\n                            \"id\": 3,\n                            \"name\": \"Wii\",\n                            \"generation\": 7,\n                            \"handheld\": false,\n                            \"createdAt\": \"2025-07-15T16:55:07.624+00:00\",\n                            \"updatedAt\": \"2025-07-15T16:55:07.624+00:00\",\n                            \"deletedAt\": null,\n                            \"customFieldValues\": [\n                                {\n                                    \"customFieldId\": 2,\n                                    \"customFieldName\": \"Release Year\",\n                                    \"customFieldType\": \"number\",\n                                    \"value\": \"2006\"\n                                }\n                            ]\n                        },\n                        \"createdAt\": \"2025-07-15T18:42:19.700+00:00\",\n                        \"updatedAt\": \"2025-07-15T18:42:19.700+00:00\",\n                        \"deletedAt\": null,\n                        \"customFieldValues\": []\n                    }\n                ],\n                \"isPhysical\": true,\n                \"isCollection\": false,\n                \"createdAt\": \"2025-07-15T18:42:19.706+00:00\",\n                \"updatedAt\": \"2025-07-15T18:42:19.706+00:00\",\n                \"deletedAt\": null,\n                \"customFieldValues\": [\n                    {\n                        \"customFieldId\": 3,\n                        \"customFieldName\": \"Developer\",\n                        \"customFieldType\": \"text\",\n                        \"value\": \"Nintendo\"\n                    },\n                    {\n                        \"customFieldId\": 4,\n                        \"customFieldName\": \"Publisher\",\n                        \"customFieldType\": \"text\",\n                        \"value\": \"Nintendo\"\n                    },\n                    {\n                        \"customFieldId\": 5,\n                        \"customFieldName\": \"Release Year\",\n                        \"customFieldType\": \"number\",\n                        \"value\": \"2011\"\n                    }\n                ]\n            },\n            {\n                \"key\": \"videoGameBox\",\n                \"id\": 7,\n                \"title\": \"Kirby's Return to Dream Land Deluxe\",\n                \"system\": {\n                    \"key\": \"system\",\n                    \"id\": 4,\n                    \"name\": \"Switch\",\n                    \"generation\": 9,\n                    \"handheld\": true,\n                    \"createdAt\": \"2025-07-15T16:55:53.764+00:00\",\n                    \"updatedAt\": \"2025-07-15T16:55:53.764+00:00\",\n                    \"deletedAt\": null,\n                    \"customFieldValues\": [\n                        {\n                            \"customFieldId\": 2,\n                            \"customFieldName\": \"Release Year\",\n                            \"customFieldType\": \"number\",\n                            \"value\": \"2017\"\n                        }\n                    ]\n                },\n                \"videoGames\": [\n                    {\n                        \"id\": 10,\n                        \"title\": \"Kirby's Return to Dream Land\",\n                        \"system\": {\n                            \"key\": \"system\",\n                            \"id\": 3,\n                            \"name\": \"Wii\",\n                            \"generation\": 7,\n                            \"handheld\": false,\n                            \"createdAt\": \"2025-07-15T16:55:07.624+00:00\",\n                            \"updatedAt\": \"2025-07-15T16:55:07.624+00:00\",\n                            \"deletedAt\": null,\n                            \"customFieldValues\": [\n                                {\n                                    \"customFieldId\": 2,\n                                    \"customFieldName\": \"Release Year\",\n                                    \"customFieldType\": \"number\",\n                                    \"value\": \"2006\"\n                                }\n                            ]\n                        },\n                        \"createdAt\": \"2025-07-15T18:42:19.700+00:00\",\n                        \"updatedAt\": \"2025-07-15T18:42:19.700+00:00\",\n                        \"deletedAt\": null,\n                        \"customFieldValues\": []\n                    }\n                ],\n                \"isPhysical\": true,\n                \"isCollection\": false,\n                \"createdAt\": \"2025-07-15T18:43:40.110+00:00\",\n                \"updatedAt\": \"2025-07-15T18:43:40.110+00:00\",\n                \"deletedAt\": null,\n                \"customFieldValues\": [\n                    {\n                        \"customFieldId\": 3,\n                        \"customFieldName\": \"Developer\",\n                        \"customFieldType\": \"text\",\n                        \"value\": \"Nintendo\"\n                    },\n                    {\n                        \"customFieldId\": 4,\n                        \"customFieldName\": \"Publisher\",\n                        \"customFieldType\": \"text\",\n                        \"value\": \"Nintendo\"\n                    },\n                    {\n                        \"customFieldId\": 5,\n                        \"customFieldName\": \"Release Year\",\n                        \"customFieldType\": \"number\",\n                        \"value\": \"2023\"\n                    }\n                ]\n            },\n            {\n                \"key\": \"videoGameBox\",\n                \"id\": 8,\n                \"title\": \"Collection of Mana\",\n                \"system\": {\n                    \"key\": \"system\",\n                    \"id\": 4,\n                    \"name\": \"Switch\",\n                    \"generation\": 9,\n                    \"handheld\": true,\n                    \"createdAt\": \"2025-07-15T16:55:53.764+00:00\",\n                    \"updatedAt\": \"2025-07-15T16:55:53.764+00:00\",\n                    \"deletedAt\": null,\n                    \"customFieldValues\": [\n                        {\n                            \"customFieldId\": 2,\n                            \"customFieldName\": \"Release Year\",\n                            \"customFieldType\": \"number\",\n                            \"value\": \"2017\"\n                        }\n                    ]\n                },\n                \"videoGames\": [\n                    {\n                        \"id\": 5,\n                        \"title\": \"Secret of Mana\",\n                        \"system\": {\n                            \"key\": \"system\",\n                            \"id\": 2,\n                            \"name\": \"SNES\",\n                            \"generation\": 4,\n                            \"handheld\": false,\n                            \"createdAt\": \"2025-07-15T16:54:02.498+00:00\",\n                            \"updatedAt\": \"2025-07-15T16:54:02.498+00:00\",\n                            \"deletedAt\": null,\n                            \"customFieldValues\": [\n                                {\n                                    \"customFieldId\": 2,\n                                    \"customFieldName\": \"Release Year\",\n                                    \"customFieldType\": \"number\",\n                                    \"value\": \"1991\"\n                                }\n                            ]\n                        },\n                        \"createdAt\": \"2025-07-15T17:53:25.542+00:00\",\n                        \"updatedAt\": \"2025-07-15T17:53:25.542+00:00\",\n                        \"deletedAt\": null,\n                        \"customFieldValues\": [\n                            {\n                                \"customFieldId\": 7,\n                                \"customFieldName\": \"notes\",\n                                \"customFieldType\": \"text\",\n                                \"value\": \"\"\n                            },\n                            {\n                                \"customFieldId\": 8,\n                                \"customFieldName\": \"enhanced_port\",\n                                \"customFieldType\": \"boolean\",\n                                \"value\": \"false\"\n                            }\n                        ]\n                    },\n                    {\n                        \"id\": 6,\n                        \"title\": \"Trials of Mana\",\n                        \"system\": {\n                            \"key\": \"system\",\n                            \"id\": 2,\n                            \"name\": \"SNES\",\n                            \"generation\": 4,\n                            \"handheld\": false,\n                            \"createdAt\": \"2025-07-15T16:54:02.498+00:00\",\n                            \"updatedAt\": \"2025-07-15T16:54:02.498+00:00\",\n                            \"deletedAt\": null,\n                            \"customFieldValues\": [\n                                {\n                                    \"customFieldId\": 2,\n                                    \"customFieldName\": \"Release Year\",\n                                    \"customFieldType\": \"number\",\n                                    \"value\": \"1991\"\n                                }\n                            ]\n                        },\n                        \"createdAt\": \"2025-07-15T17:56:23.162+00:00\",\n                        \"updatedAt\": \"2025-07-15T17:56:23.162+00:00\",\n                        \"deletedAt\": null,\n                        \"customFieldValues\": [\n                            {\n                                \"customFieldId\": 7,\n                                \"customFieldName\": \"notes\",\n                                \"customFieldType\": \"text\",\n                                \"value\": \"I got this as a reproduction cart\"\n                            }\n                        ]\n                    },\n                    {\n                        \"id\": 11,\n                        \"title\": \"Final Fantasy Adventure\",\n                        \"system\": {\n                            \"key\": \"system\",\n                            \"id\": 5,\n                            \"name\": \"Game Boy\",\n                            \"generation\": 3,\n                            \"handheld\": true,\n                            \"createdAt\": \"2025-07-15T17:35:31.307+00:00\",\n                            \"updatedAt\": \"2025-07-15T17:35:31.307+00:00\",\n                            \"deletedAt\": null,\n                            \"customFieldValues\": [\n                                {\n                                    \"customFieldId\": 2,\n                                    \"customFieldName\": \"Release Year\",\n                                    \"customFieldType\": \"number\",\n                                    \"value\": \"1989\"\n                                }\n                            ]\n                        },\n                        \"createdAt\": \"2025-07-15T18:46:48.245+00:00\",\n                        \"updatedAt\": \"2025-07-15T18:46:48.245+00:00\",\n                        \"deletedAt\": null,\n                        \"customFieldValues\": []\n                    }\n                ],\n                \"isPhysical\": true,\n                \"isCollection\": true,\n                \"createdAt\": \"2025-07-15T18:46:48.247+00:00\",\n                \"updatedAt\": \"2025-07-15T18:46:48.247+00:00\",\n                \"deletedAt\": null,\n                \"customFieldValues\": [\n                    {\n                        \"customFieldId\": 3,\n                        \"customFieldName\": \"Developer\",\n                        \"customFieldType\": \"text\",\n                        \"value\": \"SquareEnix\"\n                    },\n                    {\n                        \"customFieldId\": 4,\n                        \"customFieldName\": \"Publisher\",\n                        \"customFieldType\": \"text\",\n                        \"value\": \"SquareEnix\"\n                    },\n                    {\n                        \"customFieldId\": 5,\n                        \"customFieldName\": \"Release Year\",\n                        \"customFieldType\": \"number\",\n                        \"value\": \"2019\"\n                    }\n                ]\n            }\n        ]\n    },\n    \"errors\": null\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/function/import"
+			},
+			"response": []
+		},
+		{
+			"name": "import from backup.json",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": "http://localhost:8080/v1/function/importFromFile"
+			},
+			"response": []
+		},
+		{
+			"name": "create board game box and board game",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"boardGameBox\": {\r\n        \"title\": \"Settlers of Catan\",\r\n        \"isExpansion\": false,\r\n        \"isStandAlone\": true,\r\n        \"baseSetId\": null,\r\n        \"boardGameId\": null,\r\n        \"boardGame\": {\r\n            \"title\": \"Settlers of Catan\",\r\n            \"customFieldValues\": [\r\n                {\r\n                    \"customFieldId\": 9,\r\n                    \"customFieldName\": \"Designer\",\r\n                    \"customFieldType\": \"text\",\r\n                    \"value\": \"Klaus Teuber\"\r\n                }\r\n            ]\r\n        },\r\n        \"customFieldValues\": [\r\n            {\r\n                \"customFieldId\": 10,\r\n                \"customFieldName\": \"Player Count\",\r\n                \"customFieldType\": \"text\",\r\n                \"value\": \"3-4\"\r\n            }\r\n        ]\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/boardGameBoxes"
+			},
+			"response": []
+		},
+		{
+			"name": "read one board game box",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8080/v1/boardGameBoxes/1"
+			},
+			"response": []
+		},
+		{
+			"name": "read all board game boxes",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"filters\": []\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/boardGameBoxes/function/search"
+			},
+			"response": []
+		},
+		{
+			"name": "read all board game boxes (filters example)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"filters\": [\r\n        {\r\n            \"key\": \"boardGameBox\",\r\n            \"field\": \"title\",\r\n            \"operator\": \"contains\",\r\n            \"operand\": \"Catan\"\r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/boardGameBoxes/function/search"
+			},
+			"response": []
+		},
+		{
+			"name": "update one board game box",
+			"description": "Updates an existing board game box. Note: boardGameId is required and must be greater than 0 for updates. Board game boxes must always have a valid parent board game.",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"boardGameBox\": {\r\n        \"title\": \"Updated Board Game Box Title\",\r\n        \"isExpansion\": false,\r\n        \"isStandAlone\": true,\r\n        \"baseSetId\": null,\r\n        \"boardGameId\": 1,\r\n        \"customFieldValues\": []\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/boardGameBoxes/1"
+			},
+			"response": []
+		},
+		{
+			"name": "delete one board game box",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": "http://localhost:8080/v1/boardGameBoxes/1"
+			},
+			"response": []
+		},
+		{
+			"name": "read one board game",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8080/v1/boardGames/1"
+			},
+			"response": []
+		},
+		{
+			"name": "read all board games",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"filters\": []\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/boardGames/function/search"
+			},
+			"response": []
+		},
+		{
+			"name": "update one board game",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"boardGame\": {\r\n        \"title\": \"Updated Board Game Title\",\r\n        \"customFieldValues\": [\r\n            {\r\n                \"customFieldId\": 9,\r\n                \"customFieldName\": \"Designer\",\r\n                \"customFieldType\": \"text\",\r\n                \"value\": \"Updated Designer\"\r\n            }\r\n        ]\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/boardGames/1"
+			},
+			"response": []
+		},
+		{
+			"name": "create new metadata",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"metadata\": {\r\n        \"id\": null,\r\n        \"key\": \"user_settings\",\r\n        \"value\": \"{\\\"theme\\\":\\\"dark\\\",\\\"language\\\":\\\"en\\\",\\\"notifications\\\":true}\",\r\n        \"createdAt\": null,\r\n        \"updatedAt\": null,\r\n        \"deletedAt\": null\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/metadata"
+			},
+			"response": []
+		},
+		{
+			"name": "read all metadata",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8080/v1/metadata"
+			},
+			"response": []
+		},
+		{
+			"name": "read one metadata by key",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8080/v1/metadata/user_settings"
+			},
+			"response": []
+		},
+		{
+			"name": "update metadata value",
+			"request": {
+				"method": "PATCH",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"value\": \"{\\\"theme\\\":\\\"light\\\",\\\"language\\\":\\\"es\\\",\\\"notifications\\\":false}\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/metadata/user_settings"
+			},
+			"response": []
+		},
+		{
+			"name": "delete one metadata",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": "http://localhost:8080/v1/metadata/user_settings"
+			},
+			"response": []
+		},
+		{
+			"name": "seed sample data",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": "http://localhost:8080/v1/function/seedSampleData"
+			},
+			"response": []
+		},
+		{
+			"name": "seed my collection",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": "http://localhost:8080/v1/function/seedMyCollection"
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": {
+			"token": "{{token}}"
+		}
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// test if successful",
+					"pm.test(\"Sucessful response\", function () {",
+					"    pm.response.to.be.success;",
+					"});",
+					"",
+					"",
+					"// retry if needed",
+					"var code = pm.response.code;",
+					"",
+					"var maxNumberOfRetries = 3;",
+					"var request = request.name;",
+					"",
+					"if (!pm.environment.get(\"tries\")) {",
+					"    pm.environment.set(\"tries\", 1);",
+					"}",
+					"",
+					"var tries = pm.environment.get(\"tries\");",
+					"",
+					"if (!((code == 200) || (code == 201) || (code == 204)) && (pm.environment.get(\"tries\") < maxNumberOfRetries)) {",
+					"    console.log('fail ' + tries);",
+					"    var tries = parseInt(pm.environment.get(\"tries\"), 10);",
+					"    pm.environment.set(\"tries\", tries + 1);",
+					"    postman.setNextRequest(request);",
+					"} else if (!((code == 200) || (code == 201) || (code == 204))) {",
+					"    console.log('failed ' + maxNumberOfRetries + ' times!');",
+					"    pm.environment.unset(\"tries\");",
+					"    postman.setNextRequest(null);",
+					"} else {",
+					"// \tconsole.log(\"success\"); ",
+					"\tpm.environment.unset(\"tries\");",
+					"}"
+				]
+			}
+		}
+	]
+}
