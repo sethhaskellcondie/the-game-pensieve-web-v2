@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import SettingsSection from "./SettingsSection";
+import { useDeveloperMode } from "./DeveloperModeContext";
 import styles from "./ApiHeartbeat.module.css";
 
 type Status = "idle" | "online" | "offline";
@@ -10,6 +11,7 @@ type Status = "idle" | "online" | "offline";
 // proxies the real backend server-side) and reports ONLINE/OFFLINE plus the
 // measured round-trip time.
 export default function ApiHeartbeat() {
+  const { developerMode } = useDeveloperMode();
   const [status, setStatus] = useState<Status>("idle");
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -18,7 +20,9 @@ export default function ApiHeartbeat() {
     setLoading(true);
     const startedAt = performance.now();
     try {
-      const res = await fetch("/api/heartbeat");
+      const res = await fetch(
+        developerMode ? "/api/heartbeat?debug=1" : "/api/heartbeat",
+      );
       const elapsed = Math.round(performance.now() - startedAt);
       const body = (await res.json()) as { status?: string };
       const online = res.ok && body.status === "online";

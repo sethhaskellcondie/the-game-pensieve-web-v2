@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import SettingsSection from "./SettingsSection";
 import Toggle from "./Toggle";
+import { useDeveloperMode } from "./DeveloperModeContext";
 import styles from "./UiSettings.module.css";
 
 type SettingKey = "massInput" | "massEdit" | "developer";
@@ -48,17 +49,18 @@ const SETTINGS: SettingMeta[] = [
   },
 ];
 
-// Interface preference toggles. State is in-memory only for now (resets on
-// reload); these are not yet wired to any feature.
 export default function UiSettings() {
+  const { setDeveloperMode } = useDeveloperMode();
   const [values, setValues] = useState<Record<SettingKey, boolean>>({
     massInput: false,
     massEdit: false,
     developer: false,
   });
 
-  const toggle = (key: SettingKey) => (next: boolean) =>
+  const toggle = (key: SettingKey) => (next: boolean) => {
     setValues((prev) => ({ ...prev, [key]: next }));
+    if (key === "developer") setDeveloperMode(next);
+  };
 
   return (
     <SettingsSection

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Header from "@/components/Header";
 import UiSettings from "@/components/UiSettings";
 import ApiHeartbeat from "@/components/ApiHeartbeat";
+import { DeveloperModeProvider } from "@/components/DeveloperModeContext";
 import { OptionsIcon } from "@/components/icons";
 import styles from "./options.module.css";
 
@@ -19,8 +20,10 @@ export default function OptionsPage() {
       />
 
       <main className={styles.content}>
-        <UiSettings />
-        <ApiHeartbeat />
+        <DeveloperModeProvider>
+          <UiSettings />
+          <ApiHeartbeat />
+        </DeveloperModeProvider>
       </main>
     </>
   );
