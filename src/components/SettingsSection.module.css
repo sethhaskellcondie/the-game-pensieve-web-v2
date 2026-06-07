@@ -1,0 +1,33 @@
+.section {
+  max-width: 960px;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 14px;
+}
+
+.title {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--primary-600);
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--primary-600);
+  padding-bottom: 4px;
+}
+
+.description {
+  font-size: 13px;
+  color: var(--gray-500);
+}
+
+.card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}

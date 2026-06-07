@@ -2,11 +2,14 @@ import type { ReactNode } from "react";
 import styles from "./Header.module.css";
 
 type HeaderProps = {
+  // The icon glyph only (e.g. an <svg> or <Image>). Header owns the mark's
+  // white square and blue tint, so pages can't make the mark diverge.
   icon: ReactNode;
   title: string;
-  titleAccent: string;
+  titleAccent?: string;
   tagline: string;
-  variant?: "default" | "construction";
+  // Optional "flavor" slot rendered under the title block (stats, a badge, a
+  // status pill, …). Composition keeps Header agnostic about what goes here.
   children?: ReactNode;
 };
 
@@ -15,24 +18,18 @@ export default function Header({
   title,
   titleAccent,
   tagline,
-  variant = "default",
   children,
 }: HeaderProps) {
-  const isConstruction = variant === "construction";
-
   return (
-    <header
-      className={`${styles.header} ${isConstruction ? styles.construction : ""}`}
-    >
+    <header className={styles.header}>
       <div className={styles.heroTop}>
-        <div
-          className={`${styles.heroMark} ${isConstruction ? styles.markWarning : ""}`}
-        >
-          {icon}
-        </div>
+        <div className={styles.heroMark}>{icon}</div>
         <div>
           <h1 className={styles.heroTitle}>
-            {title} <span className={styles.heroTitleEm}>{titleAccent}</span>
+            {title}
+            {titleAccent ? (
+              <> <span className={styles.heroTitleEm}>{titleAccent}</span></>
+            ) : null}
           </h1>
           <div className={styles.tag}>{tagline}</div>
         </div>

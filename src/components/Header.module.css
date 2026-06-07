@@ -15,36 +15,28 @@
   position: relative;
 }
 
+/* The mark is uniform on every page: a white rounded square with a blue icon. */
 .heroMark {
   flex: 0 0 88px;
   width: 88px;
   height: 88px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.94);
+  color: var(--primary-600);
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 14px 30px -16px rgba(14, 27, 58, 0.8);
 }
 
+.heroMark svg {
+  width: 48px;
+  height: 48px;
+}
+
 .heroMark img {
   width: 78px;
   height: 78px;
-}
-
-/* Construction variant */
-.construction {
-  background: linear-gradient(120deg, var(--armor-navy) 0%, var(--ink-navy) 90%);
-}
-
-.markWarning {
-  background: var(--warning);
-}
-
-.markWarning svg {
-  width: 46px;
-  height: 46px;
-  color: var(--ink-navy);
 }
 
 .heroTitle {

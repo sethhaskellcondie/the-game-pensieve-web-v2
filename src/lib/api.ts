@@ -41,3 +41,11 @@ export async function apiGet<T>(path: string): Promise<T> {
   }
   return body.data;
 }
+
+// Pings the backend health-check endpoint and reports whether it responded OK.
+// Unlike the other routes, /heartbeat returns text/plain ("thump thump") rather
+// than the { data, errors } envelope, so it bypasses apiGet.
+export async function checkHeartbeat(): Promise<boolean> {
+  const res = await fetch(`${getBaseUrl()}/heartbeat`, { cache: "no-store" });
+  return res.ok;
+}

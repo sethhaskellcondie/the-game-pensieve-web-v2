@@ -12,7 +12,6 @@ export default function UnderConstruction({ label }: UnderConstructionProps) {
   return (
     <>
       <Header
-        variant="construction"
         icon={
           <svg
             viewBox="0 0 24 24"

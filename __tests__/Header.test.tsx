@@ -40,11 +40,17 @@ describe("Header", () => {
     expect(screen.getByTestId("child")).toBeInTheDocument();
   });
 
-  it("applies the construction styling only when the construction variant is set", () => {
-    const { rerender } = render(<Header {...baseProps} />);
-    expect(screen.getByRole("banner")).not.toHaveClass("construction");
+  it("renders the title alone when no accent is provided", () => {
+    render(
+      <Header
+        icon={baseProps.icon}
+        title={baseProps.title}
+        tagline={baseProps.tagline}
+      />,
+    );
 
-    rerender(<Header {...baseProps} variant="construction" />);
-    expect(screen.getByRole("banner")).toHaveClass("construction");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "THE GAME",
+    );
   });
 });

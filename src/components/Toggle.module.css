@@ -1,0 +1,35 @@
+.toggle {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 26px;
+  padding: 3px;
+  border: none;
+  border-radius: 999px;
+  background: var(--gray-300);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: background 0.18s ease;
+}
+
+.toggle[aria-checked="true"] {
+  background: var(--primary-600);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--primary-600);
+  outline-offset: 2px;
+}
+
+.knob {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--white);
+  box-shadow: 0 1px 3px rgba(14, 27, 58, 0.35);
+  transition: transform 0.18s ease;
+}
+
+.toggle[aria-checked="true"] .knob {
+  transform: translateX(20px);
+}
