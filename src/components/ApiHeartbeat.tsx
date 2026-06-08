@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Button from "./Button";
 import SettingsSection from "./SettingsSection";
 import { useUiSettings } from "./UiSettingsProvider";
 import styles from "./ApiHeartbeat.module.css";
@@ -75,14 +76,13 @@ export default function ApiHeartbeat() {
           )}
         </output>
 
-        <button
-          type="button"
-          className={styles.button}
+        <Button
+          className={styles.checkButton}
           onClick={runHeartbeat}
           disabled={loading}
         >
-          {loading ? "Checking…" : "Check Heartbeat"}
-        </button>
+          {"Check Heartbeat"}
+        </Button>
       </div>
     </SettingsSection>
   );

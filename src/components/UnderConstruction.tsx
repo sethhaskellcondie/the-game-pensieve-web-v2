@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
+import Button from "@/components/Button";
 import Header from "@/components/Header";
 import styles from "./UnderConstruction.module.css";
 
@@ -52,9 +52,7 @@ export default function UnderConstruction({
           </p>
 
           <div className={styles.ucActions}>
-            <Link className={styles.ucBtn} href="/">
-              ← Back to Home
-            </Link>
+            <Button href="/">← Back to Home</Button>
           </div>
         </div>
       </main>

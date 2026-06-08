@@ -107,19 +107,3 @@
   flex-wrap: wrap;
   justify-content: center;
 }
-
-.ucBtn {
-  font-size: var(--text-label);
-  font-weight: 700;
-  padding: 13px 22px;
-  border-radius: 12px;
-  background: var(--primary-600);
-  color: var(--white-pure);
-  border: 1px solid transparent;
-  transition: 0.15s;
-  cursor: pointer;
-}
-
-.ucBtn:hover {
-  filter: brightness(1.08);
-}
