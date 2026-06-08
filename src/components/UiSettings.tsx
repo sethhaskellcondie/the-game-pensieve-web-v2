@@ -35,7 +35,11 @@ const SETTINGS: SettingMeta[] = [
     description: "Select and update multiple records at once.",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M14 4l6 6M3 21l3-1 11-11-2-2L4 18l-1 3z" />
+        {/* A sheet of paper with a folded corner, and a pen writing on it. */}
+        <path d="M14 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6Z" />
+        <path d="M14 3v3h3" />
+        <path d="M15.5 8.5a1.8 1.8 0 0 1 2.5 2.5L10.5 18.5l-3.5 1 1-3.5Z" />
+        <path d="M13.5 10.5l2.5 2.5" />
       </svg>
     ),
   },
