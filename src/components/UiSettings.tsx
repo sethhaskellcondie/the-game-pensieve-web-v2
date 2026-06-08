@@ -23,7 +23,9 @@ const SETTINGS: SettingMeta[] = [
     description: "Add many entries in a row without leaving the form.",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M4 6h16M4 12h16M4 18h16" />
+        {/* Two arrows dropping down into an inbox tray. */}
+        <path d="M9 2v8M6.5 7.5 9 10 11.5 7.5M15 2v8M12.5 7.5 15 10 17.5 7.5" />
+        <path d="M3 13v6a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-6h-5l-1.5 2.5h-5L8 13z" />
       </svg>
     ),
   },
