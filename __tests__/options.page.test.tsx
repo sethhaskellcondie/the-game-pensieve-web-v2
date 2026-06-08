@@ -19,6 +19,13 @@ describe("OptionsPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders the Backup & Import section (always visible)", () => {
+    render(<OptionsPage />);
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Backup & Import" }),
+    ).toBeInTheDocument();
+  });
+
   it("hides the API Tools section by default (developer mode off)", () => {
     render(<OptionsPage />);
     expect(

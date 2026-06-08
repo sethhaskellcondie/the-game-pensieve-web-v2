@@ -1,0 +1,54 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+}
+
+.row + .row {
+  border-top: 1px solid var(--line);
+}
+
+.icon {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--paper);
+  color: var(--primary-600);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.text {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--ink-navy);
+}
+
+.description {
+  font-size: var(--text-label);
+  color: var(--gray-500);
+}
+
+/* Fixed width so every action button matches, regardless of label length;
+   the Button component already centers the label. Sized for the longest
+   label ("Import From Backup"). */
+.actionButton {
+  flex: 0 0 auto;
+  width: 220px;
+}
