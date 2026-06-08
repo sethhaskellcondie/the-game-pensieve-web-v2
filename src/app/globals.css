@@ -77,3 +77,13 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+/* Form controls don't inherit font-family from their ancestors by default
+   (browser UA stylesheets give them their own), which breaks the inherited
+   JetBrains Mono default. Reset them so they follow the cascade. */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
