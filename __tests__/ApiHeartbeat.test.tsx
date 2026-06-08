@@ -20,7 +20,7 @@ describe("ApiHeartbeat", () => {
     } as Response);
 
     render(<ApiHeartbeat />);
-    fireEvent.click(screen.getByRole("button", { name: "Run Heartbeat" }));
+    fireEvent.click(screen.getByRole("button", { name: "Check Heartbeat" }));
 
     expect(await screen.findByText(/ONLINE/)).toBeInTheDocument();
     expect(screen.getByText(/ms$/)).toBeInTheDocument();
@@ -33,7 +33,7 @@ describe("ApiHeartbeat", () => {
     } as Response);
 
     render(<ApiHeartbeat />);
-    fireEvent.click(screen.getByRole("button", { name: "Run Heartbeat" }));
+    fireEvent.click(screen.getByRole("button", { name: "Check Heartbeat" }));
 
     expect(await screen.findByText("OFFLINE")).toBeInTheDocument();
   });
@@ -42,7 +42,7 @@ describe("ApiHeartbeat", () => {
     mockFetch.mockRejectedValue(new Error("network down"));
 
     render(<ApiHeartbeat />);
-    fireEvent.click(screen.getByRole("button", { name: "Run Heartbeat" }));
+    fireEvent.click(screen.getByRole("button", { name: "Check Heartbeat" }));
 
     expect(await screen.findByText("OFFLINE")).toBeInTheDocument();
   });

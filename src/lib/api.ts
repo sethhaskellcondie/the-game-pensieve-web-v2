@@ -37,6 +37,67 @@ export async function apiGet<T>(path: string): Promise<T> {
   return body.data;
 }
 
+// Like apiGet, but treats a 404 as "not found" and returns null instead of
+// throwing. Other non-OK responses and envelope errors still throw.
+export async function apiGetOrNull<T>(path: string): Promise<T | null> {
+  const res = await fetch(`${getBaseUrl()}${path}`, {
+    cache: "no-store",
+  });
+
+  if (res.status === 404) return null;
+
+  if (!res.ok) {
+    throw new Error(
+      `Backend request failed: ${res.status} ${res.statusText} (${path})`,
+    );
+  }
+
+  const body = (await res.json()) as ApiResponse<T>;
+  if (body.errors && body.errors.length > 0) {
+    throw new Error(
+      `Backend returned errors for ${path}: ${body.errors.join(", ")}`,
+    );
+  }
+  return body.data;
+}
+
+// Shared sender for the methods that carry a JSON body (POST/PATCH). Unwraps the
+// same { data, errors } envelope as apiGet.
+async function apiSend<T>(
+  method: "POST" | "PATCH",
+  path: string,
+  body: unknown,
+): Promise<T> {
+  const res = await fetch(`${getBaseUrl()}${path}`, {
+    method,
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    throw new Error(
+      `Backend request failed: ${res.status} ${res.statusText} (${path})`,
+    );
+  }
+
+  const payload = (await res.json()) as ApiResponse<T>;
+  if (payload.errors && payload.errors.length > 0) {
+    throw new Error(
+      `Backend returned errors for ${path}: ${payload.errors.join(", ")}`,
+    );
+  }
+  return payload.data;
+}
+
+export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  return apiSend<T>("POST", path, body);
+}
+
+export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
+  return apiSend<T>("PATCH", path, body);
+}
+
 // Pings the backend health-check endpoint and reports whether it responded OK.
 // Unlike the other routes, /heartbeat returns text/plain ("thump thump") rather
 // than the { data, errors } envelope, so it bypasses apiGet.

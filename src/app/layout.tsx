@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Press_Start_2P } from "next/font/google";
 import Sidebar from "@/components/Sidebar";
+import { UiSettingsProvider } from "@/components/UiSettingsProvider";
+import { loadUiSettings } from "@/lib/uiSettings";
 import "./globals.css";
 import styles from "./layout.module.css";
 
@@ -20,21 +22,27 @@ export const metadata: Metadata = {
   description: "Welcome to the Game Pensieve!",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Get-or-create the UI settings in the backend so they're available app-wide
+  // (and present on first paint) via the provider below.
+  const uiSettings = await loadUiSettings();
+
   return (
     <html
       lang="en"
       className={`${jetBrainsMono.variable} ${pressStart2P.variable}`}
     >
       <body>
-        <div className={styles.layout}>
-          <Sidebar />
-          <div className={styles.main}>{children}</div>
-        </div>
+        <UiSettingsProvider initial={uiSettings}>
+          <div className={styles.layout}>
+            <Sidebar />
+            <div className={styles.main}>{children}</div>
+          </div>
+        </UiSettingsProvider>
       </body>
     </html>
   );

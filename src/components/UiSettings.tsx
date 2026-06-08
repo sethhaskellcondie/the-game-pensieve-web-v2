@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import type { ReactNode } from "react";
 import SettingsSection from "./SettingsSection";
 import Toggle from "./Toggle";
-import { useDeveloperMode } from "./DeveloperModeContext";
+import { useUiSettings } from "./UiSettingsProvider";
+import type { UiSettings } from "@/lib/uiSettings.types";
 import styles from "./UiSettings.module.css";
 
-type SettingKey = "massInput" | "massEdit" | "developer";
+type SettingKey = keyof UiSettings;
 
 type SettingMeta = {
   key: SettingKey;
@@ -18,7 +18,7 @@ type SettingMeta = {
 
 const SETTINGS: SettingMeta[] = [
   {
-    key: "massInput",
+    key: "massInputMode",
     title: "Mass Input Mode",
     description: "Add many entries in a row without leaving the form.",
     icon: (
@@ -28,7 +28,7 @@ const SETTINGS: SettingMeta[] = [
     ),
   },
   {
-    key: "massEdit",
+    key: "massEditMode",
     title: "Mass Edit Mode",
     description: "Select and update multiple records at once.",
     icon: (
@@ -38,7 +38,7 @@ const SETTINGS: SettingMeta[] = [
     ),
   },
   {
-    key: "developer",
+    key: "developerMode",
     title: "Developer Mode",
     description: "Show the developer tools.",
     icon: (
@@ -50,16 +50,10 @@ const SETTINGS: SettingMeta[] = [
 ];
 
 export default function UiSettings() {
-  const { setDeveloperMode } = useDeveloperMode();
-  const [values, setValues] = useState<Record<SettingKey, boolean>>({
-    massInput: false,
-    massEdit: false,
-    developer: false,
-  });
+  const { settings, setSetting, saving } = useUiSettings();
 
   const toggle = (key: SettingKey) => (next: boolean) => {
-    setValues((prev) => ({ ...prev, [key]: next }));
-    if (key === "developer") setDeveloperMode(next);
+    void setSetting(key, next);
   };
 
   return (
@@ -76,8 +70,9 @@ export default function UiSettings() {
           </div>
           <Toggle
             label={setting.title}
-            checked={values[setting.key]}
+            checked={settings[setting.key]}
             onChange={toggle(setting.key)}
+            disabled={saving}
           />
         </div>
       ))}
