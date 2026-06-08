@@ -1,4 +1,25 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+
+// The API Tools section is only rendered in developer mode. Stub the settings
+// write proxy and flip the toggle on (if it isn't already) so the section is
+// reliably present regardless of the backend's stored value.
+async function enableDeveloperMode(page: Page) {
+  await page.route("**/api/ui-settings", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true }),
+    }),
+  );
+
+  await page.goto("/options");
+
+  const developerMode = page.getByRole("switch", { name: "Developer Mode" });
+  if ((await developerMode.getAttribute("aria-checked")) !== "true") {
+    await developerMode.click();
+    await expect(developerMode).toHaveAttribute("aria-checked", "true");
+  }
+}
 
 test("options page is reachable from the sidebar", async ({ page }) => {
   await page.goto("/");
@@ -73,7 +94,7 @@ test("heartbeat reports ONLINE when the service responds", async ({ page }) => {
     }),
   );
 
-  await page.goto("/options");
+  await enableDeveloperMode(page);
   await page.getByRole("button", { name: "Check Heartbeat" }).click();
 
   await expect(page.getByText(/ONLINE/)).toBeVisible();
@@ -90,8 +111,37 @@ test("heartbeat reports OFFLINE when the service is unhealthy", async ({
     }),
   );
 
-  await page.goto("/options");
+  await enableDeveloperMode(page);
   await page.getByRole("button", { name: "Check Heartbeat" }).click();
 
   await expect(page.getByText("OFFLINE")).toBeVisible();
+});
+
+test("API Tools section is hidden unless developer mode is enabled", async ({
+  page,
+}) => {
+  await page.route("**/api/ui-settings", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true }),
+    }),
+  );
+
+  await page.goto("/options");
+
+  const developerMode = page.getByRole("switch", { name: "Developer Mode" });
+  const heartbeatButton = page.getByRole("button", { name: "Check Heartbeat" });
+
+  // Make sure developer mode starts off, then assert the section is absent.
+  if ((await developerMode.getAttribute("aria-checked")) === "true") {
+    await developerMode.click();
+    await expect(developerMode).toHaveAttribute("aria-checked", "false");
+  }
+  await expect(heartbeatButton).toBeHidden();
+
+  // Turning it on reveals the section.
+  await developerMode.click();
+  await expect(developerMode).toHaveAttribute("aria-checked", "true");
+  await expect(heartbeatButton).toBeVisible();
 });

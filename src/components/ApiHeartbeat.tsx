@@ -36,6 +36,12 @@ export default function ApiHeartbeat() {
     }
   };
 
+  // The API Tools section is a developer-only utility; hide it entirely
+  // unless developer mode is enabled.
+  if (!settings.developerMode) {
+    return null;
+  }
+
   return (
     <SettingsSection
       title="API Tools"
