@@ -143,6 +143,110 @@ describe("BackupImport", () => {
     });
   });
 
+  describe("Import From Backup", () => {
+    const mockFetch = jest.fn();
+
+    beforeEach(() => {
+      global.fetch = mockFetch as unknown as typeof fetch;
+    });
+
+    afterEach(() => {
+      mockFetch.mockReset();
+    });
+
+    it("POSTs to the import route and disables every button while importing", async () => {
+      let resolveFetch: (value: Response) => void = () => {};
+      mockFetch.mockReturnValue(
+        new Promise<Response>((resolve) => {
+          resolveFetch = resolve;
+        }),
+      );
+
+      renderBackupImport();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Import From Backup" }),
+      );
+
+      expect(mockFetch).toHaveBeenCalledWith("/api/import-from-backup", {
+        method: "POST",
+      });
+
+      const importingButton = await screen.findByRole("button", {
+        name: "Importing…",
+      });
+      expect(importingButton).toBeDisabled();
+      for (const label of OPTION_LABELS.filter(
+        (l) => l !== "Import From Backup",
+      )) {
+        expect(screen.getByRole("button", { name: label })).toBeDisabled();
+      }
+
+      resolveFetch({ ok: true, status: 200 } as Response);
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: "Import From Backup" }),
+        ).toBeEnabled();
+      });
+    });
+
+    it("shows a success toast when the import succeeds", async () => {
+      mockFetch.mockResolvedValue({ ok: true, status: 200 } as Response);
+
+      renderBackupImport();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Import From Backup" }),
+      );
+
+      expect(
+        await screen.findByText("Data imported from backup successfully."),
+      ).toBeInTheDocument();
+    });
+
+    it("surfaces the backend error detail in the snackbar on a non-OK response", async () => {
+      jest.spyOn(console, "error").mockImplementation(() => {});
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 502,
+        json: async () => ({
+          status: "error",
+          message:
+            "Backend request failed: 500 Error (/function/importFromFile): backup.json not found",
+        }),
+      } as unknown as Response);
+
+      renderBackupImport();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Import From Backup" }),
+      );
+
+      expect(
+        await screen.findByText(/backup\.json not found/),
+      ).toBeInTheDocument();
+
+      (console.error as jest.Mock).mockRestore();
+    });
+
+    it("shows an error snackbar and re-enables the buttons when the request fails", async () => {
+      mockFetch.mockRejectedValue(new Error("network down"));
+      jest.spyOn(console, "error").mockImplementation(() => {});
+
+      renderBackupImport();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Import From Backup" }),
+      );
+
+      expect(
+        await screen.findByText("Couldn't import from backup. Please try again."),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Import From Backup" }),
+      ).toBeEnabled();
+
+      (console.error as jest.Mock).mockRestore();
+    });
+  });
+
   describe("Backup Data", () => {
     const mockFetch = jest.fn();
 

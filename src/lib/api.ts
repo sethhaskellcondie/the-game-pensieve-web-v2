@@ -93,8 +93,6 @@ export async function apiGetOrNull<T>(path: string): Promise<T | null> {
   return body.data;
 }
 
-// Shared sender for the methods that carry a JSON body (POST/PATCH). Unwraps the
-// same { data, errors } envelope as apiGet.
 async function apiSend<T>(
   method: "POST" | "PATCH",
   path: string,
@@ -136,10 +134,12 @@ export async function seedMyCollection(): Promise<string> {
   return apiPost<string>("/function/seedMyCollection", {});
 }
 
-// Returns the backend's full backup payload (the unwrapped `data`). Typed as
-// `unknown` because callers only serialize it for download.
 export async function backup(): Promise<unknown> {
   return apiPost<unknown>("/function/backup", {});
+}
+
+export async function importFromFile(): Promise<unknown> {
+  return apiPost<unknown>("/function/importFromFile", {});
 }
 
 export async function checkHeartbeat(

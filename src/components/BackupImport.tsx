@@ -86,8 +86,8 @@ const ACTIONS: BackupAction[] = [
   },
 ];
 
-// Reads the error detail the seed Route Handler forwards from the backend
-// (its { status, message } body). Returns null if there's nothing usable.
+// Reads the error detail a Route Handler forwards from the backend (its
+// { status, message } body). Returns null if there's nothing usable.
 async function readErrorMessage(res: Response): Promise<string | null> {
   try {
     const body = (await res.json()) as { message?: string };
@@ -97,15 +97,42 @@ async function readErrorMessage(res: Response): Promise<string | null> {
   }
 }
 
-// Uppercases the first character for use at the start of a sentence.
-function capitalize(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
+// A fire-and-forget POST action: hit a Route Handler, then toast on success or
+// snackbar on failure. Backup is handled separately since it downloads a file.
+type PostAction = {
+  endpoint: string;
+  busyLabel: string; // shown on the button while the request is in flight
+  successMessage: string;
+  failureMessage: string; // generic snackbar when no backend detail is available
+  detailMessage: (detail: string) => string; // snackbar when the backend explains why
+  logLabel: string; // prefix for console.error
+};
 
-// Maps a seed action id to its Route Handler and the noun used in messages.
-const SEED_ENDPOINTS: Record<string, { endpoint: string; label: string }> = {
-  "seed-sample": { endpoint: "/api/seed-sample-data", label: "sample data" },
-  "seed-seths": { endpoint: "/api/seed-my-collection", label: "Seth's data" },
+const POST_ACTIONS: Record<string, PostAction> = {
+  "seed-sample": {
+    endpoint: "/api/seed-sample-data",
+    busyLabel: "Seeding…",
+    successMessage: "Sample data seeded successfully.",
+    failureMessage: "Couldn't seed sample data. Please try again.",
+    detailMessage: (detail) => `Couldn't seed sample data: ${detail}`,
+    logLabel: "Seed sample data",
+  },
+  "seed-seths": {
+    endpoint: "/api/seed-my-collection",
+    busyLabel: "Seeding…",
+    successMessage: "Seth's data seeded successfully.",
+    failureMessage: "Couldn't seed Seth's data. Please try again.",
+    detailMessage: (detail) => `Couldn't seed Seth's data: ${detail}`,
+    logLabel: "Seed Seth's data",
+  },
+  "import-backup": {
+    endpoint: "/api/import-from-backup",
+    busyLabel: "Importing…",
+    successMessage: "Data imported from backup successfully.",
+    failureMessage: "Couldn't import from backup. Please try again.",
+    detailMessage: (detail) => `Couldn't import from backup: ${detail}`,
+    logLabel: "Import from backup",
+  },
 };
 
 export default function BackupImport() {
@@ -146,35 +173,27 @@ export default function BackupImport() {
     }
   };
 
-  const handleSeed = async (id: string) => {
-    const seed = SEED_ENDPOINTS[id];
-    if (!seed) return;
+  const handlePostAction = async (id: string) => {
+    const config = POST_ACTIONS[id];
+    if (!config) return;
     setBusyId(id);
     try {
-      const res = await fetch(seed.endpoint, { method: "POST" });
+      const res = await fetch(config.endpoint, { method: "POST" });
       if (res.ok) {
-        showToast({
-          message: `${capitalize(seed.label)} seeded successfully.`,
-          variant: "success",
-        });
+        showToast({ message: config.successMessage, variant: "success" });
       } else {
         const detail = await readErrorMessage(res);
-        console.error(`Seed ${seed.label} failed: ${res.status}`, detail ?? "");
+        console.error(`${config.logLabel} failed: ${res.status}`, detail ?? "");
         // Errors stay up as a snackbar until the user acknowledges them, and we
         // surface the backend's detail when it sends one.
         showSnackbar({
-          message: detail
-            ? `Couldn't seed ${seed.label}: ${detail}`
-            : `Couldn't seed ${seed.label}. Please try again.`,
+          message: detail ? config.detailMessage(detail) : config.failureMessage,
           variant: "error",
         });
       }
     } catch (error) {
-      console.error(`Seed ${seed.label} request failed`, error);
-      showSnackbar({
-        message: `Couldn't seed ${seed.label}. Please try again.`,
-        variant: "error",
-      });
+      console.error(`${config.logLabel} request failed`, error);
+      showSnackbar({ message: config.failureMessage, variant: "error" });
     } finally {
       setBusyId(null);
     }
@@ -187,13 +206,13 @@ export default function BackupImport() {
     >
       {ACTIONS.map((action) => {
         const isBackup = action.id === "backup";
-        const isSeedAction = action.id in SEED_ENDPOINTS;
+        const postAction = POST_ACTIONS[action.id];
         const onClick = isBackup
           ? handleBackup
-          : isSeedAction
-            ? () => handleSeed(action.id)
+          : postAction
+            ? () => handlePostAction(action.id)
             : undefined;
-        const busyLabel = isBackup ? "Backing up…" : "Seeding…";
+        const busyLabel = isBackup ? "Backing up…" : postAction?.busyLabel;
         return (
           <div key={action.id} className={styles.row}>
             <span className={styles.icon}>{action.icon}</span>
