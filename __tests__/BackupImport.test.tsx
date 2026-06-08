@@ -143,6 +143,107 @@ describe("BackupImport", () => {
     });
   });
 
+  describe("Import From File", () => {
+    const mockFetch = jest.fn();
+
+    function selectFile(container: HTMLElement, contents: string) {
+      const input = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
+      const file = new File([contents], "backup.txt", { type: "text/plain" });
+      fireEvent.change(input, { target: { files: [file] } });
+    }
+
+    beforeEach(() => {
+      global.fetch = mockFetch as unknown as typeof fetch;
+    });
+
+    afterEach(() => {
+      mockFetch.mockReset();
+    });
+
+    it("clicking the button opens the hidden file picker", () => {
+      const { container } = renderBackupImport();
+      const input = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
+      const clickSpy = jest.spyOn(input, "click").mockImplementation(() => {});
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Import From File" }),
+      );
+
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+      clickSpy.mockRestore();
+    });
+
+    it("POSTs the selected file's contents to the import route and toasts on success", async () => {
+      mockFetch.mockResolvedValue({ ok: true, status: 200 } as Response);
+      const contents = '{"toys":[{"id":"1"}],"systems":[]}';
+
+      const { container } = renderBackupImport();
+      selectFile(container, contents);
+
+      await waitFor(() =>
+        expect(mockFetch).toHaveBeenCalledWith("/api/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: contents,
+        }),
+      );
+      expect(
+        await screen.findByText("Data imported from file successfully."),
+      ).toBeInTheDocument();
+    });
+
+    it("rejects an invalid-JSON file without calling the server", async () => {
+      const { container } = renderBackupImport();
+      selectFile(container, "this is not json");
+
+      expect(
+        await screen.findByText(/isn't valid JSON/),
+      ).toBeInTheDocument();
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it("surfaces the backend error detail on a non-OK response", async () => {
+      jest.spyOn(console, "error").mockImplementation(() => {});
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 502,
+        json: async () => ({
+          status: "error",
+          message:
+            "Backend request failed: 400 Error (/function/import): duplicate key",
+        }),
+      } as unknown as Response);
+
+      const { container } = renderBackupImport();
+      selectFile(container, '{"toys":[]}');
+
+      expect(await screen.findByText(/duplicate key/)).toBeInTheDocument();
+
+      (console.error as jest.Mock).mockRestore();
+    });
+
+    it("shows an error snackbar and re-enables the buttons when the request fails", async () => {
+      mockFetch.mockRejectedValue(new Error("network down"));
+      jest.spyOn(console, "error").mockImplementation(() => {});
+
+      const { container } = renderBackupImport();
+      selectFile(container, '{"toys":[]}');
+
+      expect(
+        await screen.findByText("Couldn't import from file. Please try again."),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Import From File" }),
+      ).toBeEnabled();
+
+      (console.error as jest.Mock).mockRestore();
+    });
+  });
+
   describe("Import From Backup", () => {
     const mockFetch = jest.fn();
 

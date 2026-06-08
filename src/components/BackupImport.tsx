@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import Button from "./Button";
 import SettingsSection from "./SettingsSection";
 import { useToast } from "./ToastProvider";
@@ -139,6 +139,7 @@ export default function BackupImport() {
   // Tracks which action is in flight (null when idle) so we can disable the
   // buttons and show progress on the one that's running.
   const [busyId, setBusyId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast, showSnackbar } = useToast();
 
   const handleBackup = async () => {
@@ -166,6 +167,67 @@ export default function BackupImport() {
       console.error("Backup request failed", error);
       showSnackbar({
         message: "Couldn't back up data. Please try again.",
+        variant: "error",
+      });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  // Opening the OS file picker is the button's job; the actual work happens in
+  // handleFileSelected once the user has chosen a file.
+  const handleImportFileClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // Reset the input so picking the same file again still fires `change`.
+    event.target.value = "";
+    if (!file) return;
+
+    setBusyId("import-file");
+    try {
+      const text = await file.text();
+
+      // Validate the file is JSON before bothering the server, so a bad file
+      // gets a clear message instead of an opaque backend error.
+      try {
+        JSON.parse(text);
+      } catch {
+        showSnackbar({
+          message: "That file isn't valid JSON. Please choose a backup file.",
+          variant: "error",
+        });
+        return;
+      }
+
+      // The file holds the backup `data` payload verbatim; send it as-is and
+      // let the Route Handler wrap it the way the /import endpoint expects.
+      const res = await fetch("/api/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: text,
+      });
+      if (res.ok) {
+        showToast({
+          message: "Data imported from file successfully.",
+          variant: "success",
+        });
+      } else {
+        const detail = await readErrorMessage(res);
+        console.error(`Import from file failed: ${res.status}`, detail ?? "");
+        showSnackbar({
+          message: detail
+            ? `Couldn't import from file: ${detail}`
+            : "Couldn't import from file. Please try again.",
+          variant: "error",
+        });
+      }
+    } catch (error) {
+      console.error("Import from file request failed", error);
+      showSnackbar({
+        message: "Couldn't import from file. Please try again.",
         variant: "error",
       });
     } finally {
@@ -204,15 +266,29 @@ export default function BackupImport() {
       title="Backup & Import"
       description="Save, restore, and seed your collection data."
     >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".txt,.json,application/json"
+        onChange={handleFileSelected}
+        hidden
+      />
       {ACTIONS.map((action) => {
         const isBackup = action.id === "backup";
+        const isImportFile = action.id === "import-file";
         const postAction = POST_ACTIONS[action.id];
         const onClick = isBackup
           ? handleBackup
-          : postAction
-            ? () => handlePostAction(action.id)
-            : undefined;
-        const busyLabel = isBackup ? "Backing up…" : postAction?.busyLabel;
+          : isImportFile
+            ? handleImportFileClick
+            : postAction
+              ? () => handlePostAction(action.id)
+              : undefined;
+        const busyLabel = isBackup
+          ? "Backing up…"
+          : isImportFile
+            ? "Importing…"
+            : postAction?.busyLabel;
         return (
           <div key={action.id} className={styles.row}>
             <span className={styles.icon}>{action.icon}</span>

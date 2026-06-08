@@ -142,6 +142,13 @@ export async function importFromFile(): Promise<unknown> {
   return apiPost<unknown>("/function/importFromFile", {});
 }
 
+// Imports collection data supplied in the request body. The backend's /import
+// endpoint expects the BackupData wrapped as { data }. Returns the unwrapped
+// ImportResults `data`.
+export async function importData(data: unknown): Promise<unknown> {
+  return apiPost<unknown>("/function/import", { data });
+}
+
 export async function checkHeartbeat(
   { debug = false }: { debug?: boolean } = {},
 ): Promise<boolean> {
