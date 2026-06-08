@@ -98,9 +98,10 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   return apiSend<T>("PATCH", path, body);
 }
 
-// Pings the backend health-check endpoint and reports whether it responded OK.
-// Unlike the other routes, /heartbeat returns text/plain ("thump thump") rather
-// than the { data, errors } envelope, so it bypasses apiGet.
+export async function seedSampleData(): Promise<string> {
+  return apiPost<string>("/function/seedSampleData", {});
+}
+
 export async function checkHeartbeat(
   { debug = false }: { debug?: boolean } = {},
 ): Promise<boolean> {

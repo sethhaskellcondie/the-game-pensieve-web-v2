@@ -1,9 +1,12 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useState, type ReactNode } from "react";
 import Button from "./Button";
 import SettingsSection from "./SettingsSection";
 import styles from "./BackupImport.module.css";
 
 type BackupAction = {
+  id: string;
   title: string;
   description: string;
   buttonLabel: string;
@@ -12,6 +15,7 @@ type BackupAction = {
 
 const ACTIONS: BackupAction[] = [
   {
+    id: "backup",
     title: "Backup Data",
     description: "Backup and download your data.",
     buttonLabel: "Backup Data",
@@ -25,6 +29,7 @@ const ACTIONS: BackupAction[] = [
     ),
   },
   {
+    id: "import-file",
     title: "Import Data (From File)",
     description: "Load records from an uploaded data file.",
     buttonLabel: "Import From File",
@@ -38,6 +43,7 @@ const ACTIONS: BackupAction[] = [
     ),
   },
   {
+    id: "import-backup",
     title: "Import Data (From Backup)",
     description: "Import the from the last backup.",
     buttonLabel: "Import From Backup",
@@ -50,6 +56,7 @@ const ACTIONS: BackupAction[] = [
     ),
   },
   {
+    id: "seed-sample",
     title: "Seed Sample Data",
     description: "Populate the app with starter data to explore.",
     buttonLabel: "Seed Sample Data",
@@ -63,6 +70,7 @@ const ACTIONS: BackupAction[] = [
     ),
   },
   {
+    id: "seed-seths",
     title: "Seed Seth's Data",
     description: "Load Seth's collection as a large data set.",
     buttonLabel: "Seed Seth's Data",
@@ -77,21 +85,47 @@ const ACTIONS: BackupAction[] = [
 ];
 
 export default function BackupImport() {
+  // disable buttons until previous requests return
+  const [seeding, setSeeding] = useState(false);
+
+  const handleSeedSampleData = async () => {
+    setSeeding(true);
+    try {
+      const res = await fetch("/api/seed-sample-data", { method: "POST" });
+      if (!res.ok) {
+        console.error(`Seed sample data failed: ${res.status} ${res.statusText}`);
+      }
+    } catch (error) {
+      console.error("Seed sample data request failed", error);
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   return (
     <SettingsSection
       title="Backup & Import"
       description="Save, restore, and seed your collection data."
     >
-      {ACTIONS.map((action) => (
-        <div key={action.title} className={styles.row}>
-          <span className={styles.icon}>{action.icon}</span>
-          <div className={styles.text}>
-            <span className={styles.title}>{action.title}</span>
-            <span className={styles.description}>{action.description}</span>
+      {ACTIONS.map((action) => {
+        const isSeedSample = action.id === "seed-sample";
+        return (
+          <div key={action.id} className={styles.row}>
+            <span className={styles.icon}>{action.icon}</span>
+            <div className={styles.text}>
+              <span className={styles.title}>{action.title}</span>
+              <span className={styles.description}>{action.description}</span>
+            </div>
+            <Button
+              className={styles.actionButton}
+              disabled={seeding}
+              onClick={isSeedSample ? handleSeedSampleData : undefined}
+            >
+              {isSeedSample && seeding ? "Seeding…" : action.buttonLabel}
+            </Button>
           </div>
-          <Button className={styles.actionButton}>{action.buttonLabel}</Button>
-        </div>
-      ))}
+        );
+      })}
     </SettingsSection>
   );
 }
