@@ -47,6 +47,16 @@ const SETTINGS: SettingMeta[] = [
       </svg>
     ),
   },
+  {
+    key: "hideAnimations",
+    title: "Hide Animations",
+    description: "Show a static header instead of the animated background.",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M10 9v6M14 9v6M4 4l16 16M4 12a8 8 0 0 1 8-8M20 12a8 8 0 0 1-8 8" />
+      </svg>
+    ),
+  },
 ];
 
 export default function UiSettings() {

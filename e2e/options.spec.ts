@@ -85,6 +85,35 @@ test("toggle does not change when the persist request fails", async ({
   await expect(developerMode).toHaveAttribute("aria-checked", before ?? "false");
 });
 
+test("Hide Animations toggle parks the header on a static frame", async ({
+  page,
+}) => {
+  await page.route("**/api/ui-settings", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true }),
+    }),
+  );
+
+  await page.goto("/options");
+
+  const hideAnimations = page.getByRole("switch", { name: "Hide Animations" });
+  const header = page.getByRole("banner");
+
+  // Make sure it starts off, so the header is animated.
+  if ((await hideAnimations.getAttribute("aria-checked")) === "true") {
+    await hideAnimations.click();
+    await expect(hideAnimations).toHaveAttribute("aria-checked", "false");
+  }
+  await expect(header).toHaveAttribute("data-static", "false");
+
+  // Turning it on parks the header background on a static frame.
+  await hideAnimations.click();
+  await expect(hideAnimations).toHaveAttribute("aria-checked", "true");
+  await expect(header).toHaveAttribute("data-static", "true");
+});
+
 test("heartbeat reports ONLINE when the service responds", async ({ page }) => {
   await page.route("**/api/heartbeat**", (route) =>
     route.fulfill({

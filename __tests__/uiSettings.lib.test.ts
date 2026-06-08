@@ -31,12 +31,14 @@ describe("serializeUiSettings / parseUiSettingsValue", () => {
       massInputMode: true,
       massEditMode: false,
       developerMode: true,
+      hideAnimations: true,
     };
     const value = serializeUiSettings(settings);
     expect(JSON.parse(value)).toEqual({
       mass_input_mode: true,
       mass_edit_mode: false,
       developer_mode: true,
+      hide_animations: true,
     });
     expect(parseUiSettingsValue(value)).toEqual(settings);
   });
@@ -47,7 +49,12 @@ describe("serializeUiSettings / parseUiSettingsValue", () => {
 
   it("fills missing keys with defaults", () => {
     expect(parseUiSettingsValue(JSON.stringify({ developer_mode: true }))).toEqual(
-      { massInputMode: false, massEditMode: false, developerMode: true },
+      {
+        massInputMode: false,
+        massEditMode: false,
+        developerMode: true,
+        hideAnimations: false,
+      },
     );
   });
 });
@@ -74,6 +81,7 @@ describe("loadUiSettings", () => {
           mass_input_mode: true,
           mass_edit_mode: false,
           developer_mode: true,
+          hide_animations: true,
         }),
       ),
     );
@@ -84,6 +92,7 @@ describe("loadUiSettings", () => {
       massInputMode: true,
       massEditMode: false,
       developerMode: true,
+      hideAnimations: true,
     });
     expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(mockFetch).toHaveBeenCalledWith(
@@ -117,6 +126,7 @@ describe("loadUiSettings", () => {
       mass_input_mode: false,
       mass_edit_mode: false,
       developer_mode: false,
+      hide_animations: false,
     });
   });
 

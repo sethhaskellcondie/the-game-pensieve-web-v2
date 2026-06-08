@@ -10,6 +10,7 @@ export async function POST(request: NextRequest) {
       massInputMode: Boolean(settings.massInputMode),
       massEditMode: Boolean(settings.massEditMode),
       developerMode: Boolean(settings.developerMode),
+      hideAnimations: Boolean(settings.hideAnimations),
     });
     return NextResponse.json({ ok: true });
   } catch {

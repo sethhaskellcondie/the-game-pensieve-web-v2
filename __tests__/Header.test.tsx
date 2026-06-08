@@ -1,6 +1,8 @@
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import Header from "@/components/Header";
+import { UiSettingsProvider } from "@/components/UiSettingsProvider";
+import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
 
 const baseProps = {
   icon: <span data-testid="icon" />,
@@ -52,5 +54,23 @@ describe("Header", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "THE GAME",
     );
+  });
+
+  it("renders the animated background by default", () => {
+    render(<Header {...baseProps} />);
+
+    expect(screen.getByRole("banner")).toHaveAttribute("data-static", "false");
+  });
+
+  it("parks the background on a static frame when Hide Animations is on", () => {
+    render(
+      <UiSettingsProvider
+        initial={{ ...DEFAULT_UI_SETTINGS, hideAnimations: true }}
+      >
+        <Header {...baseProps} />
+      </UiSettingsProvider>,
+    );
+
+    expect(screen.getByRole("banner")).toHaveAttribute("data-static", "true");
   });
 });

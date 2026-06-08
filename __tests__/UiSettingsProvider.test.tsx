@@ -34,7 +34,12 @@ describe("UiSettingsProvider", () => {
   it("exposes the initial settings to consumers", () => {
     render(
       <UiSettingsProvider
-        initial={{ massInputMode: true, massEditMode: false, developerMode: false }}
+        initial={{
+          massInputMode: true,
+          massEditMode: false,
+          developerMode: false,
+          hideAnimations: false,
+        }}
       >
         <Probe />
       </UiSettingsProvider>,
@@ -64,6 +69,7 @@ describe("UiSettingsProvider", () => {
       massInputMode: false,
       massEditMode: false,
       developerMode: true,
+      hideAnimations: false,
     });
 
     await waitFor(() =>

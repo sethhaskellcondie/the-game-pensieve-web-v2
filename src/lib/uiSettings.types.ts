@@ -12,12 +12,14 @@ export type UiSettings = {
   massInputMode: boolean;
   massEditMode: boolean;
   developerMode: boolean;
+  hideAnimations: boolean;
 };
 
 export const DEFAULT_UI_SETTINGS: UiSettings = {
   massInputMode: false,
   massEditMode: false,
   developerMode: false,
+  hideAnimations: false,
 };
 
 export const UI_SETTINGS_KEY = "ui-settings";
@@ -27,6 +29,7 @@ type StoredUiSettings = {
   mass_input_mode: boolean;
   mass_edit_mode: boolean;
   developer_mode: boolean;
+  hide_animations: boolean;
 };
 
 // Parses the metadata `value` JSON string into UiSettings. Defensive by design:
@@ -39,6 +42,7 @@ export function parseUiSettingsValue(value: string): UiSettings {
       massInputMode: Boolean(parsed?.mass_input_mode),
       massEditMode: Boolean(parsed?.mass_edit_mode),
       developerMode: Boolean(parsed?.developer_mode),
+      hideAnimations: Boolean(parsed?.hide_animations),
     };
   } catch {
     return { ...DEFAULT_UI_SETTINGS };
@@ -51,6 +55,7 @@ export function serializeUiSettings(settings: UiSettings): string {
     mass_input_mode: settings.massInputMode,
     mass_edit_mode: settings.massEditMode,
     developer_mode: settings.developerMode,
+    hide_animations: settings.hideAnimations,
   };
   return JSON.stringify(stored);
 }

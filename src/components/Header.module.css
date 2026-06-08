@@ -3,8 +3,119 @@
   position: relative;
   overflow: hidden;
   color: var(--white-pure);
-  background: linear-gradient(120deg, var(--primary-600) 0%, var(--armor-navy) 78%);
+  /* Deep navy base the grid + wash layers sit on. */
+  background: var(--ink-navy);
   padding: 46px 52px 40px;
+}
+
+/* Faint static grid drawn with two crossed 1px line gradients. */
+.grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(var(--white-rgb), 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(var(--white-rgb), 0.07) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: center;
+}
+
+/* The colour gradient that slowly washes diagonally across the grid. */
+.wash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    var(--armor-navy) 0%,
+    var(--primary-600) 34%,
+    var(--mm-cyan-bright) 50%,
+    var(--primary-600) 66%,
+    var(--armor-navy) 100%
+  );
+  background-size: 280% 100%;
+  background-position: 0% 0%;
+  mix-blend-mode: screen;
+  opacity: 0.92;
+  animation: wash 14s ease-in-out infinite;
+}
+
+/* A brighter band of grid that travels with the wash crest, revealed only
+   along a diagonal band by an animated mask. */
+.glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(145, 224, 249, 0.55) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(145, 224, 249, 0.55) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: center;
+  -webkit-mask-image: linear-gradient(115deg, transparent 38%, #000 50%, transparent 62%);
+  mask-image: linear-gradient(115deg, transparent 38%, #000 50%, transparent 62%);
+  -webkit-mask-size: 280% 100%;
+  mask-size: 280% 100%;
+  -webkit-mask-position: 0% 0%;
+  mask-position: 0% 0%;
+  animation: wash 14s ease-in-out infinite;
+}
+
+@keyframes wash {
+  0% {
+    background-position: 0% 0%;
+    -webkit-mask-position: 0% 0%;
+    mask-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 0%;
+    -webkit-mask-position: 100% 0%;
+    mask-position: 100% 0%;
+  }
+  100% {
+    background-position: 0% 0%;
+    -webkit-mask-position: 0% 0%;
+    mask-position: 0% 0%;
+  }
+}
+
+/* When "Hide Animations" is on, park both moving layers on a well-composed
+   frame instead of animating. With the 280% layer size, a 73% position lands
+   the bright crest behind the icon mark on the left rather than dead-center. */
+.header[data-static="true"] .wash,
+.header[data-static="true"] .glow {
+  animation: none;
+}
+
+.header[data-static="true"] .wash {
+  background-position: 73% 0%;
+}
+
+.header[data-static="true"] .glow {
+  -webkit-mask-position: 73% 0%;
+  mask-position: 73% 0%;
+}
+
+/* Honour the OS reduced-motion preference independently of the setting. */
+@media (prefers-reduced-motion: reduce) {
+  .wash,
+  .glow {
+    animation: none;
+  }
+
+  .wash {
+    background-position: 73% 0%;
+  }
+
+  .glow {
+    -webkit-mask-position: 73% 0%;
+    mask-position: 73% 0%;
+  }
+}
+
+/* Foreground content sits above the background layers. */
+.content {
+  position: relative;
+  z-index: 2;
 }
 
 .heroTop {

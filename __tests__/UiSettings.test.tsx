@@ -27,9 +27,14 @@ describe("UiSettings", () => {
     mockFetch.mockReset();
   });
 
-  it("renders the three interface toggles, all off by default", () => {
+  it("renders the four interface toggles, all off by default", () => {
     renderWithProvider();
-    for (const name of ["Mass Input Mode", "Mass Edit Mode", "Developer Mode"]) {
+    for (const name of [
+      "Mass Input Mode",
+      "Mass Edit Mode",
+      "Developer Mode",
+      "Hide Animations",
+    ]) {
       expect(screen.getByRole("switch", { name })).toHaveAttribute(
         "aria-checked",
         "false",
