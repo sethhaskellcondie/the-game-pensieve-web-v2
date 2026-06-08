@@ -1,14 +1,9 @@
-/* Uniform action button: one fixed height for every button in the app, with
-   width flowing from the content. Hover and click (:active) behavior are shared
-   so buttons feel identical wherever they appear. */
 .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 44px;
-  /* Height is fixed, so only horizontal padding is needed; this is what lets
-     the width vary with the label while the height stays constant. */
+  height: 40px;
   padding: 0 18px;
   border: 1px solid transparent;
   border-radius: 10px;
@@ -30,7 +25,6 @@
   background: var(--armor-navy);
 }
 
-/* Shared click feedback: the button presses down a pixel and darkens. */
 .button:active:not(:disabled) {
   background: var(--shadow-navy);
   transform: translateY(1px);
