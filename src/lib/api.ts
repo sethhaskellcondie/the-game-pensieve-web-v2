@@ -132,6 +132,16 @@ export async function seedSampleData(): Promise<string> {
   return apiPost<string>("/function/seedSampleData", {});
 }
 
+export async function seedMyCollection(): Promise<string> {
+  return apiPost<string>("/function/seedMyCollection", {});
+}
+
+// Returns the backend's full backup payload (the unwrapped `data`). Typed as
+// `unknown` because callers only serialize it for download.
+export async function backup(): Promise<unknown> {
+  return apiPost<unknown>("/function/backup", {});
+}
+
 export async function checkHeartbeat(
   { debug = false }: { debug?: boolean } = {},
 ): Promise<boolean> {

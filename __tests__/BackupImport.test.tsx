@@ -2,6 +2,15 @@ import "@testing-library/jest-dom";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import BackupImport from "@/components/BackupImport";
 import { ToastProvider } from "@/components/ToastProvider";
+import { backupFilename, downloadTextFile } from "@/lib/download";
+
+jest.mock("@/lib/download", () => ({
+  downloadTextFile: jest.fn(),
+  backupFilename: jest.fn(() => "backup-2026-06-08T14-30-00Z.txt"),
+}));
+
+const mockDownloadTextFile = downloadTextFile as jest.Mock;
+const mockBackupFilename = backupFilename as jest.Mock;
 
 const OPTION_LABELS = [
   "Backup Data",
@@ -129,6 +138,107 @@ describe("BackupImport", () => {
       expect(
         screen.getByRole("button", { name: "Seed Sample Data" }),
       ).toBeEnabled();
+
+      (console.error as jest.Mock).mockRestore();
+    });
+  });
+
+  describe("Backup Data", () => {
+    const mockFetch = jest.fn();
+
+    beforeEach(() => {
+      global.fetch = mockFetch as unknown as typeof fetch;
+      mockBackupFilename.mockReturnValue("backup-2026-06-08T14-30-00Z.txt");
+    });
+
+    afterEach(() => {
+      mockFetch.mockReset();
+      mockDownloadTextFile.mockReset();
+    });
+
+    it("POSTs to the backup route and downloads the pretty-printed data on success", async () => {
+      const data = { toys: [{ id: "1" }], systems: [] };
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ status: "ok", data }),
+      } as unknown as Response);
+
+      renderBackupImport();
+      fireEvent.click(screen.getByRole("button", { name: "Backup Data" }));
+
+      expect(mockFetch).toHaveBeenCalledWith("/api/backup", { method: "POST" });
+
+      await waitFor(() => expect(mockDownloadTextFile).toHaveBeenCalledTimes(1));
+      const [filename, contents] = mockDownloadTextFile.mock.calls[0];
+      expect(filename).toMatch(/^backup-.+Z\.txt$/);
+      expect(contents).toBe(JSON.stringify(data, null, 2));
+      expect(
+        await screen.findByText("Backup downloaded."),
+      ).toBeInTheDocument();
+    });
+
+    it("shows progress and disables every button while backing up", async () => {
+      let resolveFetch: (value: Response) => void = () => {};
+      mockFetch.mockReturnValue(
+        new Promise<Response>((resolve) => {
+          resolveFetch = resolve;
+        }),
+      );
+
+      renderBackupImport();
+      fireEvent.click(screen.getByRole("button", { name: "Backup Data" }));
+
+      const backingUpButton = await screen.findByRole("button", {
+        name: "Backing up…",
+      });
+      expect(backingUpButton).toBeDisabled();
+      for (const label of OPTION_LABELS.filter((l) => l !== "Backup Data")) {
+        expect(screen.getByRole("button", { name: label })).toBeDisabled();
+      }
+
+      resolveFetch({
+        ok: true,
+        status: 200,
+        json: async () => ({ status: "ok", data: {} }),
+      } as unknown as Response);
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: "Backup Data" }),
+        ).toBeEnabled();
+      });
+    });
+
+    it("surfaces the backend error detail and does not download on a non-OK response", async () => {
+      jest.spyOn(console, "error").mockImplementation(() => {});
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 502,
+        json: async () => ({ status: "error", message: "backend exploded" }),
+      } as unknown as Response);
+
+      renderBackupImport();
+      fireEvent.click(screen.getByRole("button", { name: "Backup Data" }));
+
+      expect(await screen.findByText(/backend exploded/)).toBeInTheDocument();
+      expect(mockDownloadTextFile).not.toHaveBeenCalled();
+
+      (console.error as jest.Mock).mockRestore();
+    });
+
+    it("shows an error snackbar and re-enables the buttons when the request fails", async () => {
+      mockFetch.mockRejectedValue(new Error("network down"));
+      jest.spyOn(console, "error").mockImplementation(() => {});
+
+      renderBackupImport();
+      fireEvent.click(screen.getByRole("button", { name: "Backup Data" }));
+
+      expect(
+        await screen.findByText("Couldn't back up data. Please try again."),
+      ).toBeInTheDocument();
+      expect(mockDownloadTextFile).not.toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: "Backup Data" })).toBeEnabled();
 
       (console.error as jest.Mock).mockRestore();
     });
