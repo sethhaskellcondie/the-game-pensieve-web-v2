@@ -43,6 +43,11 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  /* Take the space between the brand (top) and footer (bottom) and scroll the
+     links internally if they ever overflow, so both ends stay pinned in view. */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .nav a {
