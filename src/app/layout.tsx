@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Press_Start_2P } from "next/font/google";
 import Sidebar from "@/components/Sidebar";
+import { ToastProvider } from "@/components/ToastProvider";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { loadUiSettings } from "@/lib/uiSettings";
 import "./globals.css";
@@ -37,12 +38,14 @@ export default async function RootLayout({
       className={`${jetBrainsMono.variable} ${pressStart2P.variable}`}
     >
       <body>
-        <UiSettingsProvider initial={uiSettings}>
-          <div className={styles.layout}>
-            <Sidebar />
-            <div className={styles.main}>{children}</div>
-          </div>
-        </UiSettingsProvider>
+        <ToastProvider>
+          <UiSettingsProvider initial={uiSettings}>
+            <div className={styles.layout}>
+              <Sidebar />
+              <div className={styles.main}>{children}</div>
+            </div>
+          </UiSettingsProvider>
+        </ToastProvider>
       </body>
     </html>
   );

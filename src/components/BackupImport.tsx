@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import Button from "./Button";
 import SettingsSection from "./SettingsSection";
+import { useToast } from "./ToastProvider";
 import styles from "./BackupImport.module.css";
 
 type BackupAction = {
@@ -84,19 +85,49 @@ const ACTIONS: BackupAction[] = [
   },
 ];
 
+// Reads the error detail the seed Route Handler forwards from the backend
+// (its { status, message } body). Returns null if there's nothing usable.
+async function readErrorMessage(res: Response): Promise<string | null> {
+  try {
+    const body = (await res.json()) as { message?: string };
+    return body.message ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default function BackupImport() {
   // disable buttons until previous requests return
   const [seeding, setSeeding] = useState(false);
+  const { showToast, showSnackbar } = useToast();
 
   const handleSeedSampleData = async () => {
     setSeeding(true);
     try {
       const res = await fetch("/api/seed-sample-data", { method: "POST" });
-      if (!res.ok) {
-        console.error(`Seed sample data failed: ${res.status} ${res.statusText}`);
+      if (res.ok) {
+        showToast({
+          message: "Sample data seeded successfully.",
+          variant: "success",
+        });
+      } else {
+        const detail = await readErrorMessage(res);
+        console.error(`Seed sample data failed: ${res.status}`, detail ?? "");
+        // Errors stay up as a snackbar until the user acknowledges them, and we
+        // surface the backend's detail when it sends one.
+        showSnackbar({
+          message: detail
+            ? `Couldn't seed sample data: ${detail}`
+            : "Couldn't seed sample data. Please try again.",
+          variant: "error",
+        });
       }
     } catch (error) {
       console.error("Seed sample data request failed", error);
+      showSnackbar({
+        message: "Couldn't seed sample data. Please try again.",
+        variant: "error",
+      });
     } finally {
       setSeeding(false);
     }

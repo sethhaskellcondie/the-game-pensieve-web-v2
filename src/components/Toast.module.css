@@ -1,0 +1,96 @@
+/* Fixed stack in the bottom-right corner, above all page content. pointer-events
+   is re-enabled on each toast so the empty viewport never blocks clicks. */
+.viewport {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(360px, calc(100vw - 40px));
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border-left: 4px solid var(--accent, var(--primary-600));
+  background: var(--white-pure);
+  color: var(--ink-navy);
+  box-shadow: 0 8px 24px rgba(var(--ink-navy-rgb), 0.18);
+  animation: toast-in 0.18s ease-out;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: var(--accent, var(--primary-600));
+}
+
+.icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.message {
+  flex: 1 1 auto;
+  font-size: var(--text-label);
+  line-height: 1.4;
+}
+
+.close {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--gray-500);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--paper);
+  color: var(--ink-navy);
+}
+
+.close svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Per-variant accent color consumed by the border, icon, and close hover. */
+.success {
+  --accent: var(--success);
+}
+
+.error {
+  --accent: var(--cannon-red);
+}
+
+.info {
+  --accent: var(--primary-600);
+}
