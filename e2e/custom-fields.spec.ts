@@ -175,6 +175,19 @@ test("edits a field's options via the modal", async ({ page }) => {
   await expect(page.getByText("Sci-Fi")).toBeVisible();
 });
 
+test("renames a field inline from the name cell", async ({ page }) => {
+  await page.goto("/custom-fields");
+  await page.getByRole("button", { name: "Designers", exact: true }).click();
+
+  const input = page.getByRole("textbox", { name: "Name for Designers" });
+  await input.fill("Designer");
+  await input.press("Enter");
+
+  await expect(page.getByText("Custom field updated.")).toBeVisible();
+  await expect(page.getByText("Designer", { exact: true })).toBeVisible();
+  await expect(page.getByText("Designers", { exact: true })).toHaveCount(0);
+});
+
 test("deletes a field from its row", async ({ page }) => {
   await page.goto("/custom-fields");
   const row = page.getByRole("row").filter({ hasText: "Designers" });

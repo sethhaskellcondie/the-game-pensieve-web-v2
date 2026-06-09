@@ -279,18 +279,45 @@
   padding: 0 12px;
 }
 
+/* The name is an inline-edit trigger: click swaps it for .nameInput. The 6px
+   padding + 6px side margins give the same 12px left buffer as the type badge
+   and options trigger, while keeping the hover wash / edit field inside the
+   cell so it doesn't bleed over the frozen seam into the next column. */
 .name {
   display: block;
-  /* Same 12px left buffer as the type badge and options trigger; the width is
-     trimmed to keep the ellipsis inside the cell's content box. */
-  margin-left: 12px;
   width: calc(100% - 12px);
+  border: none;
+  background: transparent;
   font-size: 13px;
   font-weight: 700;
   color: var(--ink-navy);
+  cursor: text;
+  padding: 3px 6px;
+  margin: 0 6px;
+  border-radius: 6px;
+  text-align: left;
+  transition: 0.12s;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.name:hover {
+  background: #eaf1ff;
+}
+
+.nameInput {
+  display: block;
+  width: calc(100% - 12px);
+  margin: 0 6px;
+  padding: 3px 6px;
+  border: 1px solid var(--primary-600);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-navy);
+  outline: none;
 }
 
 /* Options column — the cell's content is the click target that opens the

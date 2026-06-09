@@ -101,6 +101,9 @@ export default function CustomFieldsManager() {
   const [saving, setSaving] = useState(false);
   const [dragId, setDragId] = useState<number | null>(null);
   const [overInfo, setOverInfo] = useState<OverInfo | null>(null);
+  // The row whose name is being edited inline, plus its working draft.
+  const [editingNameId, setEditingNameId] = useState<number | null>(null);
+  const [draftName, setDraftName] = useState("");
   const [widths, setWidths] = useState<Record<ColKey, number>>(() =>
     Object.fromEntries(COLS.map((c) => [c.key, c.width])) as Record<
       ColKey,
@@ -213,6 +216,54 @@ export default function CustomFieldsManager() {
     }
   };
 
+  const startEditName = (field: CustomField) => {
+    setEditingNameId(field.id);
+    setDraftName(field.name);
+  };
+
+  const cancelEditName = () => {
+    setEditingNameId(null);
+    setDraftName("");
+  };
+
+  // Commit the inline name edit. No-ops (blank or unchanged) just exit edit
+  // mode. Otherwise the rename is applied optimistically and rolled back on
+  // failure. The PUT carries name + order only, leaving options untouched (see
+  // persistReorder), so renaming an option-bearing field keeps its options.
+  const commitEditName = async (field: CustomField) => {
+    const name = draftName.trim();
+    setEditingNameId(null);
+    setDraftName("");
+    if (name === "" || name === field.name) return;
+    const prev = fields;
+    setFields((fs) => fs.map((f) => (f.id === field.id ? { ...f, name } : f)));
+    try {
+      const input: UpdateCustomFieldInput = { name, order: field.order };
+      const res = await fetch(`/api/custom-fields/${field.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        throw new Error(body?.message ?? "Request failed");
+      }
+      showToast({ message: "Custom field updated.", variant: "success" });
+    } catch (error) {
+      console.error("Rename custom field failed", error);
+      setFields(prev);
+      showSnackbar({
+        message:
+          error instanceof Error
+            ? `Couldn't rename the custom field: ${error.message}`
+            : "Couldn't rename the custom field. Please try again.",
+        variant: "error",
+      });
+    }
+  };
+
   // Persist only the rows whose order changed; the backend has no reorder
   // endpoint, so each is a PUT carrying its new order (options left untouched).
   const persistReorder = async (next: CustomField[], prev: CustomField[]) => {
@@ -294,6 +345,7 @@ export default function CustomFieldsManager() {
     if (key === entityKey) return;
     setLoading(true);
     setFields([]);
+    cancelEditName();
     setEntityKey(key);
   };
 
@@ -421,7 +473,33 @@ export default function CustomFieldsManager() {
                       className={`${styles.nameCell} ${styles.frozen} ${styles.seam}`}
                       style={{ left: frozenLeft.name }}
                     >
-                      <span className={styles.name}>{field.name}</span>
+                      {editingNameId === field.id ? (
+                        <input
+                          className={styles.nameInput}
+                          aria-label={`Name for ${field.name}`}
+                          value={draftName}
+                          autoFocus
+                          onChange={(e) => setDraftName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              void commitEditName(field);
+                            } else if (e.key === "Escape") {
+                              e.preventDefault();
+                              cancelEditName();
+                            }
+                          }}
+                          onBlur={() => void commitEditName(field)}
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          className={styles.name}
+                          onClick={() => startEditName(field)}
+                        >
+                          {field.name}
+                        </button>
+                      )}
                     </td>
                     <td className={styles.cell}>
                       <KindBadge type={field.type} />

@@ -119,6 +119,48 @@ describe("CustomFieldsManager", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("renames a field inline via the name cell", async () => {
+    renderManager();
+    await screen.findByText("Designers");
+
+    // Click the name to enter edit mode, change it, and commit with Enter.
+    fireEvent.click(screen.getByRole("button", { name: "Designers" }));
+    const input = screen.getByLabelText("Name for Designers");
+    fireEvent.change(input, { target: { value: "Designer" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(
+        mockFetch.mock.calls.some(
+          ([url, init]) =>
+            String(url).includes("/custom-fields/1") &&
+            (init as RequestInit)?.method === "PUT" &&
+            JSON.parse(String((init as RequestInit)?.body)).name === "Designer",
+        ),
+      ).toBe(true);
+    });
+    // The new name is shown and the input is gone.
+    expect(screen.getByRole("button", { name: "Designer" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Name for Designers")).not.toBeInTheDocument();
+  });
+
+  it("cancels an inline rename on Escape without calling the API", async () => {
+    renderManager();
+    await screen.findByText("Designers");
+
+    fireEvent.click(screen.getByRole("button", { name: "Designers" }));
+    const input = screen.getByLabelText("Name for Designers");
+    fireEvent.change(input, { target: { value: "Discarded" } });
+    fireEvent.keyDown(input, { key: "Escape" });
+
+    expect(screen.getByRole("button", { name: "Designers" })).toBeInTheDocument();
+    expect(
+      mockFetch.mock.calls.some(
+        ([, init]) => (init as RequestInit)?.method === "PUT",
+      ),
+    ).toBe(false);
+  });
+
   it("opens the edit modal when a field's options cell is clicked", async () => {
     renderManager();
     await screen.findByText("Theme");
