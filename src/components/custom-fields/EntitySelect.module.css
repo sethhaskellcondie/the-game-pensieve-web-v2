@@ -93,6 +93,12 @@
 
 .optionIcon {
   display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Fixed slot so the box variants (no icon yet) keep their labels aligned
+     with the rows that do have one. */
+  width: 18px;
+  height: 18px;
   color: var(--primary-600);
   flex: 0 0 auto;
 }

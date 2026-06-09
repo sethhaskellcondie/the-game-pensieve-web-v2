@@ -45,7 +45,7 @@ describe("custom fields registry", () => {
     expect(new Set(FIELD_TYPE_ORDER).size).toBe(6);
   });
 
-  it("defines metadata and icons for all six entities", () => {
+  it("defines metadata for all six entities", () => {
     const keys: EntityKey[] = [
       "toy",
       "system",
@@ -57,9 +57,9 @@ describe("custom fields registry", () => {
     for (const key of keys) {
       expect(ENTITY_META[key]).toBeDefined();
       expect(ENTITY_META[key].label.length).toBeGreaterThan(0);
-      expect(["chip", "toy", "monitor", "layers"]).toContain(
-        ENTITY_META[key].icon,
-      );
+      expect(ENTITY_META[key].bg).toMatch(/^#/);
+      expect(ENTITY_META[key].fg).toMatch(/^#/);
+      expect(ENTITY_META[key].dot).toMatch(/^#/);
     }
   });
 
@@ -67,10 +67,5 @@ describe("custom fields registry", () => {
     expect(ENTITY_ORDER).toHaveLength(6);
     expect(new Set(ENTITY_ORDER).size).toBe(6);
     expect(ENTITY_ORDER).toContain("boardGame");
-  });
-
-  it("reuses the base icon for box variants", () => {
-    expect(ENTITY_META.videoGameBox.icon).toBe(ENTITY_META.videoGame.icon);
-    expect(ENTITY_META.boardGameBox.icon).toBe(ENTITY_META.boardGame.icon);
   });
 });

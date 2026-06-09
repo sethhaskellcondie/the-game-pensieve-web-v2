@@ -1,10 +1,31 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { ComponentType, SVGProps } from "react";
 import type { EntityKey } from "@/lib/api";
-import { ENTITY_META, ENTITY_ORDER, EntIcon } from "./registry";
+import { ENTITY_META, ENTITY_ORDER } from "./registry";
 import { CaretIcon, CheckIcon } from "./icons";
+import {
+  BoardGamesIcon,
+  SystemsIcon,
+  ToysIcon,
+  VideoGamesIcon,
+} from "@/components/icons";
 import styles from "./EntitySelect.module.css";
+
+// Reuse the same line icons the Sidebar and Header show for each record type,
+// so the scope picker matches them. The two "Box" variants have no shared icon
+// yet, so they're intentionally left blank for now.
+const ENTITY_ICON: Partial<
+  Record<EntityKey, ComponentType<SVGProps<SVGSVGElement>>>
+> = {
+  system: SystemsIcon,
+  toy: ToysIcon,
+  videoGame: VideoGamesIcon,
+  boardGame: BoardGamesIcon,
+};
+
+const ICON_SIZE = 18;
 
 // Header dropdown that scopes the table to one record type. Controlled by the
 // parent (value + onChange). Closes on outside mousedown and Escape.
@@ -37,6 +58,7 @@ export default function EntitySelect({
   }, [open]);
 
   const current = ENTITY_META[value];
+  const TriggerIcon = ENTITY_ICON[value];
 
   return (
     <div className={styles.wrap} ref={ref}>
@@ -47,9 +69,11 @@ export default function EntitySelect({
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
-        <span className={styles.triggerIcon}>
-          <EntIcon icon={current.icon} />
-        </span>
+        {TriggerIcon && (
+          <span className={styles.triggerIcon}>
+            <TriggerIcon width={ICON_SIZE} height={ICON_SIZE} />
+          </span>
+        )}
         <span className={styles.triggerLabel}>{current.label}</span>
         <span className={styles.caret}>
           <CaretIcon />
@@ -59,6 +83,7 @@ export default function EntitySelect({
         <div className={styles.menu} role="listbox" aria-label="Record type">
           {ENTITY_ORDER.map((key) => {
             const meta = ENTITY_META[key];
+            const OptionIcon = ENTITY_ICON[key];
             const selected = key === value;
             return (
               <button
@@ -73,7 +98,9 @@ export default function EntitySelect({
                 }}
               >
                 <span className={styles.optionIcon}>
-                  <EntIcon icon={meta.icon} />
+                  {OptionIcon && (
+                    <OptionIcon width={ICON_SIZE} height={ICON_SIZE} />
+                  )}
                 </span>
                 <span className={styles.optionLabel}>{meta.label}</span>
                 {selected && (
