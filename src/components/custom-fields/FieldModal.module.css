@@ -296,6 +296,41 @@ label.label:first-of-type {
   pointer-events: none;
 }
 
+.optGrip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 38px;
+  color: #c2cad6;
+  cursor: grab;
+  border-radius: 6px;
+  transition: color 0.12s;
+}
+
+.optGrip:hover {
+  color: var(--gray-500);
+}
+
+.optGrip:active {
+  cursor: grabbing;
+}
+
+/* The dragged row fades; the hovered target shows a line on the edge the
+   cursor is closest to — matching the field table's drop affordance. */
+.optDragging {
+  opacity: 0.4;
+}
+
+.dropBefore {
+  box-shadow: inset 0 2px 0 0 var(--primary-600);
+}
+
+.dropAfter {
+  box-shadow: inset 0 -2px 0 0 var(--primary-600);
+}
+
 .optDel {
   flex: 0 0 auto;
   width: 32px;
