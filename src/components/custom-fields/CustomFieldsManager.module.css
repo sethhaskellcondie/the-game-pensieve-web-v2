@@ -1,0 +1,364 @@
+/* Fills the content area below the app Header; the card scrolls internally. */
+.page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 26px 32px;
+  background: var(--paper);
+}
+
+.head {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.titleWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 0 0 auto;
+}
+
+.entName {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink-navy);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.crumb {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--gray-500);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.crumb b {
+  color: inherit;
+  font-weight: 600;
+}
+
+.actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* The New button reuses the shared <Button> for its height, focus-visible,
+   :active, and disabled behavior, and only swaps the palette to the design's
+   green. Scoping under .actions raises specificity above Button's own
+   :hover/:active rules (cross-file class order isn't guaranteed otherwise). */
+.actions .newBtn {
+  background: var(--success);
+  white-space: nowrap;
+}
+
+.actions .newBtn:hover:not(:disabled) {
+  background: #229b3d;
+  box-shadow: 0 6px 16px -6px rgba(42, 167, 69, 0.7);
+}
+
+.actions .newBtn:active:not(:disabled) {
+  background: #1e8a36;
+}
+
+/* ============ CARD ============ */
+.card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  overflow: hidden;
+  box-shadow:
+    0 1px 2px rgba(var(--ink-navy-rgb), 0.04),
+    0 16px 44px -20px rgba(var(--ink-navy-rgb), 0.24);
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.scroll::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.scroll::-webkit-scrollbar-thumb {
+  background: #d3dae4;
+  border: 3px solid var(--white);
+  border-radius: 8px;
+}
+
+.scroll::-webkit-scrollbar-thumb:hover {
+  background: #bcc6d4;
+}
+
+/* ============ TABLE ============ */
+.table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  table-layout: fixed;
+  font-size: 13px;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  vertical-align: middle;
+  height: 40px;
+  padding: 0;
+  border-right: 1px solid #eef1f6;
+  border-bottom: 1px solid #eef1f6;
+}
+
+/* Header cells: sticky, blue gradient with a faint grid overlay. */
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background:
+    linear-gradient(rgba(145, 224, 249, 0.2) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(145, 224, 249, 0.2) 1px, transparent 1px),
+    linear-gradient(180deg, #4f86dd 0%, #2c539f 100%);
+  background-size:
+    24px 24px,
+    24px 24px,
+    100% 100%;
+  color: #fff;
+  font-weight: 700;
+  white-space: nowrap;
+  border-bottom: 1px solid #294e97;
+  border-right-color: rgba(145, 224, 249, 0.3);
+}
+
+.hcell {
+  position: relative;
+}
+
+.thLabel {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 12px;
+  font-weight: 700;
+  font-size: 12px;
+  color: #fff;
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 1px rgba(15, 33, 74, 0.35);
+}
+
+.resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 7;
+}
+
+.resize::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  right: 0;
+  width: 2px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background 0.12s;
+}
+
+.resize:hover::after {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+/* Frozen columns + seam divider */
+.frozen {
+  position: sticky;
+  z-index: 2;
+  background: var(--white);
+}
+
+.table thead th.frozen {
+  z-index: 4;
+}
+
+.seam {
+  border-right: 2px solid #cad3e0 !important;
+  box-shadow: 6px 0 10px -8px rgba(40, 74, 154, 0.28);
+}
+
+.table thead th.seam {
+  box-shadow: 6px 0 10px -8px rgba(15, 33, 74, 0.4);
+  border-right-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Body cells + hover wash */
+.cell {
+  padding: 0 12px;
+  color: var(--ink-navy);
+}
+
+/* Give the object inside each content cell (the type badge, the options chips)
+   a small left buffer so it doesn't sit flush against the cell edge. The Order
+   cell is excluded — its grip/number already has its own layout. */
+.cell:not(.orderCell) > span {
+  margin-left: 12px;
+}
+
+.orderCell {
+  color: var(--gray-500);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  cursor: grab;
+}
+
+.orderCell:active {
+  cursor: grabbing;
+}
+
+.orderWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.grip {
+  display: flex;
+  color: #c2cad6;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.row:hover .grip {
+  opacity: 1;
+}
+
+.dragging td {
+  opacity: 0.4;
+}
+
+.dropBefore td {
+  box-shadow: inset 0 2px 0 0 var(--primary-600);
+}
+
+.dropAfter td {
+  box-shadow: inset 0 -2px 0 0 var(--primary-600);
+}
+
+.row:hover td {
+  background: #f4f9ff;
+}
+
+.row:hover td.frozen {
+  background: #ecf4fe;
+}
+
+/* Name column */
+.nameCell {
+  padding: 0 12px;
+}
+
+.name {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary-600);
+  cursor: pointer;
+  padding: 3px 6px;
+  margin: 0 -6px 0 6px;
+  border-radius: 6px;
+  text-align: left;
+  transition: 0.12s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name:hover {
+  color: #1b4fc0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Options column */
+.optCell {
+  padding: 0 12px;
+}
+
+/* Delete column — auto width so it absorbs the table's leftover space; the
+   button stays left-aligned next to the content rather than floating in the
+   middle of the slack. */
+.delCol {
+  min-width: 92px;
+  text-align: left;
+  padding: 0 12px;
+}
+
+.del {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--cannon-red);
+  border-radius: 7px;
+  cursor: pointer;
+  transition: 0.12s;
+  opacity: 0;
+}
+
+.row:hover .del {
+  opacity: 1;
+}
+
+.del:hover {
+  background: #fdecec;
+}
+
+.emptyState {
+  color: var(--gray-500);
+  font-size: 13px;
+  border-right: none;
+}
+
+/* The blanket `.table td { padding: 0 }` rule outranks a plain `.emptyState`,
+   so the empty/loading message carries its padding on a cell-level selector
+   that wins on specificity. */
+.table td.emptyState {
+  padding: 12px 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grip,
+  .del,
+  .name,
+  .newBtn {
+    transition: none;
+  }
+}

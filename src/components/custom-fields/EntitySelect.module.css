@@ -1,0 +1,111 @@
+.wrap {
+  position: relative;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 236px;
+  height: 40px;
+  padding: 0 11px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: 0.13s;
+  color: var(--ink-navy);
+}
+
+.trigger:hover {
+  border-color: #c9d2df;
+  background: #fff;
+}
+
+.trigger.on {
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 3px rgba(47, 112, 236, 0.12);
+}
+
+.triggerIcon {
+  display: flex;
+  color: var(--primary-600);
+  flex: 0 0 auto;
+}
+
+.triggerLabel {
+  flex: 1;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caret {
+  display: flex;
+  color: var(--gray-500);
+  flex: 0 0 auto;
+  transition: transform 0.15s;
+}
+
+.trigger.on .caret {
+  transform: rotate(180deg);
+  color: var(--primary-600);
+}
+
+.menu {
+  position: absolute;
+  top: 46px;
+  left: 0;
+  z-index: 40;
+  width: 236px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  box-shadow: 0 20px 48px -16px rgba(var(--ink-navy-rgb), 0.34);
+  padding: 6px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 38px;
+  padding: 0 9px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--ink-navy);
+  transition: 0.1s;
+}
+
+.option:hover {
+  background: #f1f6ff;
+}
+
+.option.selected {
+  background: #eef4ff;
+}
+
+.optionIcon {
+  display: flex;
+  color: var(--primary-600);
+  flex: 0 0 auto;
+}
+
+.optionLabel {
+  flex: 1;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.optionCheck {
+  display: flex;
+  color: var(--primary-600);
+  flex: 0 0 auto;
+}

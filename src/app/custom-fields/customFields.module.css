@@ -1,0 +1,10 @@
+/* The custom fields screen fills the area below the Header without scrolling
+   the whole page — the card inside the manager owns the scroll instead. */
+.content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--paper);
+}

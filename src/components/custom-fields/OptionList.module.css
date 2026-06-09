@@ -1,0 +1,38 @@
+.opts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: #f1f4f9;
+  border: 1px solid #e4e9f1;
+  color: #46506a;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.more {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 6px;
+  color: var(--gray-500);
+  font-size: 11px;
+  font-weight: 700;
+  flex: 0 0 auto;
+  letter-spacing: 0.02em;
+}
+
+.noOpt {
+  color: #c2cad6;
+  font-weight: 600;
+}
