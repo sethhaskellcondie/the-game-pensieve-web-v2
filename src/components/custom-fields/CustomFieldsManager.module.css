@@ -281,7 +281,10 @@
 
 .name {
   display: block;
-  width: 100%;
+  /* Same 12px left buffer as the type badge and options trigger; the width is
+     trimmed to keep the ellipsis inside the cell's content box. */
+  margin-left: 12px;
+  width: calc(100% - 12px);
   font-size: 13px;
   font-weight: 700;
   color: var(--ink-navy);
@@ -304,7 +307,10 @@
   background: transparent;
   cursor: pointer;
   padding: 4px 6px;
-  margin: 0 -6px;
+  /* Left nudge lands the chips at the same 12px buffer as the type badge
+     (its own 6px padding + 6px margin); the right side still bleeds into the
+     cell padding so the hover wash fills the cell. */
+  margin: 0 -6px 0 6px;
   border-radius: 7px;
   text-align: left;
   transition: 0.12s;
