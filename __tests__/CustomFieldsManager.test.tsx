@@ -74,9 +74,9 @@ describe("CustomFieldsManager", () => {
   it("loads and renders the scoped fields with a count", async () => {
     renderManager();
     expect(
-      await screen.findByRole("button", { name: "Designers" }),
+      await screen.findByText("Designers"),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Theme" })).toBeInTheDocument();
+    expect(screen.getByText("Theme")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { level: 2, name: "Board Game" }),
     ).toBeInTheDocument();
@@ -84,13 +84,13 @@ describe("CustomFieldsManager", () => {
 
   it("refetches when the scoped entity changes", async () => {
     renderManager();
-    await screen.findByRole("button", { name: "Designers" });
+    await screen.findByText("Designers");
 
     fireEvent.click(screen.getByRole("button", { name: /board game/i }));
     fireEvent.click(screen.getByRole("option", { name: "Video Game" }));
 
     expect(
-      await screen.findByRole("button", { name: "Platform" }),
+      await screen.findByText("Platform"),
     ).toBeInTheDocument();
     expect(
       mockFetch.mock.calls.some(([url]) =>
@@ -101,7 +101,7 @@ describe("CustomFieldsManager", () => {
 
   it("deletes a field via the row delete button", async () => {
     renderManager();
-    await screen.findByRole("button", { name: "Designers" });
+    await screen.findByText("Designers");
 
     fireEvent.click(screen.getByRole("button", { name: "Delete Designers" }));
 
@@ -115,13 +115,27 @@ describe("CustomFieldsManager", () => {
       ).toBe(true);
     });
     expect(
-      screen.queryByRole("button", { name: "Designers" }),
+      screen.queryByText("Designers"),
     ).not.toBeInTheDocument();
+  });
+
+  it("opens the edit modal when a field's options cell is clicked", async () => {
+    renderManager();
+    await screen.findByText("Theme");
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit Theme" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByRole("heading", { name: "Update Custom Field" }),
+    ).toBeInTheDocument();
+    // The clicked field's data populates the form.
+    expect(within(dialog).getByLabelText("Field name")).toHaveValue("Theme");
   });
 
   it("opens the create modal from the New button", async () => {
     renderManager();
-    await screen.findByRole("button", { name: "Designers" });
+    await screen.findByText("Designers");
 
     fireEvent.click(screen.getByRole("button", { name: "New" }));
 

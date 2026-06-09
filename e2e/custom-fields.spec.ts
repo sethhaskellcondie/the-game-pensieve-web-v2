@@ -124,13 +124,13 @@ test("is reachable from the sidebar and lists the Board Game fields", async ({
   await expect(
     page.getByRole("heading", { level: 2, name: "Board Game" }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Designers", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Theme", exact: true })).toBeVisible();
+  await expect(page.getByText("Designers", { exact: true })).toBeVisible();
+  await expect(page.getByText("Theme", { exact: true })).toBeVisible();
 });
 
 test("switching the entity scope swaps the heading and rows", async ({ page }) => {
   await page.goto("/custom-fields");
-  await expect(page.getByRole("button", { name: "Designers", exact: true })).toBeVisible();
+  await expect(page.getByText("Designers", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: /board game/i }).click();
   await page.getByRole("option", { name: "Video Game", exact: true }).click();
@@ -138,13 +138,13 @@ test("switching the entity scope swaps the heading and rows", async ({ page }) =
   await expect(
     page.getByRole("heading", { level: 2, name: "Video Game" }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Platform", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Designers", exact: true })).toHaveCount(0);
+  await expect(page.getByText("Platform", { exact: true })).toBeVisible();
+  await expect(page.getByText("Designers", { exact: true })).toHaveCount(0);
 });
 
 test("creates a new field via the modal", async ({ page }) => {
   await page.goto("/custom-fields");
-  await expect(page.getByRole("button", { name: "Designers", exact: true })).toBeVisible();
+  await expect(page.getByText("Designers", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "New" }).click();
   const dialog = page.getByRole("dialog");
@@ -154,12 +154,13 @@ test("creates a new field via the modal", async ({ page }) => {
   await dialog.getByRole("button", { name: "Create field" }).click();
 
   await expect(page.getByText("Custom field created.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Publisher", exact: true })).toBeVisible();
+  await expect(page.getByText("Publisher", { exact: true })).toBeVisible();
 });
 
 test("edits a field's options via the modal", async ({ page }) => {
   await page.goto("/custom-fields");
-  await page.getByRole("button", { name: "Theme", exact: true }).click();
+  // The options cell opens the edit modal.
+  await page.getByRole("button", { name: "Edit Theme" }).click();
 
   const dialog = page.getByRole("dialog");
   await expect(
@@ -180,5 +181,5 @@ test("deletes a field from its row", async ({ page }) => {
   await row.hover();
   await row.getByRole("button", { name: "Delete Designers" }).click();
 
-  await expect(page.getByRole("button", { name: "Designers", exact: true })).toHaveCount(0);
+  await expect(page.getByText("Designers", { exact: true })).toHaveCount(0);
 });

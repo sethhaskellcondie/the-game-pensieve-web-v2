@@ -282,31 +282,36 @@
 .name {
   display: block;
   width: 100%;
-  border: none;
-  background: transparent;
   font-size: 13px;
   font-weight: 700;
-  color: var(--primary-600);
-  cursor: pointer;
-  padding: 3px 6px;
-  margin: 0 -6px 0 6px;
-  border-radius: 6px;
-  text-align: left;
-  transition: 0.12s;
+  color: var(--ink-navy);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.name:hover {
-  color: #1b4fc0;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-/* Options column */
+/* Options column — the cell's content is the click target that opens the
+   edit modal, so it reads as interactive on hover. */
 .optCell {
   padding: 0 12px;
+}
+
+.optTrigger {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px 6px;
+  margin: 0 -6px;
+  border-radius: 7px;
+  text-align: left;
+  transition: 0.12s;
+}
+
+.optTrigger:hover {
+  background: #eaf1ff;
 }
 
 /* Delete column — auto width so it absorbs the table's leftover space; the

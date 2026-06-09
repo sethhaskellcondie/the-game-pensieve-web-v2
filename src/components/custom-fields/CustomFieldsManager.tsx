@@ -421,19 +421,20 @@ export default function CustomFieldsManager() {
                       className={`${styles.nameCell} ${styles.frozen} ${styles.seam}`}
                       style={{ left: frozenLeft.name }}
                     >
-                      <button
-                        type="button"
-                        className={styles.name}
-                        onClick={() => setModal({ mode: "edit", field })}
-                      >
-                        {field.name}
-                      </button>
+                      <span className={styles.name}>{field.name}</span>
                     </td>
                     <td className={styles.cell}>
                       <KindBadge type={field.type} />
                     </td>
                     <td className={`${styles.cell} ${styles.optCell}`}>
-                      <OptionList options={field.options} />
+                      <button
+                        type="button"
+                        className={styles.optTrigger}
+                        aria-label={`Edit ${field.name}`}
+                        onClick={() => setModal({ mode: "edit", field })}
+                      >
+                        <OptionList options={field.options} />
+                      </button>
                     </td>
                     <td className={styles.delCol}>
                       <button
