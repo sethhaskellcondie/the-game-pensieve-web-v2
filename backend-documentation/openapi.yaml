@@ -826,9 +826,15 @@ paths:
                 type: "dropdown"
                 entityKey: "videoGame"
                 options:
-                  - "Not Started"
-                  - "In Progress"
-                  - "Completed"
+                  - name: "Not Started"
+                    order: 0
+                    isDefault: true
+                  - name: "In Progress"
+                    order: 1
+                    isDefault: false
+                  - name: "Completed"
+                    order: 2
+                    isDefault: false
       responses:
         '201':
           description: Custom field created successfully
