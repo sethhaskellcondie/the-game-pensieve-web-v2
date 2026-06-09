@@ -94,7 +94,7 @@ export async function apiGetOrNull<T>(path: string): Promise<T | null> {
 }
 
 async function apiSend<T>(
-  method: "POST" | "PATCH",
+  method: "POST" | "PATCH" | "PUT",
   path: string,
   body: unknown,
 ): Promise<T> {
@@ -126,6 +126,34 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   return apiSend<T>("PATCH", path, body);
 }
 
+export async function apiPut<T>(path: string, body: unknown): Promise<T> {
+  return apiSend<T>("PUT", path, body);
+}
+
+// DELETE has its own helper because the backend answers a successful delete with
+// 204 / an empty body, which apiSend would choke on when it tries to parse JSON.
+export async function apiDelete(path: string): Promise<void> {
+  const res = await fetch(`${getBaseUrl()}${path}`, {
+    method: "DELETE",
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new Error(await failureMessage(res, path));
+  }
+
+  // A 204 (or any empty body) means success with nothing to read.
+  const text = (await res.text()).trim();
+  if (!text) return;
+
+  const payload = JSON.parse(text) as ApiResponse<unknown>;
+  if (payload.errors && payload.errors.length > 0) {
+    throw new Error(
+      `Backend returned errors for ${path}: ${payload.errors.join(", ")}`,
+    );
+  }
+}
+
 export async function seedSampleData(): Promise<string> {
   return apiPost<string>("/function/seedSampleData", {});
 }
@@ -147,6 +175,94 @@ export async function importFromFile(): Promise<unknown> {
 // ImportResults `data`.
 export async function importData(data: unknown): Promise<unknown> {
   return apiPost<unknown>("/function/import", { data });
+}
+
+// ---------- Custom fields ----------
+// Shapes mirror the CustomField schemas in backend-documentation/openapi.yaml.
+
+export type CustomFieldType =
+  | "text"
+  | "number"
+  | "boolean"
+  | "dropdown"
+  | "radio_button"
+  | "progress_bar";
+
+export type EntityKey =
+  | "toy"
+  | "system"
+  | "videoGame"
+  | "videoGameBox"
+  | "boardGame"
+  | "boardGameBox";
+
+export type CustomFieldOption = {
+  id: number;
+  customFieldId: number;
+  name: string;
+  isDefault: boolean;
+  order: number;
+};
+
+export type CustomField = {
+  id: number;
+  name: string;
+  type: CustomFieldType;
+  entityKey: EntityKey;
+  order: number;
+  options: CustomFieldOption[];
+};
+
+// Options on create carry no id yet (the backend assigns one).
+export type CreateCustomFieldOption = {
+  name: string;
+  order: number;
+  isDefault: boolean;
+};
+
+export type CreateCustomFieldInput = {
+  name: string;
+  type: CustomFieldType;
+  entityKey: EntityKey;
+  options?: CreateCustomFieldOption[];
+};
+
+// On update the options array is a full replacement: existing options keep their
+// id, new ones use id: null. Type and entityKey are not editable.
+export type UpdateCustomFieldOption = {
+  id: number | null;
+  name: string;
+  order: number;
+  isDefault: boolean;
+};
+
+export type UpdateCustomFieldInput = {
+  name: string;
+  order: number;
+  options?: UpdateCustomFieldOption[];
+};
+
+export function listCustomFieldsByEntity(
+  key: EntityKey,
+): Promise<CustomField[]> {
+  return apiGet<CustomField[]>(`/custom_fields/entity/${key}`);
+}
+
+export function createCustomField(
+  input: CreateCustomFieldInput,
+): Promise<CustomField> {
+  return apiPost<CustomField>("/custom_fields", { custom_field: input });
+}
+
+export function updateCustomField(
+  id: number,
+  input: UpdateCustomFieldInput,
+): Promise<CustomField> {
+  return apiPut<CustomField>(`/custom_fields/${id}`, { custom_field: input });
+}
+
+export function deleteCustomField(id: number): Promise<void> {
+  return apiDelete(`/custom_fields/${id}`);
 }
 
 export async function checkHeartbeat(
