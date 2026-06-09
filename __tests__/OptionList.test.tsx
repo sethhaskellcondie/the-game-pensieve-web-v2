@@ -34,9 +34,22 @@ describe("OptionList", () => {
     expect(more).toHaveAttribute("title");
   });
 
+  it("marks the default option with a * and leaves the others unmarked", () => {
+    // opt() makes order 0 the default, so "Light" is default and "Heavy" isn't.
+    render(<OptionList options={[opt("Light", 0), opt("Heavy", 1)]} />);
+    const stars = screen.getAllByTitle("Default option");
+    expect(stars).toHaveLength(1);
+    expect(stars[0]).toHaveTextContent("*");
+    // The star sits inside the default chip, next to its label.
+    expect(screen.getByText("Light")).toContainElement(stars[0]);
+  });
+
   it("orders chips by their option order", () => {
     render(<OptionList options={[opt("B", 1), opt("A", 0)]} />);
-    const chips = screen.getAllByText(/^[AB]$/).map((el) => el.textContent);
+    // Read the label text node (the default chip also holds a "*" marker span).
+    const chips = screen
+      .getAllByText(/^[AB]/)
+      .map((el) => el.firstChild?.textContent);
     expect(chips).toEqual(["A", "B"]);
   });
 });

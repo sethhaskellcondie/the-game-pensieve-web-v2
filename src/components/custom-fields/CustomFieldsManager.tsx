@@ -23,7 +23,7 @@ const COLS: Column[] = [
   { key: "order", label: "Order", width: 80, frozen: true },
   { key: "name", label: "Name", width: 272, frozen: true, seam: true },
   { key: "kind", label: "Custom Field Type", width: 226 },
-  { key: "options", label: "Options", width: 380 },
+  { key: "options", label: "Options (* = default)", width: 380 },
 ];
 const MIN_COL = 110;
 const MAX_COL = 560;

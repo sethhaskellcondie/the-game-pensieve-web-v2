@@ -17,29 +17,37 @@ export default function OptionList({
     return <span className={styles.noOpt}>N/A</span>;
   }
 
-  const names = [...options]
+  const sorted = [...options]
     .sort((a, b) => a.order - b.order)
-    .map((o) => o.name);
+    .map((o) => ({ name: o.name, isDefault: o.isDefault }));
 
-  const shown: string[] = [];
+  const shown: typeof sorted = [];
   let used = 0;
-  for (const name of names) {
-    const cost = name.length + 3;
+  for (const opt of sorted) {
+    const cost = opt.name.length + 3;
     if (shown.length > 0 && used + cost > BUDGET) break;
-    shown.push(name);
+    shown.push(opt);
     used += cost;
   }
-  const extra = names.length - shown.length;
+  const extra = sorted.length - shown.length;
 
   return (
     <span className={styles.opts}>
-      {shown.map((name, idx) => (
+      {shown.map((opt, idx) => (
         <span key={idx} className={styles.chip}>
-          {name}
+          {opt.name}
+          {opt.isDefault && (
+            <span className={styles.defaultStar} title="Default option">
+              *
+            </span>
+          )}
         </span>
       ))}
       {extra > 0 && (
-        <span className={styles.more} title={names.slice(shown.length).join(", ")}>
+        <span
+          className={styles.more}
+          title={sorted.slice(shown.length).map((o) => o.name).join(", ")}
+        >
           +{extra}
         </span>
       )}

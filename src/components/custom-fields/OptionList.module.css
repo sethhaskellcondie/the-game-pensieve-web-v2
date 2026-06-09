@@ -20,6 +20,13 @@
   flex: 0 0 auto;
 }
 
+.defaultStar {
+  margin-left: 3px;
+  color: var(--primary-600);
+  font-weight: 800;
+  line-height: 1;
+}
+
 .more {
   display: inline-flex;
   align-items: center;
