@@ -27,6 +27,12 @@ const COLS: Column[] = [
 ];
 const MIN_COL = 110;
 const MAX_COL = 560;
+// Fixed width for the delete column. It must be a real <col> width because
+// table-layout: fixed honors those but ignores a cell's min-width — without it
+// the auto delete column collapses to 0 (hiding the buttons and blanking its
+// header) whenever the table overflows. A trailing auto filler column absorbs
+// the leftover space instead, so the data columns never stretch.
+const DEL_W = 56;
 
 type ModalState = { mode: "create" | "edit"; field?: CustomField };
 type OverInfo = { id: number; pos: "before" | "after" };
@@ -380,6 +386,7 @@ export default function CustomFieldsManager() {
               {COLS.map((c) => (
                 <col key={c.key} style={{ width: widths[c.key] }} />
               ))}
+              <col style={{ width: DEL_W }} />
               <col />
             </colgroup>
             <thead>
@@ -409,6 +416,7 @@ export default function CustomFieldsManager() {
                   );
                 })}
                 <th scope="col" className={styles.delCol} aria-label="Delete" />
+                <th aria-hidden="true" className={styles.filler} />
               </tr>
             </thead>
             <tbody>
@@ -524,19 +532,20 @@ export default function CustomFieldsManager() {
                         <TrashIcon />
                       </button>
                     </td>
+                    <td className={styles.filler} />
                   </tr>
                 );
               })}
               {!loading && fields.length === 0 && (
                 <tr>
-                  <td className={styles.emptyState} colSpan={5}>
+                  <td className={styles.emptyState} colSpan={6}>
                     No custom fields for this record type.
                   </td>
                 </tr>
               )}
               {loading && fields.length === 0 && (
                 <tr>
-                  <td className={styles.emptyState} colSpan={5}>
+                  <td className={styles.emptyState} colSpan={6}>
                     Loading custom fields…
                   </td>
                 </tr>

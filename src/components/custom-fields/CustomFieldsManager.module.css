@@ -347,13 +347,21 @@
   background: #eaf1ff;
 }
 
-/* Delete column — auto width so it absorbs the table's leftover space; the
-   button stays left-aligned next to the content rather than floating in the
-   middle of the slack. */
+/* Delete column — a real fixed <col> width (set in the component) so
+   table-layout: fixed never collapses it to 0 when the table overflows, which
+   would blank its header and hide the delete buttons. The trailing .filler
+   column absorbs the table's leftover space instead. */
 .delCol {
-  min-width: 92px;
   text-align: left;
   padding: 0 12px;
+  border-right: none;
+}
+
+/* Empty trailing column that soaks up any leftover width so the data columns
+   keep their set sizes and the header's blue band reaches the card's right
+   edge. It safely collapses to 0 once the table overflows. */
+.filler {
+  border-right: none;
 }
 
 .del {
