@@ -17,10 +17,13 @@ import { GripIcon, PlusIcon, TrashIcon } from "./icons";
 import styles from "./CustomFieldsManager.module.css";
 
 type ColKey = "order" | "name" | "kind" | "options";
-type Column = { key: ColKey; label: string; width: number; frozen?: boolean; seam?: boolean };
+type Column = { key: ColKey; label: string; width: number; min?: number; frozen?: boolean; seam?: boolean };
 
 const COLS: Column[] = [
-  { key: "order", label: "Order", width: 80, frozen: true },
+  // Order is the narrowest column (just a grip + number), so it gets a smaller
+  // resize floor than MIN_COL — otherwise dragging it would snap up past its
+  // own default width.
+  { key: "order", label: "Order", width: 80, min: 56, frozen: true },
   { key: "name", label: "Name", width: 272, frozen: true, seam: true },
   { key: "kind", label: "Custom Field Type", width: 226 },
   { key: "options", label: "Options (* = default)", width: 380 },
@@ -46,6 +49,7 @@ function beginColumnResize(
   key: ColKey,
   e: React.MouseEvent,
   startW: number,
+  minW: number,
   setWidths: React.Dispatch<React.SetStateAction<Record<ColKey, number>>>,
 ) {
   e.preventDefault();
@@ -57,7 +61,7 @@ function beginColumnResize(
     setWidths((ws) => ({
       ...ws,
       [key]: Math.max(
-        MIN_COL,
+        minW,
         Math.min(MAX_COL, Math.round(startW + (ev.clientX - startX))),
       ),
     }));
@@ -328,9 +332,12 @@ export default function CustomFieldsManager() {
     void persistReorder(next, prev);
   };
 
-  // Drag a header's right edge to resize that column (spreadsheet feel).
-  const startResize = (key: ColKey, e: React.MouseEvent) =>
-    beginColumnResize(key, e, widths[key], setWidths);
+  // Drag a header's right edge to resize that column (spreadsheet feel). Each
+  // column may set its own resize floor (Order's is below MIN_COL).
+  const startResize = (key: ColKey, e: React.MouseEvent) => {
+    const minW = COLS.find((c) => c.key === key)?.min ?? MIN_COL;
+    beginColumnResize(key, e, widths[key], minW, setWidths);
+  };
 
   // Cumulative left offset for each frozen (sticky) column.
   const frozenLeft: Partial<Record<ColKey, number>> = (() => {
