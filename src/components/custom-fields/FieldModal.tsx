@@ -59,6 +59,15 @@ export default function FieldModal({
           .map((o) => ({ id: o.id, name: o.name }))
       : [],
   );
+  // Index into `options` of the option marked default. Only one can be default,
+  // so a single index is enough; removeOption keeps it pointed at a live row.
+  const [defaultIndex, setDefaultIndex] = useState<number>(() => {
+    if (!field) return 0;
+    const idx = [...field.options]
+      .sort((a, b) => a.order - b.order)
+      .findIndex((o) => o.isDefault);
+    return idx >= 0 ? idx : 0;
+  });
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -87,31 +96,40 @@ export default function FieldModal({
     setOptions((os) => os.map((o, i) => (i === index ? { ...o, name: value } : o)));
   const addOption = () =>
     setOptions((os) => [...os, { id: null, name: "" }]);
-  const removeOption = (index: number) =>
+  const removeOption = (index: number) => {
     setOptions((os) => os.filter((_, i) => i !== index));
+    // Keep the default pointed at the same option: if we removed the default
+    // itself, fall back to the first; if we removed one above it, shift down.
+    setDefaultIndex((d) => {
+      if (index === d) return 0;
+      return index < d ? d - 1 : d;
+    });
+  };
 
   const submit = () => {
     if (!canSave || saving) return;
+    // Drop blank rows, but remember which surviving row the user marked default.
+    // If that row was blank (and thus dropped), fall back to the first option.
+    const kept = options
+      .map((o, i) => ({ id: o.id, name: o.name.trim(), wasDefault: i === defaultIndex }))
+      .filter((o) => o.name.length > 0);
+    const defaultPos = kept.findIndex((o) => o.wasDefault);
+    const withDefault = kept.map((o, i) => ({
+      name: o.name,
+      order: i,
+      isDefault: defaultPos >= 0 ? i === defaultPos : i === 0,
+    }));
+
     if (isEdit && field) {
-      // Full-replacement options that preserve existing ids; keep the default on
-      // the previously-default option if it survived, else fall back to first.
-      const prevDefaultId = field.options.find((o) => o.isDefault)?.id ?? null;
-      const kept = options
-        .map((o) => ({ id: o.id, name: o.name.trim() }))
-        .filter((o) => o.name.length > 0);
-      const defaultPresent = kept.some(
-        (o) => o.id != null && o.id === prevDefaultId,
-      );
       const input: UpdateCustomFieldInput = {
         name: name.trim(),
         order: field.order,
+        // Full-replacement options that preserve existing ids.
         ...(hasOptions(field.type)
           ? {
               options: kept.map((o, i) => ({
                 id: o.id,
-                name: o.name,
-                order: i,
-                isDefault: defaultPresent ? o.id === prevDefaultId : i === 0,
+                ...withDefault[i],
               })),
             }
           : {}),
@@ -119,22 +137,11 @@ export default function FieldModal({
       onSave({ mode: "edit", id: field.id, input });
       return;
     }
-    const trimmed = options
-      .map((o) => o.name.trim())
-      .filter((n) => n.length > 0);
     const input: CreateCustomFieldInput = {
       name: name.trim(),
       type,
       entityKey,
-      ...(hasOptions(type)
-        ? {
-            options: trimmed.map((n, i) => ({
-              name: n,
-              order: i,
-              isDefault: i === 0,
-            })),
-          }
-        : {}),
+      ...(hasOptions(type) ? { options: withDefault } : {}),
     };
     onSave({ mode: "create", input });
   };
@@ -150,7 +157,7 @@ export default function FieldModal({
       >
         <div className={styles.head}>
           <h2 id="cf-modal-title" className={styles.title}>
-            {isEdit ? "Edit custom field" : "New custom field"}
+            {isEdit ? "Update Custom Field" : "Create Custom Field"}
           </h2>
           <button
             type="button"
@@ -170,12 +177,35 @@ export default function FieldModal({
           ref={nameRef}
           className={styles.input}
           value={name}
-          placeholder="e.g. Designer, Play Time, Acquired Date"
+          placeholder="Designer, Play Time, Acquired Date, etc."
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") submit();
           }}
         />
+
+        <span className={styles.label}>Applies to</span>
+        {isEdit && field ? (
+          <div className={styles.readRow}>
+            <EntityBadge entityKey={field.entityKey} />
+            <span className={styles.readNote}>Can&apos;t be reassigned</span>
+          </div>
+        ) : (
+          <div className={styles.selectWrap}>
+            <select
+              aria-label="Applies to"
+              value={entityKey}
+              onChange={(e) => setEntityKey(e.target.value as EntityKey)}
+            >
+              {ENTITY_ORDER.map((key) => (
+                <option key={key} value={key}>
+                  {ENTITY_META[key].label}
+                </option>
+              ))}
+            </select>
+            <CaretIcon />
+          </div>
+        )}
 
         <span className={styles.label}>Field type</span>
         {isEdit && field ? (
@@ -215,55 +245,52 @@ export default function FieldModal({
           </div>
         )}
 
-        <span className={styles.label}>Applies to</span>
-        {isEdit && field ? (
-          <div className={styles.readRow}>
-            <EntityBadge entityKey={field.entityKey} />
-            <span className={styles.readNote}>Can&apos;t be reassigned</span>
-          </div>
-        ) : (
-          <div className={styles.selectWrap}>
-            <select
-              aria-label="Applies to"
-              value={entityKey}
-              onChange={(e) => setEntityKey(e.target.value as EntityKey)}
-            >
-              {ENTITY_ORDER.map((key) => (
-                <option key={key} value={key}>
-                  {ENTITY_META[key].label}
-                </option>
-              ))}
-            </select>
-            <CaretIcon />
-          </div>
-        )}
-
         {showsOptions && (
           <>
             <span className={styles.label}>Options</span>
             <div className={styles.optEdit}>
               {options.length === 0 && (
                 <div className={styles.optEmpty}>
-                  No options yet — add the choices users can pick from.
+                  Add at least one option.
+                </div>
+              )}
+              {options.length > 0 && (
+                <div className={styles.optHint}>
+                  Use the radio buttons on the left to select a default option.
                 </div>
               )}
               {options.map((opt, i) => (
                 <div className={styles.optRow} key={i}>
-                  <span className={styles.optIdx}>{i + 1}</span>
                   <input
-                    className={styles.optInput}
-                    aria-label={`Option ${i + 1}`}
-                    value={opt.name}
-                    placeholder="Option label"
-                    autoFocus={opt.name === "" && i === options.length - 1}
-                    onChange={(e) => setOption(i, e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addOption();
-                      }
-                    }}
+                    type="radio"
+                    className={styles.optDefault}
+                    name="cf-default-option"
+                    checked={i === defaultIndex}
+                    aria-label={`Make option ${i + 1} the default`}
+                    title="Make default"
+                    onChange={() => setDefaultIndex(i)}
                   />
+                  <div className={styles.optInputWrap}>
+                    <input
+                      className={`${styles.optInput}${i === defaultIndex ? ` ${styles.optInputDefault}` : ""}`}
+                      aria-label={`Option ${i + 1}`}
+                      value={opt.name}
+                      placeholder="Option label"
+                      autoFocus={opt.name === "" && i === options.length - 1}
+                      onChange={(e) => setOption(i, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addOption();
+                        }
+                      }}
+                    />
+                    {i === defaultIndex && (
+                      <span className={styles.optDefaultTag} aria-hidden="true">
+                        (default)
+                      </span>
+                    )}
+                  </div>
                   <button
                     type="button"
                     className={styles.optDel}

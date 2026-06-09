@@ -331,6 +331,8 @@
   cursor: pointer;
   transition: 0.12s;
   opacity: 0;
+  /* Match the name button's nudge so it doesn't sit flush against the cell. */
+  margin-left: 6px;
 }
 
 .row:hover .del {

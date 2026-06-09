@@ -163,7 +163,7 @@ test("edits a field's options via the modal", async ({ page }) => {
 
   const dialog = page.getByRole("dialog");
   await expect(
-    dialog.getByRole("heading", { name: "Edit custom field" }),
+    dialog.getByRole("heading", { name: "Update Custom Field" }),
   ).toBeVisible();
 
   await dialog.getByRole("button", { name: /add option/i }).click();

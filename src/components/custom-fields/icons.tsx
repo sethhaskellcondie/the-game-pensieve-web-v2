@@ -1,6 +1,3 @@
-// Small UI icons for the Custom Fields screen (ported from cf-grid.jsx `I`).
-// Each inherits `currentColor` so callers control the color via CSS. Their
-// viewBoxes differ from the app's 24x24 IconBase, so they stay standalone.
 import type { SVGProps } from "react";
 
 export function PlusIcon(props: SVGProps<SVGSVGElement>) {

@@ -8,9 +8,9 @@ function opt(name: string, order: number): CustomFieldOption {
 }
 
 describe("OptionList", () => {
-  it("shows a muted dash when there are no options", () => {
+  it("shows a muted N/A when there are no options", () => {
     render(<OptionList options={[]} />);
-    expect(screen.getByText("—")).toBeInTheDocument();
+    expect(screen.getByText("N/A")).toBeInTheDocument();
   });
 
   it("renders a chip per option for a short list", () => {

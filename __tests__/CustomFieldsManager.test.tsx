@@ -127,7 +127,7 @@ describe("CustomFieldsManager", () => {
 
     const dialog = await screen.findByRole("dialog");
     expect(
-      within(dialog).getByRole("heading", { name: "New custom field" }),
+      within(dialog).getByRole("heading", { name: "Create Custom Field" }),
     ).toBeInTheDocument();
   });
 });

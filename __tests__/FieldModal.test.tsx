@@ -80,6 +80,52 @@ describe("FieldModal (create)", () => {
       },
     });
   });
+
+  it("marks the user-selected option as the default", () => {
+    const onSave = jest.fn<void, [FieldModalSave]>();
+    render(
+      <FieldModal
+        mode="create"
+        defaultEntityKey="boardGame"
+        onSave={onSave}
+        onClose={jest.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Field name"), {
+      target: { value: "Theme" },
+    });
+    fireEvent.click(screen.getByRole("radio", { name: "Dropdown" }));
+
+    fireEvent.click(screen.getByRole("button", { name: /add option/i }));
+    fireEvent.change(screen.getByLabelText("Option 1"), {
+      target: { value: "Fantasy" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /add option/i }));
+    fireEvent.change(screen.getByLabelText("Option 2"), {
+      target: { value: "Sci-Fi" },
+    });
+
+    // Promote the second option to default instead of the first.
+    fireEvent.click(
+      screen.getByRole("radio", { name: "Make option 2 the default" }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Create field" }));
+
+    expect(onSave.mock.calls[0][0]).toEqual({
+      mode: "create",
+      input: {
+        name: "Theme",
+        type: "dropdown",
+        entityKey: "boardGame",
+        options: [
+          { name: "Fantasy", order: 0, isDefault: false },
+          { name: "Sci-Fi", order: 1, isDefault: true },
+        ],
+      },
+    });
+  });
 });
 
 describe("FieldModal (edit)", () => {
@@ -105,7 +151,12 @@ describe("FieldModal (edit)", () => {
         onClose={jest.fn()}
       />,
     );
-    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    // The field-type picker is a radiogroup; default-option radios may still
+    // appear, so assert the type picker specifically is gone.
+    expect(
+      screen.queryByRole("radiogroup", { name: "Field type" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "Dropdown" })).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.getByText(/type can't be changed/i)).toBeInTheDocument();
     expect(screen.getByText(/can't be reassigned/i)).toBeInTheDocument();
