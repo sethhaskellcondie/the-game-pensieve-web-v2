@@ -262,102 +262,108 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ---- yes/no badge ---- */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px 5px 9px;
-  border-radius: 20px;
-  font-size: 12.5px;
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
-  font-family: var(--font-jetbrains-mono), monospace;
-  border: none;
-  cursor: pointer;
-  transition:
-    filter 0.12s,
-    box-shadow 0.12s;
-}
-
-.badge:hover {
-  filter: brightness(0.97);
-  box-shadow: 0 0 0 2px rgba(var(--ink-navy-rgb), 0.08);
-}
-
-.badgeDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-}
-
-.badgeYes {
-  background: #d7eede;
-  color: #1c7a38;
-}
-
-.badgeYes .badgeDot {
-  background: var(--success);
-}
-
-.badgeNo {
-  background: #fbe9c8;
-  color: #9a7416;
-}
-
-.badgeNo .badgeDot {
-  background: var(--warning);
-}
-
-.editSwap {
-  margin-left: 3px;
-  opacity: 0;
-  transition: opacity 0.12s;
-}
-
-.badge:hover .editSwap {
-  opacity: 0.7;
-}
-
-/* ---- dropdown ---- */
+/* ---- dropdown — a gold trigger + custom listbox (no native <select>) ---- */
 .vDrop {
-  display: inline-flex;
+  position: relative;
+  display: inline-block;
+  max-width: 280px;
+}
+
+.dropTrigger {
+  display: flex;
   align-items: center;
   gap: 10px;
-  white-space: nowrap;
-  font-weight: 700;
-  color: #7c5a0e;
+  width: 100%;
+  min-width: 150px;
+  padding: 6px 11px 6px 13px;
   background: #faedcf;
   border: 1px solid #ead49a;
-  padding: 6px 13px;
   border-radius: 8px;
-  font-size: 13px;
-  font-family: var(--font-jetbrains-mono), monospace;
-  cursor: pointer;
-}
-
-.vDrop svg {
-  opacity: 0.7;
-}
-
-.vDropEdit {
-  padding-right: 11px;
-  cursor: default;
-}
-
-.dropSel {
-  appearance: none;
-  -webkit-appearance: none;
-  border: none;
-  background: transparent;
+  color: #7c5a0e;
   font-family: var(--font-jetbrains-mono), monospace;
   font-size: 13px;
   font-weight: 700;
-  color: #7c5a0e;
   cursor: pointer;
-  outline: none;
-  padding-right: 2px;
+  transition: 0.13s;
+}
+
+.dropTrigger:hover {
+  border-color: #d9b86a;
+}
+
+.dropOpen {
+  border-color: #d9b86a;
+  box-shadow: 0 0 0 3px rgba(154, 111, 18, 0.14);
+}
+
+.dropValue {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropCaret {
+  display: flex;
+  flex: 0 0 auto;
+  opacity: 0.7;
+  transition: transform 0.15s;
+}
+
+.dropOpen .dropCaret {
+  transform: rotate(180deg);
+}
+
+.dropMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  min-width: 100%;
+  background: #fff;
+  border: 1px solid #ead49a;
+  border-radius: 11px;
+  box-shadow: 0 20px 48px -16px rgba(var(--ink-navy-rgb), 0.34);
+  padding: 6px;
+}
+
+.dropOption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #7c5a0e;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: 0.1s;
+}
+
+.dropOption:hover {
+  background: #faf3e0;
+}
+
+.dropOptionSelected {
+  background: #fbf0d6;
+}
+
+.dropOptionLabel {
+  flex: 1;
+  text-align: left;
+}
+
+.dropOptionCheck {
+  display: flex;
+  flex: 0 0 auto;
+  color: #9a6f12;
 }
 
 /* ---- radio ---- */

@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { CustomFieldOption, CustomFieldType } from "@/lib/api";
-import { CaretIcon, PencilIcon, SwapIcon } from "@/components/custom-fields/icons";
+import {
+  CaretIcon,
+  CheckIcon,
+  PencilIcon,
+} from "@/components/custom-fields/icons";
+import BooleanBadge from "@/components/BooleanBadge";
 import styles from "./ToyDetail.module.css";
 
 // The minimal view of a field an editor needs. `value` is always the backend's
@@ -130,74 +135,93 @@ function TextEditor({ field, onCommit }: EditorProps) {
   );
 }
 
-// Yes/No: the badge is the control — clicking it toggles directly.
+// Yes/No: the same pill shown in the toys grid, but clickable — clicking
+// toggles the value directly.
 function YesNoEditor({ field, onCommit }: EditorProps) {
   const on = field.value === "true";
   return (
-    <button
-      type="button"
-      className={`${styles.badge} ${on ? styles.badgeYes : styles.badgeNo}`}
-      aria-pressed={on}
-      aria-label={`${field.name}: ${on ? "Yes" : "No"}`}
-      onClick={() => onCommit(on ? "false" : "true")}
-    >
-      <span className={styles.badgeDot} />
-      {on ? "Yes" : "No"}
-      <SwapIcon className={styles.editSwap} aria-hidden="true" />
-    </button>
+    <BooleanBadge
+      value={on}
+      label={field.name}
+      onToggle={() => onCommit(on ? "false" : "true")}
+    />
   );
 }
 
-// Dropdown: click the pill to reveal a native select; change commits + closes.
+// Dropdown: a gold trigger that opens a custom listbox of every option (in
+// their defined order, as sorted by the caller) — no native <select>, matching
+// the custom-fields scope picker. Picking a different option commits it. Closes
+// on outside click or Escape.
 function DropdownEditor({ field, onCommit }: EditorProps) {
   const options = field.options ?? [];
-  const [editing, setEditing] = useState(false);
-  const ref = useRef<HTMLSelectElement>(null);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (editing && ref.current) ref.current.focus();
-  }, [editing]);
-
-  if (editing) {
-    return (
-      <span className={`${styles.vDrop} ${styles.vDropEdit}`}>
-        <select
-          ref={ref}
-          className={styles.dropSel}
-          aria-label={field.name}
-          value={field.value}
-          onChange={(e) => {
-            onCommit(e.target.value);
-            setEditing(false);
-          }}
-          onBlur={() => setEditing(false)}
-        >
-          {field.value === "" && (
-            <option value="" disabled>
-              Select…
-            </option>
-          )}
-          {options.map((o) => (
-            <option key={o.id} value={o.name}>
-              {o.name}
-            </option>
-          ))}
-        </select>
-        <CaretIcon />
-      </span>
-    );
-  }
+    if (!open) return;
+    const onDocMouseDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocMouseDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onDocMouseDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
 
   return (
-    <button
-      type="button"
-      className={`${styles.vDrop} ${styles.editable}`}
-      aria-label={`Edit ${field.name}`}
-      onClick={() => setEditing(true)}
-    >
-      {field.value === "" ? <em className={styles.ph}>Empty</em> : field.value}
-      <CaretIcon />
-    </button>
+    <div className={styles.vDrop} ref={ref}>
+      <button
+        type="button"
+        className={`${styles.dropTrigger}${open ? ` ${styles.dropOpen}` : ""}`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={field.name}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className={styles.dropValue}>
+          {field.value === "" ? (
+            <em className={styles.ph}>Select…</em>
+          ) : (
+            field.value
+          )}
+        </span>
+        <span className={styles.dropCaret}>
+          <CaretIcon />
+        </span>
+      </button>
+      {open && (
+        <div className={styles.dropMenu} role="listbox" aria-label={field.name}>
+          {options.map((o) => {
+            const selected = o.name === field.value;
+            return (
+              <button
+                type="button"
+                key={o.id}
+                role="option"
+                aria-selected={selected}
+                className={`${styles.dropOption}${selected ? ` ${styles.dropOptionSelected}` : ""}`}
+                onClick={() => {
+                  if (o.name !== field.value) onCommit(o.name);
+                  setOpen(false);
+                }}
+              >
+                <span className={styles.dropOptionLabel}>{o.name}</span>
+                {selected && (
+                  <span className={styles.dropOptionCheck}>
+                    <CheckIcon />
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 

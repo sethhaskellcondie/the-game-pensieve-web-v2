@@ -1,0 +1,39 @@
+/* The shared Yes/No pill pairing a check/X icon with its label. The icon
+   inherits the badge's color via `currentColor`. Used statically in the toys
+   grid and as a clickable toggle on the toy detail page. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.yes {
+  color: var(--success);
+  background: rgba(42, 167, 69, 0.12);
+}
+
+.no {
+  color: var(--cannon-red);
+  background: rgba(244, 40, 40, 0.1);
+}
+
+/* Interactive (edit) variant — the same pill, clickable. */
+button.badge {
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    filter 0.12s,
+    box-shadow 0.12s;
+}
+
+button.badge:hover {
+  filter: brightness(0.97);
+  box-shadow: 0 0 0 2px rgba(var(--ink-navy-rgb), 0.08);
+}

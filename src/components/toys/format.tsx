@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { CustomFieldType } from "@/lib/api";
-import { CheckIcon, XIcon } from "@/components/custom-fields/icons";
+import BooleanBadge from "@/components/BooleanBadge";
 import styles from "./format.module.css";
 
 // A blank/missing value renders as a muted dash so empty cells read as
@@ -22,15 +22,7 @@ export function formatCustomFieldValue(
   if (value == null || value === "") return placeholder();
   switch (type) {
     case "boolean":
-      return value === "true" ? (
-        <span className={`${styles.badge} ${styles.yes}`} role="img" aria-label="Yes">
-          <CheckIcon aria-hidden="true" /> Yes
-        </span>
-      ) : (
-        <span className={`${styles.badge} ${styles.no}`} role="img" aria-label="No">
-          <XIcon aria-hidden="true" /> No
-        </span>
-      );
+      return <BooleanBadge value={value === "true"} />;
     case "text":
     case "number":
       return value;

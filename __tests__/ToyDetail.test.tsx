@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { CustomField, Toy } from "@/lib/api";
 import ToyDetail from "@/components/toys/ToyDetail";
 import { normalizeFieldValue } from "@/components/toys/toyFieldEditors";
@@ -209,12 +209,19 @@ describe("ToyDetail", () => {
     expect(cf.value).toBe("Good");
   });
 
-  it("changes a dropdown via the native select", async () => {
+  it("changes a dropdown via the custom listbox", async () => {
     renderDetail();
 
-    fireEvent.click(screen.getByRole("button", { name: "Edit Series" }));
-    const select = screen.getByRole("combobox", { name: "Series" });
-    fireEvent.change(select, { target: { value: "Ocarina of Time" } });
+    fireEvent.click(screen.getByRole("button", { name: "Series" }));
+    const listbox = screen.getByRole("listbox", { name: "Series" });
+    // All options, in their defined order.
+    expect(
+      within(listbox)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["Breath of the Wild", "Ocarina of Time"]);
+
+    fireEvent.click(screen.getByRole("option", { name: "Ocarina of Time" }));
 
     await waitFor(() => expect(mockFetch).toHaveBeenCalled());
     const cf = lastPutBody().customFieldValues.find(
@@ -260,12 +267,13 @@ describe("ToyDetail", () => {
     };
     renderDetail(bad);
 
-    // Non-numeric number + unknown dropdown option → the "Empty" placeholder.
+    // Non-numeric number → the "Empty" placeholder.
     expect(screen.getByRole("button", { name: "Edit Quantity" })).toHaveTextContent(
       "Empty",
     );
-    expect(screen.getByRole("button", { name: "Edit Series" })).toHaveTextContent(
-      "Empty",
+    // Unknown dropdown option → the trigger falls back to its empty placeholder.
+    expect(screen.getByRole("button", { name: "Series" })).toHaveTextContent(
+      "Select…",
     );
     // An unknown radio option leaves nothing selected.
     expect(screen.getByRole("radio", { name: "Mint" })).toHaveAttribute(
