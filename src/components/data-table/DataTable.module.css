@@ -63,14 +63,7 @@
   position: sticky;
   top: 0;
   z-index: 3;
-  background:
-    linear-gradient(rgba(145, 224, 249, 0.2) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(145, 224, 249, 0.2) 1px, transparent 1px),
-    linear-gradient(180deg, #4f86dd 0%, #2c539f 100%);
-  background-size:
-    24px 24px,
-    24px 24px,
-    100% 100%;
+  background: var(--surface-blue-grid);
   color: #fff;
   font-weight: 700;
   white-space: nowrap;

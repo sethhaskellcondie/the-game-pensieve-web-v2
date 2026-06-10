@@ -76,13 +76,15 @@
     0 16px 42px -28px rgba(var(--ink-navy-rgb), 0.26);
 }
 
+/* The card header wears the shared "blue grid" surface (see globals.css), so its
+   text goes white and the bottom border matches the data-grid header seam. */
 .caphdr {
   display: flex;
   align-items: center;
   gap: 9px;
   padding: 13px 22px;
-  border-bottom: 1px solid var(--line);
-  background: #fff;
+  border-bottom: 1px solid #294e97;
+  background: var(--surface-blue-grid);
 }
 
 .caphdrTitle {
@@ -90,19 +92,20 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--gray-500);
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(15, 33, 74, 0.35);
 }
 
 .caphdrCount {
   margin-left: auto;
   font-size: 12px;
   font-weight: 700;
-  color: var(--gray-500);
+  color: rgba(var(--white-rgb), 0.82);
   white-space: nowrap;
 }
 
 .caphdrCount b {
-  color: var(--ink-navy);
+  color: #fff;
 }
 
 /* ---- field rows ---- */
