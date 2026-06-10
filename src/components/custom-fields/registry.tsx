@@ -37,6 +37,17 @@ export const FIELD_TYPE_META: Record<CustomFieldType, FieldTypeMeta> = {
   },
 };
 
+// Metadata for a "standard" field — the built-in, always-present attributes
+// every record has (e.g. a toy's Name and Set) as opposed to user-defined
+// custom fields. Reuse this (with StandardFieldGlyph) wherever standard fields
+// are shown alongside custom fields so they read as a distinct, neutral kind.
+export const STANDARD_FIELD_META: FieldTypeMeta = {
+  label: "Standard",
+  bg: "#E9ECF3",
+  fg: "#4A5161",
+  hasOptions: false,
+};
+
 // Order shown in the "New field" type picker (matches the prototype).
 export const FIELD_TYPE_ORDER: CustomFieldType[] = [
   "text",
@@ -172,4 +183,27 @@ export function KindGlyph({
     default:
       return null;
   }
+}
+
+// Glyph for a "standard" (built-in) field such as a record's Name or Set — a
+// shield, distinct from the custom-field type glyphs. Mirrors KindGlyph's
+// stroke style so the two sit together cleanly. Reuse anywhere standard fields
+// appear.
+export function StandardFieldGlyph({ size = 15 }: { size?: number }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 2.75 20 5.4V11.2C20 16.4 16.4 19.9 12 21.25 7.6 19.9 4 16.4 4 11.2V5.4Z" />
+      <path d="M4.4 9.1H19.6" />
+      <path d="M12 9.1V20.55" />
+    </svg>
+  );
 }

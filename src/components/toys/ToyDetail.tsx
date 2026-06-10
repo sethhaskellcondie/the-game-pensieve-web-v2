@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import type {
   CustomField,
   CustomFieldOption,
@@ -11,22 +10,31 @@ import type {
   UpdateToyInput,
 } from "@/lib/api";
 import Header from "@/components/Header";
+import Button from "@/components/Button";
 import { ToysIcon } from "@/components/icons";
 import { ChevronLeftIcon } from "@/components/custom-fields/icons";
-import { FIELD_TYPE_META, KindGlyph } from "@/components/custom-fields/registry";
+import {
+  FIELD_TYPE_META,
+  KindGlyph,
+  STANDARD_FIELD_META,
+  StandardFieldGlyph,
+} from "@/components/custom-fields/registry";
 import { useToast } from "@/components/ToastProvider";
 import FieldEditor, { normalizeFieldValue } from "./toyFieldEditors";
 import styles from "./ToyDetail.module.css";
 
 // One rendered field: the fixed Name/Set rows and every custom field share this
 // shape so a single row renderer drives them all. `kind` reuses the backend
-// custom-field type so Name/Set borrow the "text" glyph + editor.
+// custom-field type so Name/Set borrow the "text" editor. `standard` marks the
+// built-in Name/Set rows so they get the neutral standard-field glyph + label
+// instead of a custom-field type's.
 type Row = {
   key: string;
   name: string;
   kind: CustomFieldType;
   value: string;
   options?: CustomFieldOption[];
+  standard?: boolean;
   onCommit: (value: string) => void;
 };
 
@@ -117,8 +125,8 @@ export default function ToyDetail({
   // Name + Set first (guaranteeing at least two rows), then the custom fields in
   // their defined order.
   const rows: Row[] = [
-    { key: "name", name: "Name", kind: "text", value: toy.name, onCommit: commitName },
-    { key: "set", name: "Set", kind: "text", value: toy.set, onCommit: commitSet },
+    { key: "name", name: "Name", kind: "text", value: toy.name, standard: true, onCommit: commitName },
+    { key: "set", name: "Set", kind: "text", value: toy.set, standard: true, onCommit: commitSet },
     ...definitions.map<Row>((def) => {
       const options = [...def.options].sort((a, b) => a.order - b.order);
       const raw = toy.customFieldValues.find(
@@ -140,16 +148,16 @@ export default function ToyDetail({
     <>
       <Header
         icon={<ToysIcon />}
-        title={toy.name}
-        tagline="A toy in your collection"
+        title="TOY"
+        tagline={`${toy.name} · ${toy.set}`}
       />
 
       <main className={styles.main}>
         <div className={styles.wrap}>
           <div className={styles.topbar}>
-            <Link href="/toys" className={styles.backbtn}>
+            <Button href="/toys" className={styles.backbtn}>
               <ChevronLeftIcon aria-hidden="true" /> Back
-            </Link>
+            </Button>
           </div>
 
           <div className={styles.card}>
@@ -162,7 +170,9 @@ export default function ToyDetail({
             </div>
 
             {rows.map((row) => {
-              const meta = FIELD_TYPE_META[row.kind];
+              const meta = row.standard
+                ? STANDARD_FIELD_META
+                : FIELD_TYPE_META[row.kind];
               return (
                 <div className={styles.row} key={row.key}>
                   <div className={styles.rowlabel}>
@@ -170,7 +180,11 @@ export default function ToyDetail({
                       className={styles.glyph}
                       style={{ background: meta.bg, color: meta.fg }}
                     >
-                      <KindGlyph type={row.kind} size={15} />
+                      {row.standard ? (
+                        <StandardFieldGlyph size={15} />
+                      ) : (
+                        <KindGlyph type={row.kind} size={15} />
+                      )}
                     </span>
                     <span className={styles.lblwrap}>
                       <div className={styles.lbl}>{row.name}</div>

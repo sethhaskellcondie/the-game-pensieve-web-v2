@@ -27,32 +27,41 @@
   gap: 14px;
 }
 
-.backbtn {
-  display: inline-flex;
-  align-items: center;
+/* The Back button reuses the shared <Button> for its base layout, focus ring,
+   and press behavior; these rules only swap in the design's outlined/white
+   palette + 36px height. Scoping under .topbar raises specificity above
+   Button's own base/:hover/:active rules (cross-file class order isn't
+   guaranteed otherwise), matching how .actions .filterBtn does it. */
+.topbar .backbtn {
   gap: 7px;
   height: 36px;
   padding: 0 15px 0 12px;
-  border-radius: 9px;
-  white-space: nowrap;
   border: 1px solid var(--line);
+  border-radius: 9px;
   background: var(--white);
   color: var(--ink-navy);
   font-size: 13px;
-  font-weight: 700;
+  white-space: nowrap;
   text-decoration: none;
-  cursor: pointer;
-  transition: 0.13s;
   box-shadow: 0 1px 2px rgba(var(--ink-navy-rgb), 0.04);
+  transition:
+    background 0.18s ease,
+    transform 0.05s ease,
+    border-color 0.13s ease,
+    color 0.13s ease;
 }
 
-.backbtn:hover {
+.topbar .backbtn:hover:not(:disabled) {
   border-color: #c9d2df;
   background: #fff;
   color: var(--primary-600);
 }
 
-.backbtn svg {
+.topbar .backbtn:active:not(:disabled) {
+  background: #eef1f6;
+}
+
+.topbar .backbtn svg {
   opacity: 0.85;
 }
 

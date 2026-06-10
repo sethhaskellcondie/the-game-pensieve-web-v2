@@ -106,8 +106,9 @@ describe("ToyDetail", () => {
     renderDetail();
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "R2-D2" }),
+      screen.getByRole("heading", { level: 1, name: "TOY" }),
     ).toBeInTheDocument();
+    expect(screen.getByText("R2-D2 · Star Wars")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back" })).toHaveAttribute(
       "href",
       "/toys",
@@ -119,6 +120,9 @@ describe("ToyDetail", () => {
     expect(
       screen.getByText((_, el) => el?.textContent === "6 custom fields"),
     ).toBeInTheDocument();
+
+    // Name + Set are tagged as "Standard" fields, not "Text".
+    expect(screen.getAllByText("Standard")).toHaveLength(2);
 
     // A sample of each value rendering.
     expect(screen.getByRole("button", { name: "Edit Line" })).toHaveTextContent(
@@ -147,10 +151,8 @@ describe("ToyDetail", () => {
       set: "Star Wars",
       customFieldValues: toy.customFieldValues,
     });
-    // Optimistic: the header reflects the new name.
-    expect(
-      screen.getByRole("heading", { level: 1, name: "C-3PO" }),
-    ).toBeInTheDocument();
+    // Optimistic: the header tagline reflects the new name.
+    expect(screen.getByText("C-3PO · Star Wars")).toBeInTheDocument();
   });
 
   it("edits a text custom field, merging the value into customFieldValues", async () => {
