@@ -1,5 +1,0 @@
-/* Muted dash for a missing custom field value. (The Yes/No pill now lives in
-   the shared BooleanBadge component.) */
-.dash {
-  color: var(--gray-500);
-}

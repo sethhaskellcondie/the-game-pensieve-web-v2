@@ -2,13 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CustomField, Toy, UpdateToyInput } from "@/lib/api";
+import type {
+  CustomField,
+  CustomFieldValue as CustomFieldValueType,
+  Toy,
+  UpdateToyInput,
+} from "@/lib/api";
 import Button from "@/components/Button";
 import DataTable, { type ColumnDef } from "@/components/data-table/DataTable";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import { PlusIcon } from "@/components/custom-fields/icons";
-import { formatCustomFieldValue } from "./format";
+import CustomFieldValue from "./CustomFieldValue";
+import FieldEditor, { normalizeFieldValue } from "./toyFieldEditors";
 import { FilterIcon, SearchIcon } from "./icons";
 import styles from "./ToysManager.module.css";
 
@@ -227,6 +233,69 @@ export default function ToysManager() {
     [showToast, showSnackbar],
   );
 
+  // Commit a custom-field value edited inline in the grid (mass-edit mode).
+  // Mirrors commitEdit: merge the value into the toy's customFieldValues, apply
+  // optimistically, PUT the whole toy, and roll back on failure.
+  const commitFieldValue = useCallback(
+    async (toy: Toy, def: CustomField, value: string) => {
+      const current =
+        toy.customFieldValues.find((v) => v.customFieldId === def.id)?.value ??
+        "";
+      if (value === current) return;
+      const entry: CustomFieldValueType = {
+        customFieldId: def.id,
+        customFieldName: def.name,
+        customFieldType: def.type,
+        value,
+      };
+      const exists = toy.customFieldValues.some(
+        (v) => v.customFieldId === def.id,
+      );
+      const customFieldValues = exists
+        ? toy.customFieldValues.map((v) =>
+            v.customFieldId === def.id ? entry : v,
+          )
+        : [...toy.customFieldValues, entry];
+      let prev: Toy[] = [];
+      setToys((ts) => {
+        prev = ts;
+        return ts.map((t) =>
+          t.id === toy.id ? { ...t, customFieldValues } : t,
+        );
+      });
+      try {
+        const input: UpdateToyInput = {
+          name: toy.name,
+          set: toy.set,
+          customFieldValues,
+        };
+        const res = await fetch(`/api/toys/${toy.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input),
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as {
+            message?: string;
+          } | null;
+          throw new Error(body?.message ?? "Request failed");
+        }
+        showToast({ message: "Toy updated.", variant: "success" });
+      } catch (error) {
+        console.error("Update toy failed", error);
+        setToys(prev);
+        showSnackbar({
+          message:
+            error instanceof Error
+              ? `Couldn't update the toy: ${error.message}`
+              : "Couldn't update the toy. Please try again.",
+          variant: "error",
+        });
+      }
+    },
+    [showToast, showSnackbar],
+  );
+
   // Name and Set are always first; the rest of the columns are the toy custom
   // fields, in their defined order. Each cell maps the toy's values by field id.
   // In mass-edit mode, Name and Set become inline-editable.
@@ -263,18 +332,46 @@ export default function ToysManager() {
           : (toy) => toy.set,
       },
     ];
+    // In mass-edit mode a dropdown cell becomes the full interactive editor (the
+    // same control as the toy detail page); otherwise every type shows its
+    // read-only display. Other types get inline editing in follow-ups.
+    function renderFieldCell(toy: Toy, def: CustomField) {
+      const value = toy.customFieldValues.find(
+        (cv) => cv.customFieldId === def.id,
+      )?.value;
+      if (massEditMode && def.type === "dropdown") {
+        return (
+          <FieldEditor
+            field={{
+              name: def.name,
+              kind: def.type,
+              value: normalizeFieldValue(def.type, value, def.options),
+              options: [...def.options].sort((a, b) => a.order - b.order),
+            }}
+            onCommit={(v) => commitFieldValue(toy, def, v)}
+          />
+        );
+      }
+      return (
+        <CustomFieldValue type={def.type} value={value} options={def.options} />
+      );
+    }
     const dynamic: ColumnDef<Toy>[] = definitions.map((def) => ({
       key: `cf-${def.id}`,
       label: def.name,
       width: 180,
-      render: (toy) =>
-        formatCustomFieldValue(
-          def.type,
-          toy.customFieldValues.find((cv) => cv.customFieldId === def.id)?.value,
-        ),
+      render: (toy) => renderFieldCell(toy, def),
     }));
     return [...base, ...dynamic];
-  }, [definitions, massEditMode, editing, startEdit, cancelEdit, commitEdit]);
+  }, [
+    definitions,
+    massEditMode,
+    editing,
+    startEdit,
+    cancelEdit,
+    commitEdit,
+    commitFieldValue,
+  ]);
 
   // Client-side search over name + set. (Server-side filtering via the search
   // endpoint is a follow-up.)

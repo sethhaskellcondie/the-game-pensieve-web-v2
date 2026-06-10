@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useRouter } from "next/navigation";
 import type { CustomField, Toy } from "@/lib/api";
 import ToysManager from "@/components/toys/ToysManager";
@@ -15,6 +15,17 @@ const mockPush = jest.fn();
 const toyFields: CustomField[] = [
   { id: 10, name: "Boxed", type: "boolean", entityKey: "toy", order: 0, options: [] },
   { id: 11, name: "Year", type: "number", entityKey: "toy", order: 1, options: [] },
+  {
+    id: 12,
+    name: "Series",
+    type: "dropdown",
+    entityKey: "toy",
+    order: 2,
+    options: [
+      { id: 21, customFieldId: 12, name: "Original", isDefault: true, order: 0 },
+      { id: 22, customFieldId: 12, name: "Special Edition", isDefault: false, order: 1 },
+    ],
+  },
 ];
 
 const toys: Toy[] = [
@@ -26,6 +37,7 @@ const toys: Toy[] = [
     customFieldValues: [
       { customFieldId: 10, customFieldName: "Boxed", customFieldType: "boolean", value: "true" },
       { customFieldId: 11, customFieldName: "Year", customFieldType: "number", value: "1977" },
+      { customFieldId: 12, customFieldName: "Series", customFieldType: "dropdown", value: "Original" },
     ],
     createdAt: "",
     updatedAt: "",
@@ -270,5 +282,36 @@ describe("ToysManager", () => {
       ([url, init]) => /\/api\/toys\/1$/.test(url) && init?.method === "PUT",
     );
     expect(put).toBeUndefined();
+  });
+
+  it("shows a dropdown value as a read-only pill when mass edit is off", async () => {
+    renderManager(false);
+    await screen.findByText("R2-D2");
+
+    // The selected option is shown as text; there's no interactive listbox.
+    expect(screen.getByText("Original")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Series" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("edits a dropdown inline and PUTs the toy when mass edit is on", async () => {
+    renderManager(true);
+    await screen.findByText("R2-D2");
+
+    const row = screen.getByText("R2-D2").closest("tr") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "Series" }));
+    fireEvent.click(screen.getByRole("option", { name: "Special Edition" }));
+
+    await waitFor(() => {
+      const put = mockFetch.mock.calls.find(
+        ([url, init]) => /\/api\/toys\/1$/.test(url) && init?.method === "PUT",
+      );
+      expect(put).toBeDefined();
+      const cf = JSON.parse(put![1].body).customFieldValues.find(
+        (v: { customFieldId: number }) => v.customFieldId === 12,
+      );
+      expect(cf.value).toBe("Special Edition");
+    });
   });
 });

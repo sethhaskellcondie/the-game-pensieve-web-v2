@@ -1,0 +1,79 @@
+/* Read-only custom-field value renderings for the toys grid, mirroring the toy
+   detail page's value primitives (kept in sync with ToyDetail.module.css). */
+
+/* Muted dash for a missing/invalid value. */
+.dash {
+  color: var(--gray-500);
+}
+
+/* Number — bold purple, tabular. */
+.num {
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #6242be;
+}
+
+/* Dropdown — gold pill (read-only, no chevron). */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 4px 11px;
+  background: #faedcf;
+  border: 1px solid #ead49a;
+  border-radius: 8px;
+  color: #7c5a0e;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.pillLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Radio — the selected option as a red chip. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 9px;
+  border-radius: 8px;
+  border: 1px solid #c0392b;
+  background: #fbe4e2;
+  color: #c0392b;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.chipDot {
+  flex: 0 0 auto;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid #c0392b;
+  background: radial-gradient(circle, #c0392b 0 38%, #fff 42%);
+}
+
+/* Progress — the segmented bar (filled up to the current stage), no labels. */
+.prog {
+  display: inline-flex;
+  gap: 5px;
+  width: 100%;
+  max-width: 150px;
+  vertical-align: middle;
+}
+
+.progSeg {
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  background: #e2e7ee;
+}
+
+.progDone {
+  background: #157e74;
+}

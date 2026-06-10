@@ -315,12 +315,12 @@
   transform: rotate(180deg);
 }
 
+/* Placed via inline top/left/min-width from the trigger's rect (see
+   DropdownEditor); position:fixed so it escapes any clipping/scrolling
+   ancestor, such as a grid cell. */
 .dropMenu {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 40;
-  min-width: 100%;
+  position: fixed;
+  z-index: 50;
   background: #fff;
   border: 1px solid #ead49a;
   border-radius: 11px;

@@ -151,37 +151,61 @@ function YesNoEditor({ field, onCommit }: EditorProps) {
 // Dropdown: a gold trigger that opens a custom listbox of every option (in
 // their defined order, as sorted by the caller) — no native <select>, matching
 // the custom-fields scope picker. Picking a different option commits it. Closes
-// on outside click or Escape.
+// on outside click, Escape, or scroll.
+//
+// The menu is position:fixed (placed from the trigger's rect) so it escapes
+// `overflow:hidden` ancestors — it must show even when the editor lives in a
+// clipped, scrollable grid cell. It stays a DOM child of the wrapper, so the
+// outside-click check still recognizes clicks inside it.
 function DropdownEditor({ field, onCommit }: EditorProps) {
   const options = field.options ?? [];
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(
+    null,
+  );
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  const openMenu = () => {
+    const r = triggerRef.current?.getBoundingClientRect();
+    if (r) setPos({ top: r.bottom + 6, left: r.left, width: r.width });
+    setOpen(true);
+  };
 
   useEffect(() => {
     if (!open) return;
     const onDocMouseDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
+    const close = () => setOpen(false);
     document.addEventListener("mousedown", onDocMouseDown);
     document.addEventListener("keydown", onKeyDown);
+    // Capture-phase catches scrolling on any inner container (e.g. the grid).
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
     return () => {
       document.removeEventListener("mousedown", onDocMouseDown);
       document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
     };
   }, [open]);
 
   return (
-    <div className={styles.vDrop} ref={ref}>
+    <div className={styles.vDrop} ref={wrapRef}>
       <button
+        ref={triggerRef}
         type="button"
         className={`${styles.dropTrigger}${open ? ` ${styles.dropOpen}` : ""}`}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={field.name}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (open ? setOpen(false) : openMenu())}
       >
         <span className={styles.dropValue}>
           {field.value === "" ? (
@@ -194,8 +218,13 @@ function DropdownEditor({ field, onCommit }: EditorProps) {
           <CaretIcon />
         </span>
       </button>
-      {open && (
-        <div className={styles.dropMenu} role="listbox" aria-label={field.name}>
+      {open && pos && (
+        <div
+          className={styles.dropMenu}
+          role="listbox"
+          aria-label={field.name}
+          style={{ top: pos.top, left: pos.left, minWidth: pos.width }}
+        >
           {options.map((o) => {
             const selected = o.name === field.value;
             return (
