@@ -1,0 +1,39 @@
+/* Fills the area below the Header. Blank for now apart from the back link. */
+.content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 26px 32px;
+  background: var(--paper);
+  overflow: auto;
+}
+
+/* Back link styled as an outlined button, matching the Filter button palette. */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--ink-navy);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.back:hover {
+  background: var(--paper);
+  border-color: #cad3e0;
+}
+
+.back:focus-visible {
+  outline: none;
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 3px rgba(var(--ink-navy-rgb), 0.1);
+}

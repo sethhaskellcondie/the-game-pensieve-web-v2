@@ -331,12 +331,17 @@ export default function ToysManager() {
         emptyMessage={query.trim() ? "No toys match your search." : "No toys yet."}
         onDelete={() => {}}
         deleteLabel={(toy) => `Delete ${toy.name}`}
-        // The leading details column only appears in mass edit mode. The detail
-        // page doesn't exist yet — this just navigates toward its eventual route.
+        // The leading details column only appears in mass edit mode; otherwise
+        // the whole row navigates to the toy's detail page. Both routes are the
+        // same — they just differ in affordance per mode.
         onOpenDetails={
           massEditMode ? (toy) => router.push(`/toys/${toy.id}`) : undefined
         }
         detailsLabel={(toy) => `View ${toy.name}`}
+        onRowClick={
+          massEditMode ? undefined : (toy) => router.push(`/toys/${toy.id}`)
+        }
+        rowClickLabel={(toy) => `View ${toy.name}`}
       />
     </div>
   );

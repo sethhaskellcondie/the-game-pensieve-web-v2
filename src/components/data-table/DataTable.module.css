@@ -167,6 +167,17 @@
   background: #ecf4fe;
 }
 
+/* Whole-row navigation: the row reads as a link target. The hover wash above
+   already signals interactivity; this adds the cursor + a keyboard focus ring. */
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:focus-visible {
+  outline: 2px solid var(--primary-600);
+  outline-offset: -2px;
+}
+
 /* Delete column — a real fixed <col> width (set in the component) so
    table-layout: fixed never collapses it to 0 when the table overflows, which
    would blank its header and hide the delete buttons. The trailing .filler

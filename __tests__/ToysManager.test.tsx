@@ -200,6 +200,38 @@ describe("ToysManager", () => {
     expect(mockPush).toHaveBeenCalledWith("/toys/1");
   });
 
+  it("navigates to a toy's detail route when its row is clicked (mass edit off)", async () => {
+    renderManager(false);
+    await screen.findByText("Pikachu");
+
+    fireEvent.click(screen.getByText("Pikachu"));
+
+    expect(mockPush).toHaveBeenCalledWith("/toys/2");
+  });
+
+  it("does not navigate when the row's delete button is clicked", async () => {
+    renderManager(false);
+    await screen.findByText("R2-D2");
+
+    const row = screen.getByText("R2-D2").closest("tr");
+    fireEvent.click(
+      within(row as HTMLElement).getByRole("button", { name: "Delete R2-D2" }),
+    );
+
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("does not make rows click-navigable in mass edit mode", async () => {
+    renderManager(true);
+    await screen.findByText("Pikachu");
+
+    // In mass edit mode the cells are edit triggers, not a row link — clicking a
+    // value opens its inline editor rather than navigating.
+    fireEvent.click(screen.getByRole("button", { name: "Pikachu" }));
+
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
   it("inline-edits a toy's name and PUTs the full toy in mass edit mode", async () => {
     renderManager(true);
     await screen.findByText("R2-D2");

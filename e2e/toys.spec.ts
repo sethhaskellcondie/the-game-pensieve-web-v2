@@ -129,3 +129,18 @@ test("exposes the New, Filter, and per-row delete controls", async ({ page }) =>
   await row.hover();
   await expect(row.getByRole("button", { name: "Delete R2-D2" })).toBeVisible();
 });
+
+// Row-click navigation depends on mass-edit mode (loaded server-side, so it
+// can't be stubbed here); that path is covered in the unit tests. This verifies
+// the detail page itself and its back link in a real browser.
+test("the toy detail page carries the Toys header and a back link to the list", async ({
+  page,
+}) => {
+  await page.goto("/toys/1");
+
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("TOYS");
+
+  await page.getByRole("link", { name: "Back to Toys" }).click();
+  await expect(page).toHaveURL("/toys");
+  await expect(page.getByRole("heading", { level: 2, name: "2 Toys" })).toBeVisible();
+});

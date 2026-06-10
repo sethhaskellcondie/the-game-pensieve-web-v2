@@ -32,6 +32,11 @@ export type DataTableProps<Row> = {
   onOpenDetails?: (row: Row) => void;
   // aria-label for a row's open-details button.
   detailsLabel?: (row: Row) => string;
+  // Omit for non-interactive rows. When present, clicking (or pressing Enter on)
+  // anywhere in a row that isn't another control fires this.
+  onRowClick?: (row: Row) => void;
+  // aria-label for a clickable row (announced when the row is focused).
+  rowClickLabel?: (row: Row) => string;
 };
 
 const MIN_COL = 110;
@@ -89,6 +94,8 @@ export default function DataTable<Row>({
   deleteLabel,
   onOpenDetails,
   detailsLabel,
+  onRowClick,
+  rowClickLabel,
 }: DataTableProps<Row>) {
   const [widths, setWidths] = useState<Record<string, number>>(() =>
     Object.fromEntries(columns.map((c) => [c.key, c.width])),
@@ -175,7 +182,23 @@ export default function DataTable<Row>({
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={getRowKey(row)} className={styles.row}>
+              <tr
+                key={getRowKey(row)}
+                className={`${styles.row}${onRowClick ? ` ${styles.clickable}` : ""}`}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                aria-label={onRowClick ? rowClickLabel?.(row) : undefined}
+                onKeyDown={
+                  onRowClick
+                    ? (e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          onRowClick(row);
+                        }
+                      }
+                    : undefined
+                }
+              >
                 {onOpenDetails && (
                   <td
                     className={`${styles.detailCol} ${styles.frozen}`}
@@ -185,7 +208,10 @@ export default function DataTable<Row>({
                       type="button"
                       className={styles.detail}
                       aria-label={detailsLabel?.(row) ?? "View details"}
-                      onClick={() => onOpenDetails(row)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenDetails(row);
+                      }}
                     >
                       <ChevronRightIcon />
                     </button>
@@ -215,7 +241,10 @@ export default function DataTable<Row>({
                       type="button"
                       className={styles.del}
                       aria-label={deleteLabel?.(row) ?? "Delete"}
-                      onClick={() => onDelete(row)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(row);
+                      }}
                     >
                       <TrashIcon />
                     </button>

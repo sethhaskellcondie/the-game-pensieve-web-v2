@@ -107,6 +107,25 @@ export function ChevronRightIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+// Left-pointing chevron — a "back" affordance.
+export function ChevronLeftIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M10 3.5L5.5 8L10 12.5" />
+    </svg>
+  );
+}
+
 export function GripIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
