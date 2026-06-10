@@ -182,7 +182,7 @@
   font-size: 18px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  color: #6242be;
+  color: var(--field-purple-text);
 }
 
 /* ---- editable affordances (text / number) ---- */
@@ -276,10 +276,10 @@
   width: 100%;
   min-width: 150px;
   padding: 6px 11px 6px 13px;
-  background: #faedcf;
-  border: 1px solid #ead49a;
+  background: var(--field-gold-bg);
+  border: 1px solid var(--field-gold-border);
   border-radius: 8px;
-  color: #7c5a0e;
+  color: var(--field-gold-text);
   font-family: var(--font-jetbrains-mono), monospace;
   font-size: 13px;
   font-weight: 700;
@@ -288,11 +288,11 @@
 }
 
 .dropTrigger:hover {
-  border-color: #d9b86a;
+  border-color: var(--field-gold-border-strong);
 }
 
 .dropOpen {
-  border-color: #d9b86a;
+  border-color: var(--field-gold-border-strong);
   box-shadow: 0 0 0 3px rgba(154, 111, 18, 0.14);
 }
 
@@ -322,7 +322,7 @@
   position: fixed;
   z-index: 50;
   background: #fff;
-  border: 1px solid #ead49a;
+  border: 1px solid var(--field-gold-border);
   border-radius: 11px;
   box-shadow: 0 20px 48px -16px rgba(var(--ink-navy-rgb), 0.34);
   padding: 6px;
@@ -339,7 +339,7 @@
   background: transparent;
   border-radius: 8px;
   cursor: pointer;
-  color: #7c5a0e;
+  color: var(--field-gold-text);
   font-family: var(--font-jetbrains-mono), monospace;
   font-size: 13px;
   font-weight: 700;
@@ -348,11 +348,11 @@
 }
 
 .dropOption:hover {
-  background: #faf3e0;
+  background: var(--field-gold-option-hover);
 }
 
 .dropOptionSelected {
-  background: #fbf0d6;
+  background: var(--field-gold-option-selected);
 }
 
 .dropOptionLabel {
@@ -363,7 +363,7 @@
 .dropOptionCheck {
   display: flex;
   flex: 0 0 auto;
-  color: #9a6f12;
+  color: var(--field-gold-accent);
 }
 
 /* ---- radio ---- */
@@ -404,14 +404,14 @@
 }
 
 .vRadio.on {
-  border-color: #c0392b;
-  color: #c0392b;
-  background: #fbe4e2;
+  border-color: var(--field-red-text);
+  color: var(--field-red-text);
+  background: var(--field-red-bg);
 }
 
 .vRadio.on .rdot {
-  border-color: #c0392b;
-  background: radial-gradient(circle, #c0392b 0 38%, #fff 42%);
+  border-color: var(--field-red-text);
+  background: radial-gradient(circle, var(--field-red-text) 0 38%, #fff 42%);
 }
 
 /* ---- progress (ordered stages as cumulative chips) ---- */
@@ -435,18 +435,18 @@
 }
 
 .progChip:hover {
-  border-color: #a9d3cd;
-  color: #157e74;
+  border-color: var(--field-green-border);
+  color: var(--field-green);
 }
 
 .progChipDone {
-  border-color: #157e74;
-  background: #157e74;
+  border-color: var(--field-green);
+  background: var(--field-green);
   color: #fff;
 }
 
 .progChipDone:hover {
-  border-color: #126b62;
-  background: #126b62;
+  border-color: var(--field-green-strong);
+  background: var(--field-green-strong);
   color: #fff;
 }

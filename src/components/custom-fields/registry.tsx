@@ -16,23 +16,45 @@ export type FieldTypeMeta = {
   hasOptions: boolean;
 };
 
-// Colors mirror the icon spec sheet. `hasOptions` flags the kinds that carry a
-// list of options (Dropdown, Radio Button, Progress Bar).
+// Colors come from the shared custom-field palette in globals.css (the same
+// tokens the value pills/editors use), applied as inline styles on the glyph
+// chips. `hasOptions` flags the kinds that carry a list of options (Dropdown,
+// Radio Button, Progress Bar).
 export const FIELD_TYPE_META: Record<CustomFieldType, FieldTypeMeta> = {
-  text: { label: "Text", bg: "#E7F0FC", fg: "#2657B8", hasOptions: false },
-  boolean: { label: "Yes / No", bg: "#DCEFE0", fg: "#1E8038", hasOptions: false },
-  number: { label: "Number", bg: "#ECE6FA", fg: "#6242BE", hasOptions: false },
+  text: {
+    label: "Text",
+    bg: "var(--field-blue-bg)",
+    fg: "var(--field-blue-text)",
+    hasOptions: false,
+  },
+  boolean: {
+    label: "Yes / No",
+    bg: "var(--field-mint-bg)",
+    fg: "var(--field-mint-text)",
+    hasOptions: false,
+  },
+  number: {
+    label: "Number",
+    bg: "var(--field-purple-bg)",
+    fg: "var(--field-purple-text)",
+    hasOptions: false,
+  },
   progress_bar: {
     label: "Progress Bar",
-    bg: "#D6EFEC",
-    fg: "#157E74",
+    bg: "var(--field-green-bg)",
+    fg: "var(--field-green)",
     hasOptions: true,
   },
-  dropdown: { label: "Dropdown", bg: "#FAEDCF", fg: "#9A6F12", hasOptions: true },
+  dropdown: {
+    label: "Dropdown",
+    bg: "var(--field-gold-bg)",
+    fg: "var(--field-gold-accent)",
+    hasOptions: true,
+  },
   radio_button: {
     label: "Radio Button",
-    bg: "#FBE4E2",
-    fg: "#C0392B",
+    bg: "var(--field-red-bg)",
+    fg: "var(--field-red-text)",
     hasOptions: true,
   },
 };

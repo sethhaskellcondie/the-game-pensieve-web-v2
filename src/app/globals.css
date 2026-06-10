@@ -37,6 +37,39 @@
       24px 24px,
     linear-gradient(180deg, #4f86dd 0%, #2c539f 100%) 0 0 / 100% 100%;
 
+  /* Custom-field palette — the per-type accent colors. Each type has a light
+     `-bg` tint (used for its glyph chip in the registry) and an accent color;
+     the option-bearing types add the extra tokens their value pills/editors
+     need. Shared by the type glyphs (FIELD_TYPE_META), the read-only display
+     (CustomFieldValue), and the inline editors (toy detail + toys grid). Reuse
+     on other entity pages that surface the same field types. */
+  /* Text — blue */
+  --field-blue-bg: #e7f0fc;
+  --field-blue-text: #2657b8;
+  /* Yes/No — mint */
+  --field-mint-bg: #dcefe0;
+  --field-mint-text: #1e8038;
+  /* Number — purple */
+  --field-purple-bg: #ece6fa;
+  --field-purple-text: #6242be;
+  /* Dropdown — gold */
+  --field-gold-bg: #faedcf;
+  --field-gold-border: #ead49a;
+  --field-gold-border-strong: #d9b86a;
+  --field-gold-text: #7c5a0e;
+  --field-gold-accent: #9a6f12; /* glyph fg + the option check */
+  --field-gold-option-hover: #faf3e0;
+  --field-gold-option-selected: #fbf0d6;
+  /* Radio — red */
+  --field-red-bg: #fbe4e2;
+  --field-red-border: #e8b4ad;
+  --field-red-text: #c0392b;
+  /* Progress — green */
+  --field-green-bg: #d6efec;
+  --field-green-border: #a9d3cd;
+  --field-green: #157e74;
+  --field-green-strong: #126b62;
+
   /* Sidebar (dark theme) text */
   --sidebar-link: #9aa3b4;
   --sidebar-link-hover: #dfe5ee;

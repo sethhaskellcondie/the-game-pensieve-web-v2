@@ -20,8 +20,9 @@ describe("custom fields registry", () => {
     for (const type of types) {
       expect(FIELD_TYPE_META[type]).toBeDefined();
       expect(FIELD_TYPE_META[type].label.length).toBeGreaterThan(0);
-      expect(FIELD_TYPE_META[type].bg).toMatch(/^#/);
-      expect(FIELD_TYPE_META[type].fg).toMatch(/^#/);
+      // Colors reference the shared custom-field palette (globals.css).
+      expect(FIELD_TYPE_META[type].bg).toMatch(/^var\(--field-/);
+      expect(FIELD_TYPE_META[type].fg).toMatch(/^var\(--field-/);
     }
   });
 
