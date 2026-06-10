@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { searchToys } from "@/lib/api";
+import { createToy, searchToys, type CreateToyInput } from "@/lib/api";
 
 export async function GET() {
   try {
@@ -8,6 +8,18 @@ export async function GET() {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to load toys";
+    return NextResponse.json({ status: "error", message }, { status: 502 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const input = (await request.json()) as CreateToyInput;
+    const data = await createToy(input);
+    return NextResponse.json({ status: "ok", data });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to create toy";
     return NextResponse.json({ status: "error", message }, { status: 502 });
   }
 }

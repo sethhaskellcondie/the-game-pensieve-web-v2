@@ -1,0 +1,136 @@
+/* Create-a-toy dialog. The modal chrome mirrors the custom-field FieldModal; the
+   field rows inside reuse ToyDetail.module.css so they match the detail page. */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(var(--ink-navy-rgb), 0.42);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: toy-create-fade 0.14s ease;
+}
+
+@keyframes toy-create-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal {
+  width: 620px;
+  max-width: 100%;
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 30px 80px -20px rgba(var(--ink-navy-rgb), 0.5);
+  padding: 22px 24px 20px;
+  animation: toy-create-pop 0.16s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@keyframes toy-create-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .modal {
+    animation: none;
+  }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink-navy);
+  letter-spacing: -0.01em;
+}
+
+.close {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--cannon-red);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.close:hover {
+  background: #fdecec;
+  color: var(--cannon-red);
+}
+
+/* Buttons sit in the bottom left (per the request), so the footer left-aligns
+   rather than stretching the buttons full width. */
+.foot {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+  margin-top: 20px;
+}
+
+.cancel {
+  height: 42px;
+  min-width: 96px;
+  padding: 0 18px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink-navy);
+}
+
+.cancel:hover {
+  background: #f3f5f9;
+}
+
+.save {
+  height: 42px;
+  min-width: 120px;
+  padding: 0 22px;
+  border: none;
+  background: var(--primary-600);
+  color: #fff;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  transition: 0.12s;
+}
+
+.save:hover {
+  background: #205fd6;
+}
+
+.save:disabled {
+  background: #c6d4ea;
+  cursor: not-allowed;
+}

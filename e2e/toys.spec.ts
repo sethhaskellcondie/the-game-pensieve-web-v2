@@ -130,6 +130,167 @@ test("exposes the New, Filter, and per-row delete controls", async ({ page }) =>
   await expect(row.getByRole("button", { name: "Delete R2-D2" })).toBeVisible();
 });
 
+test("creates a toy through the New dialog and shows it in the list", async ({
+  page,
+}) => {
+  // Branch the toys proxy by method: POST echoes back a saved toy (with a fresh
+  // id), GET still lists the originals. Registered here so it overrides the
+  // beforeEach stub.
+  await page.route("**/api/toys**", (route) => {
+    if (route.request().method() === "POST") {
+      const input = route.request().postDataJSON() as {
+        name: string;
+        set: string;
+      };
+      const created: StubToy = {
+        id: 3,
+        key: "toy",
+        name: input.name,
+        set: input.set,
+        customFieldValues: [],
+        createdAt: "",
+        updatedAt: "",
+        deletedAt: null,
+      };
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ status: "ok", data: created }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ status: "ok", data: TOYS }),
+    });
+  });
+
+  await page.goto("/toys");
+  await page.getByRole("button", { name: "New" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Create Toy" });
+  await expect(dialog).toBeVisible();
+
+  // Create is disabled until a Name is entered.
+  await expect(dialog.getByRole("button", { name: "Create" })).toBeDisabled();
+
+  // Name and Set reuse the detail page's click-to-edit editors.
+  await dialog.getByRole("button", { name: "Edit Name" }).click();
+  await dialog.getByRole("textbox", { name: "Name" }).fill("Buzz Lightyear");
+  await dialog.getByRole("textbox", { name: "Name" }).press("Enter");
+
+  await dialog.getByRole("button", { name: "Edit Set" }).click();
+  await dialog.getByRole("textbox", { name: "Set" }).fill("Toy Story");
+  await dialog.getByRole("textbox", { name: "Set" }).press("Enter");
+
+  await dialog.getByRole("button", { name: "Create" }).click();
+
+  // Dialog closes and the new toy appears at the top of the list.
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("Buzz Lightyear", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "3 Toys" }),
+  ).toBeVisible();
+});
+
+test("the New dialog is keyboard-navigable", async ({ page }) => {
+  await page.goto("/toys");
+
+  // Open it from the keyboard; focus should move into the dialog.
+  await page.getByRole("button", { name: "New" }).focus();
+  await page.keyboard.press("Enter");
+
+  const dialog = page.getByRole("dialog", { name: "Create Toy" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Close" })).toBeFocused();
+
+  // Tab is trapped inside the dialog: Shift+Tab off the first control wraps to
+  // the last one (Cancel, since Create is disabled while Name is empty).
+  await page.keyboard.press("Shift+Tab");
+  await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
+
+  // Escape closes the dialog and returns focus to the New button that opened it.
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("button", { name: "New" })).toBeFocused();
+});
+
+test("auto-opens text fields on focus and selects their value to overwrite", async ({
+  page,
+}) => {
+  await page.goto("/toys");
+  await page.getByRole("button", { name: "New" }).click();
+  const dialog = page.getByRole("dialog", { name: "Create Toy" });
+
+  // Tab off the Close button onto Name: it opens as a focused textbox, ready to
+  // type into — no Enter/click first.
+  await page.keyboard.press("Tab");
+  const nameInput = dialog.getByRole("textbox", { name: "Name" });
+  await expect(nameInput).toBeFocused();
+  await page.keyboard.type("First");
+
+  // Tab commits Name and opens Set the same way.
+  await page.keyboard.press("Tab");
+  await expect(dialog.getByRole("textbox", { name: "Set" })).toBeFocused();
+
+  // Returning to Name re-opens it with its value selected, so typing overwrites
+  // rather than appends.
+  await page.keyboard.press("Shift+Tab");
+  await expect(nameInput).toBeFocused();
+  await page.keyboard.type("Second");
+  await expect(nameInput).toHaveValue("Second");
+});
+
+test("auto-opens a dropdown field's menu on focus", async ({ page }) => {
+  // Swap in a single dropdown custom field so the dialog renders one.
+  await page.route("**/api/custom-fields/entity/toy", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        status: "ok",
+        data: [
+          {
+            id: 20,
+            name: "Condition",
+            type: "dropdown",
+            entityKey: "toy",
+            order: 0,
+            options: [
+              { id: 1, customFieldId: 20, name: "Mint", isDefault: true, order: 0 },
+              { id: 2, customFieldId: 20, name: "Used", isDefault: false, order: 1 },
+            ],
+          },
+        ],
+      }),
+    }),
+  );
+
+  await page.goto("/toys");
+  await page.getByRole("button", { name: "New" }).click();
+  const dialog = page.getByRole("dialog", { name: "Create Toy" });
+
+  // Focusing the dropdown trigger opens its listbox — no click/Enter needed.
+  await dialog.getByRole("button", { name: "Condition" }).focus();
+  await expect(
+    dialog.getByRole("listbox", { name: "Condition" }),
+  ).toBeVisible();
+});
+
+test("closes the New dialog without creating on Cancel", async ({ page }) => {
+  await page.goto("/toys");
+  await page.getByRole("button", { name: "New" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Create Toy" });
+  await expect(dialog).toBeVisible();
+
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "2 Toys" }),
+  ).toBeVisible();
+});
+
 // The detail page fetches its toy server-side (Playwright's page.route can't
 // stub that), so this smoke test runs against the live dev backend's toy #1;
 // the deterministic edit-logic coverage lives in __tests__/ToyDetail.test.tsx.

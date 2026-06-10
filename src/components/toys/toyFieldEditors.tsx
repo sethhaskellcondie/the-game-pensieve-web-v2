@@ -24,6 +24,12 @@ export type EditorField = {
 type EditorProps = {
   field: EditorField;
   onCommit: (value: string) => void;
+  // When true, the editor opens as soon as it receives focus (rather than
+  // waiting for a click/Enter), and a text/number input selects its value so a
+  // keystroke overwrites it. Used by the create dialog for fast keyboard entry;
+  // the grid and detail page leave it off. Ignored by the boolean/radio/progress
+  // editors, which stay click-to-toggle.
+  openOnFocus?: boolean;
 };
 
 // Coerce a stored value to a valid one for its type, or "" when it isn't —
@@ -54,7 +60,7 @@ export function normalizeFieldValue(
 // Text + Number: click the value to open an inline input. Enter/blur commits,
 // Esc cancels. A latch keeps the Enter-then-blur sequence from committing twice.
 // Numbers coerce via Number() on commit and revert on invalid input.
-function TextEditor({ field, onCommit }: EditorProps) {
+function TextEditor({ field, onCommit, openOnFocus }: EditorProps) {
   const isNum = field.kind === "number";
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(field.value);
@@ -122,6 +128,7 @@ function TextEditor({ field, onCommit }: EditorProps) {
       role="button"
       aria-label={`Edit ${field.name}`}
       onClick={open}
+      onFocus={openOnFocus ? open : undefined}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
           e.preventDefault();
@@ -157,7 +164,7 @@ function YesNoEditor({ field, onCommit }: EditorProps) {
 // `overflow:hidden` ancestors — it must show even when the editor lives in a
 // clipped, scrollable grid cell. It stays a DOM child of the wrapper, so the
 // outside-click check still recognizes clicks inside it.
-function DropdownEditor({ field, onCommit }: EditorProps) {
+function DropdownEditor({ field, onCommit, openOnFocus }: EditorProps) {
   const options = field.options ?? [];
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(
@@ -197,7 +204,21 @@ function DropdownEditor({ field, onCommit }: EditorProps) {
   }, [open]);
 
   return (
-    <div className={styles.vDrop} ref={wrapRef}>
+    <div
+      className={styles.vDrop}
+      ref={wrapRef}
+      // With openOnFocus, the menu opens on focus; close it again once focus
+      // leaves the wrapper entirely (Tab past the options) so it isn't orphaned.
+      onBlur={
+        openOnFocus
+          ? (e) => {
+              if (!wrapRef.current?.contains(e.relatedTarget as Node | null)) {
+                setOpen(false);
+              }
+            }
+          : undefined
+      }
+    >
       <button
         ref={triggerRef}
         type="button"
@@ -205,6 +226,7 @@ function DropdownEditor({ field, onCommit }: EditorProps) {
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={field.name}
+        onFocus={openOnFocus && !open ? openMenu : undefined}
         onClick={() => (open ? setOpen(false) : openMenu())}
       >
         <span className={styles.dropValue}>
@@ -310,15 +332,27 @@ function ProgressEditor({ field, onCommit }: EditorProps) {
 
 // Routes a field to the right editor by its backend type. Each editor commits a
 // string value; the parent merges it into the toy and persists.
-export default function FieldEditor({ field, onCommit }: EditorProps) {
+export default function FieldEditor({
+  field,
+  onCommit,
+  openOnFocus,
+}: EditorProps) {
   switch (field.kind) {
     case "text":
     case "number":
-      return <TextEditor field={field} onCommit={onCommit} />;
+      return (
+        <TextEditor field={field} onCommit={onCommit} openOnFocus={openOnFocus} />
+      );
     case "boolean":
       return <YesNoEditor field={field} onCommit={onCommit} />;
     case "dropdown":
-      return <DropdownEditor field={field} onCommit={onCommit} />;
+      return (
+        <DropdownEditor
+          field={field}
+          onCommit={onCommit}
+          openOnFocus={openOnFocus}
+        />
+      );
     case "radio_button":
       return <RadioEditor field={field} onCommit={onCommit} />;
     case "progress_bar":

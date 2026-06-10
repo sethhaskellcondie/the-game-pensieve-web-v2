@@ -19,6 +19,7 @@ import { useUiSettings } from "@/components/UiSettingsProvider";
 import { PlusIcon } from "@/components/custom-fields/icons";
 import CustomFieldValue from "./CustomFieldValue";
 import FieldEditor, { normalizeFieldValue } from "./toyFieldEditors";
+import ToyCreateModal from "./ToyCreateModal";
 import { FilterIcon, SearchIcon } from "./icons";
 import styles from "./ToysManager.module.css";
 
@@ -147,6 +148,9 @@ export default function ToysManager() {
   const [definitions, setDefinitions] = useState<CustomField[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  // Whether the create-toy dialog is open, and whether its POST is in flight.
+  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
   // The cell being inline-edited (row id + which column), or null when idle.
   const [editing, setEditing] = useState<{ id: number; field: EditField } | null>(
     null,
@@ -300,6 +304,38 @@ export default function ToysManager() {
     [showToast, showSnackbar],
   );
 
+  // Create a toy from the dialog: POST it, then prepend the saved toy (with its
+  // backend-assigned id) to the list and close the dialog. On failure the dialog
+  // stays open so the user can retry without re-entering their input.
+  const handleCreate = useCallback(
+    async (input: UpdateToyInput) => {
+      setSaving(true);
+      try {
+        const res = await fetch("/api/toys", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input),
+        });
+        const created = await readJson<Toy>(res);
+        setToys((ts) => [created, ...ts]);
+        setCreating(false);
+        showToast({ message: "Toy created.", variant: "success" });
+      } catch (error) {
+        console.error("Create toy failed", error);
+        showSnackbar({
+          message:
+            error instanceof Error
+              ? `Couldn't create the toy: ${error.message}`
+              : "Couldn't create the toy. Please try again.",
+          variant: "error",
+        });
+      } finally {
+        setSaving(false);
+      }
+    },
+    [showToast, showSnackbar],
+  );
+
   // Name and Set are always first; the rest of the columns are the toy custom
   // fields, in their defined order. Each cell maps the toy's values by field id.
   // In mass-edit mode, Name and Set become inline-editable.
@@ -423,12 +459,11 @@ export default function ToysManager() {
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
-          {/* Filter + New + per-row delete are not wired to the backend yet
-              (inert). */}
+          {/* Filter + per-row delete are not wired to the backend yet (inert). */}
           <Button className={styles.filterBtn}>
             <FilterIcon /> Filter
           </Button>
-          <Button className={styles.newBtn}>
+          <Button className={styles.newBtn} onClick={() => setCreating(true)}>
             <PlusIcon /> New
           </Button>
         </div>
@@ -455,6 +490,15 @@ export default function ToysManager() {
         }
         rowClickLabel={(toy) => `View ${toy.name}`}
       />
+
+      {creating && (
+        <ToyCreateModal
+          definitions={definitions}
+          saving={saving}
+          onCreate={handleCreate}
+          onClose={() => setCreating(false)}
+        />
+      )}
     </div>
   );
 }
