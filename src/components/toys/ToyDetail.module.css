@@ -367,9 +367,11 @@
 }
 
 /* ---- radio ---- */
+/* Chips sit side by side on one line. In a narrow grid cell they overflow (and
+   clip) rather than stacking — the user widens the column to see them all. */
 .vRadios {
   display: inline-flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
 }
 

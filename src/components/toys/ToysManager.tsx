@@ -344,6 +344,7 @@ export default function ToysManager() {
       "dropdown",
       "boolean",
       "number",
+      "radio_button",
     ];
     function renderFieldCell(toy: Toy, def: CustomField) {
       const value = toy.customFieldValues.find(

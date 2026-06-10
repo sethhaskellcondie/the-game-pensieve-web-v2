@@ -38,8 +38,7 @@ export default function CustomFieldValue({
     case "radio_button":
       return (
         <span className={styles.chip}>
-          <span className={styles.chipDot} />
-          {v}
+          <span className={styles.pillLabel}>{v}</span>
         </span>
       );
 

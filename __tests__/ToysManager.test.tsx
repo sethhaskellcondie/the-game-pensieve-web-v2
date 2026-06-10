@@ -26,6 +26,17 @@ const toyFields: CustomField[] = [
       { id: 22, customFieldId: 12, name: "Special Edition", isDefault: false, order: 1 },
     ],
   },
+  {
+    id: 13,
+    name: "Condition",
+    type: "radio_button",
+    entityKey: "toy",
+    order: 3,
+    options: [
+      { id: 31, customFieldId: 13, name: "Mint", isDefault: true, order: 0 },
+      { id: 32, customFieldId: 13, name: "Used", isDefault: false, order: 1 },
+    ],
+  },
 ];
 
 const toys: Toy[] = [
@@ -38,6 +49,7 @@ const toys: Toy[] = [
       { customFieldId: 10, customFieldName: "Boxed", customFieldType: "boolean", value: "true" },
       { customFieldId: 11, customFieldName: "Year", customFieldType: "number", value: "1977" },
       { customFieldId: 12, customFieldName: "Series", customFieldType: "dropdown", value: "Original" },
+      { customFieldId: 13, customFieldName: "Condition", customFieldType: "radio_button", value: "Mint" },
     ],
     createdAt: "",
     updatedAt: "",
@@ -282,6 +294,35 @@ describe("ToysManager", () => {
       ([url, init]) => /\/api\/toys\/1$/.test(url) && init?.method === "PUT",
     );
     expect(put).toBeUndefined();
+  });
+
+  it("shows a radio value as a read-only pill when mass edit is off", async () => {
+    renderManager(false);
+    await screen.findByText("R2-D2");
+
+    // The selected option shows as text in a pill; no interactive radios.
+    expect(screen.getByText("Mint")).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "Mint" })).not.toBeInTheDocument();
+  });
+
+  it("selects a radio option inline and PUTs the toy when mass edit is on", async () => {
+    renderManager(true);
+    await screen.findByText("R2-D2");
+
+    const row = screen.getByText("R2-D2").closest("tr") as HTMLElement;
+    // All options render as radios; selecting "Used" commits.
+    fireEvent.click(within(row).getByRole("radio", { name: "Used" }));
+
+    await waitFor(() => {
+      const put = mockFetch.mock.calls.find(
+        ([url, init]) => /\/api\/toys\/1$/.test(url) && init?.method === "PUT",
+      );
+      expect(put).toBeDefined();
+      const cf = JSON.parse(put![1].body).customFieldValues.find(
+        (v: { customFieldId: number }) => v.customFieldId === 13,
+      );
+      expect(cf.value).toBe("Used");
+    });
   });
 
   it("shows a dropdown value as a read-only pill when mass edit is off", async () => {
