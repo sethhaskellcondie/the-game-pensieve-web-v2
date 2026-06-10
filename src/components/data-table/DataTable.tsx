@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { TrashIcon } from "@/components/custom-fields/icons";
+import { ChevronRightIcon, TrashIcon } from "@/components/custom-fields/icons";
 import styles from "./DataTable.module.css";
 
 // A single column definition. `render` turns a row into the cell's content, so
@@ -27,6 +27,11 @@ export type DataTableProps<Row> = {
   onDelete?: (row: Row) => void;
   // aria-label for a row's delete button.
   deleteLabel?: (row: Row) => string;
+  // Omit to render no leading "open details" column at all. When present, a
+  // frozen first column with a small chevron button is added.
+  onOpenDetails?: (row: Row) => void;
+  // aria-label for a row's open-details button.
+  detailsLabel?: (row: Row) => string;
 };
 
 const MIN_COL = 110;
@@ -37,6 +42,8 @@ const MAX_COL = 560;
 // header) whenever the table overflows. A trailing auto filler column absorbs
 // the leftover space instead, so the data columns never stretch.
 const DEL_W = 56;
+// Fixed width for the leading open-details column — same rationale as DEL_W.
+const DETAIL_W = 52;
 
 // Column resize lives at module scope so it can imperatively drive
 // document.body during the drag without tripping the in-component
@@ -80,6 +87,8 @@ export default function DataTable<Row>({
   loadingMessage,
   onDelete,
   deleteLabel,
+  onOpenDetails,
+  detailsLabel,
 }: DataTableProps<Row>) {
   const [widths, setWidths] = useState<Record<string, number>>(() =>
     Object.fromEntries(columns.map((c) => [c.key, c.width])),
@@ -94,9 +103,11 @@ export default function DataTable<Row>({
     beginColumnResize(key, e, startW, minW, setWidths);
   };
 
-  // Cumulative left offset for each frozen (sticky) column.
+  // Cumulative left offset for each frozen (sticky) column. The leading
+  // details column (when present) is itself frozen at left:0 and so pushes the
+  // first data column's sticky offset over by its width.
   const frozenLeft: Record<string, number> = (() => {
-    let acc = 0;
+    let acc = onOpenDetails ? DETAIL_W : 0;
     const m: Record<string, number> = {};
     for (const c of columns) {
       if (c.frozen) {
@@ -107,13 +118,15 @@ export default function DataTable<Row>({
     return m;
   })();
 
-  const colSpan = columns.length + (onDelete ? 1 : 0) + 1;
+  const colSpan =
+    columns.length + (onOpenDetails ? 1 : 0) + (onDelete ? 1 : 0) + 1;
 
   return (
     <div className={styles.card}>
       <div className={styles.scroll}>
         <table className={styles.table}>
           <colgroup>
+            {onOpenDetails && <col style={{ width: DETAIL_W }} />}
             {columns.map((c) => (
               <col key={c.key} style={{ width: widths[c.key] ?? c.width }} />
             ))}
@@ -122,6 +135,14 @@ export default function DataTable<Row>({
           </colgroup>
           <thead>
             <tr>
+              {onOpenDetails && (
+                <th
+                  scope="col"
+                  className={`${styles.detailCol} ${styles.frozen}`}
+                  style={{ left: 0 }}
+                  aria-label="Details"
+                />
+              )}
               {columns.map((c) => {
                 const cls = [
                   styles.hcell,
@@ -155,6 +176,21 @@ export default function DataTable<Row>({
           <tbody>
             {rows.map((row) => (
               <tr key={getRowKey(row)} className={styles.row}>
+                {onOpenDetails && (
+                  <td
+                    className={`${styles.detailCol} ${styles.frozen}`}
+                    style={{ left: 0 }}
+                  >
+                    <button
+                      type="button"
+                      className={styles.detail}
+                      aria-label={detailsLabel?.(row) ?? "View details"}
+                      onClick={() => onOpenDetails(row)}
+                    >
+                      <ChevronRightIcon />
+                    </button>
+                  </td>
+                )}
                 {columns.map((c) => {
                   const cls = [
                     styles.cell,

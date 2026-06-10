@@ -88,6 +88,25 @@ export function CheckIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+// Right-pointing chevron — a "drill into this row's detail page" affordance.
+export function ChevronRightIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M6 3.5L10.5 8L6 12.5" />
+    </svg>
+  );
+}
+
 export function GripIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { CustomField, Toy, UpdateToyInput } from "@/lib/api";
 import Button from "@/components/Button";
 import DataTable, { type ColumnDef } from "@/components/data-table/DataTable";
@@ -128,6 +129,7 @@ function loadErrorMessage(error: unknown): string {
 }
 
 export default function ToysManager() {
+  const router = useRouter();
   const { showToast, showSnackbar } = useToast();
   const { settings } = useUiSettings();
   const massEditMode = settings.massEditMode;
@@ -329,6 +331,12 @@ export default function ToysManager() {
         emptyMessage={query.trim() ? "No toys match your search." : "No toys yet."}
         onDelete={() => {}}
         deleteLabel={(toy) => `Delete ${toy.name}`}
+        // The leading details column only appears in mass edit mode. The detail
+        // page doesn't exist yet — this just navigates toward its eventual route.
+        onOpenDetails={
+          massEditMode ? (toy) => router.push(`/toys/${toy.id}`) : undefined
+        }
+        detailsLabel={(toy) => `View ${toy.name}`}
       />
     </div>
   );

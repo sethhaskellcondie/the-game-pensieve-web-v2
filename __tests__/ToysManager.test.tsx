@@ -1,10 +1,16 @@
 import "@testing-library/jest-dom";
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { useRouter } from "next/navigation";
 import type { CustomField, Toy } from "@/lib/api";
 import ToysManager from "@/components/toys/ToysManager";
 import { ToastProvider } from "@/components/ToastProvider";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
+
+jest.mock("next/navigation", () => ({
+  useRouter: jest.fn(),
+}));
+const mockPush = jest.fn();
 
 const toyFields: CustomField[] = [
   { id: 10, name: "Boxed", type: "boolean", entityKey: "toy", order: 0, options: [] },
@@ -80,6 +86,8 @@ describe("ToysManager", () => {
   beforeEach(() => {
     mockFetch.mockImplementation(routedFetch);
     global.fetch = mockFetch as unknown as typeof fetch;
+    mockPush.mockReset();
+    (useRouter as jest.Mock).mockReturnValue({ push: mockPush });
   });
 
   afterEach(() => {
@@ -153,7 +161,9 @@ describe("ToysManager", () => {
     renderManager(false);
     await screen.findByText("R2-D2");
 
-    expect(screen.queryByText("Mass edit mode on.")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Mass edit mode is on. (adjust in options)"),
+    ).not.toBeInTheDocument();
     // Name/Set stay plain text, not inline-edit trigger buttons.
     expect(
       screen.queryByRole("button", { name: "R2-D2" }),
@@ -164,7 +174,30 @@ describe("ToysManager", () => {
     renderManager(true);
     await screen.findByText("R2-D2");
 
-    expect(screen.getByText("Mass edit mode on.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Mass edit mode is on. (adjust in options)"),
+    ).toBeInTheDocument();
+  });
+
+  it("omits the open-details column when mass edit mode is off", async () => {
+    renderManager(false);
+    await screen.findByText("R2-D2");
+
+    expect(
+      screen.queryByRole("button", { name: "View R2-D2" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("navigates to a toy's detail route from the open-details button", async () => {
+    renderManager(true);
+    await screen.findByText("R2-D2");
+
+    const row = screen.getByText("R2-D2").closest("tr");
+    fireEvent.click(
+      within(row as HTMLElement).getByRole("button", { name: "View R2-D2" }),
+    );
+
+    expect(mockPush).toHaveBeenCalledWith("/toys/1");
   });
 
   it("inline-edits a toy's name and PUTs the full toy in mass edit mode", async () => {

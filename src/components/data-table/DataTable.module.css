@@ -177,6 +177,34 @@
   border-right: none;
 }
 
+/* Leading open-details column — a frozen first column (fixed <col> width, same
+   rationale as .delCol) whose small chevron button navigates to the row's
+   detail page. The button matches .del in size/shape, but stays visible since
+   it's a primary navigation affordance rather than a hover-only action. */
+.detailCol {
+  text-align: center;
+  padding: 0;
+}
+
+.detail {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--gray-500);
+  border-radius: 7px;
+  cursor: pointer;
+  transition: 0.12s;
+}
+
+.detail:hover {
+  background: #eaf1ff;
+  color: var(--primary-600);
+}
+
 /* Empty trailing column that soaks up any leftover width so the data columns
    keep their set sizes and the header's blue band reaches the card's right
    edge. It safely collapses to 0 once the table overflows. */
