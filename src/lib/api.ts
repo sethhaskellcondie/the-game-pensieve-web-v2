@@ -265,6 +265,36 @@ export function deleteCustomField(id: number): Promise<void> {
   return apiDelete(`/custom_fields/${id}`);
 }
 
+// ---------- Toys ----------
+// Shapes mirror the Toy + CustomFieldValue schemas in
+// backend-documentation/openapi.yaml.
+
+// A custom field's value on a specific entity. `value` is always a string
+// representation (e.g. "true"/"false" for booleans, "123" for numbers).
+export type CustomFieldValue = {
+  customFieldId: number;
+  customFieldName: string;
+  customFieldType: CustomFieldType;
+  value: string;
+};
+
+export type Toy = {
+  id: number;
+  key: "toy";
+  name: string;
+  set: string;
+  customFieldValues: CustomFieldValue[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+};
+
+// The backend lists toys through a POST search endpoint; an empty filter set
+// returns them all. apiPost unwraps the { data, errors } envelope for us.
+export function searchToys(): Promise<Toy[]> {
+  return apiPost<Toy[]>("/toys/function/search", { filters: [] });
+}
+
 export async function checkHeartbeat(
   { debug = false }: { debug?: boolean } = {},
 ): Promise<boolean> {

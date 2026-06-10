@@ -1,0 +1,9 @@
+/* Boolean "true" check mark. */
+.check {
+  color: var(--success);
+}
+
+/* Muted dash for a "false" or missing custom field value. */
+.dash {
+  color: var(--gray-500);
+}
