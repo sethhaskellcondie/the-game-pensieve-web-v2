@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
   CustomField,
+  CustomFieldType,
   CustomFieldValue as CustomFieldValueType,
   Toy,
   UpdateToyInput,
@@ -335,14 +336,16 @@ export default function ToysManager() {
           : (toy) => toy.set,
       },
     ];
-    // In mass-edit mode a dropdown cell becomes the full interactive editor (the
-    // same control as the toy detail page); otherwise every type shows its
-    // read-only display. Other types get inline editing in follow-ups.
+    // In mass-edit mode, dropdown and Yes/No cells become the full interactive
+    // editor (the same controls as the toy detail page) — clicking commits the
+    // change. Otherwise every type shows its read-only display. Remaining types
+    // get inline editing in follow-ups.
+    const editableInline: CustomFieldType[] = ["dropdown", "boolean"];
     function renderFieldCell(toy: Toy, def: CustomField) {
       const value = toy.customFieldValues.find(
         (cv) => cv.customFieldId === def.id,
       )?.value;
-      if (massEditMode && def.type === "dropdown") {
+      if (massEditMode && editableInline.includes(def.type)) {
         return (
           <FieldEditor
             field={{

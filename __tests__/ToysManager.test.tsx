@@ -295,6 +295,26 @@ describe("ToysManager", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("toggles a yes/no custom field inline and PUTs the toy when mass edit is on", async () => {
+    renderManager(true);
+    await screen.findByText("R2-D2");
+
+    const row = screen.getByText("R2-D2").closest("tr") as HTMLElement;
+    // R2-D2's "Boxed" is true → clicking flips it to false.
+    fireEvent.click(within(row).getByRole("button", { name: "Boxed: Yes" }));
+
+    await waitFor(() => {
+      const put = mockFetch.mock.calls.find(
+        ([url, init]) => /\/api\/toys\/1$/.test(url) && init?.method === "PUT",
+      );
+      expect(put).toBeDefined();
+      const cf = JSON.parse(put![1].body).customFieldValues.find(
+        (v: { customFieldId: number }) => v.customFieldId === 10,
+      );
+      expect(cf.value).toBe("false");
+    });
+  });
+
   it("edits a dropdown inline and PUTs the toy when mass edit is on", async () => {
     renderManager(true);
     await screen.findByText("R2-D2");
