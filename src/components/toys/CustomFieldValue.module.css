@@ -48,22 +48,23 @@
   font-weight: 700;
 }
 
-/* Progress — the segmented bar (filled up to the current stage), no labels. */
+/* Progress — the selected stage in a green pill, with its position (e.g.
+   "Broken 3/4"). A teal twin of the dropdown pill. */
 .prog {
   display: inline-flex;
-  gap: 5px;
-  width: 100%;
-  max-width: 150px;
-  vertical-align: middle;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 11px;
+  border-radius: 8px;
+  border: 1px solid #a9d3cd;
+  background: #d6efec;
+  color: #157e74;
+  font-size: 12.5px;
+  font-weight: 700;
 }
 
-.progSeg {
-  flex: 1;
-  height: 10px;
-  border-radius: 5px;
-  background: #e2e7ee;
-}
-
-.progDone {
-  background: #157e74;
+.progCount {
+  flex: 0 0 auto;
+  opacity: 0.7;
 }

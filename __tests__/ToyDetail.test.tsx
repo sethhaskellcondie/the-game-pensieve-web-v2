@@ -230,10 +230,10 @@ describe("ToyDetail", () => {
     expect(cf.value).toBe("Ocarina of Time");
   });
 
-  it("sets a progress stage by clicking a step", async () => {
+  it("sets a progress stage by clicking a chip", async () => {
     renderDetail();
 
-    fireEvent.click(screen.getByRole("button", { name: "Finished" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Finished" }));
 
     await waitFor(() => expect(mockFetch).toHaveBeenCalled());
     const cf = lastPutBody().customFieldValues.find(

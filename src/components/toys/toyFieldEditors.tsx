@@ -279,38 +279,31 @@ function RadioEditor({ field, onCommit }: EditorProps) {
   );
 }
 
-// Progress: an ordered list of named stages. The fill covers everything up to
-// and including the current stage; clicking a segment or label sets that stage.
+// Progress: an ordered list of named stages shown as chips, like the radio
+// editor but teal — selecting a stage fills it and every stage to its left
+// (cumulative), so the chips read as a progress bar. The current stage is the
+// committed value; clicking any chip sets it.
 function ProgressEditor({ field, onCommit }: EditorProps) {
   const options = field.options ?? [];
   const idx = options.findIndex((o) => o.name === field.value);
   return (
-    <span className={styles.vProg}>
-      <span className={styles.progSegs}>
-        {options.map((o, i) => (
+    <span className={styles.vRadios} role="radiogroup" aria-label={field.name}>
+      {options.map((o, i) => {
+        const done = i <= idx;
+        const current = i === idx;
+        return (
           <button
             key={o.id}
             type="button"
-            className={`${styles.progSeg}${i <= idx ? ` ${styles.done}` : ""}`}
-            aria-label={`Set ${field.name} to ${o.name}`}
-            title={o.name}
-            onClick={() => onCommit(o.name)}
-          />
-        ))}
-      </span>
-      <span className={styles.progSteps}>
-        {options.map((o, i) => (
-          <button
-            key={o.id}
-            type="button"
-            className={`${styles.progStep}${i < idx ? ` ${styles.past}` : ""}${i === idx ? ` ${styles.cur}` : ""}`}
-            aria-current={i === idx ? "step" : undefined}
+            role="radio"
+            aria-checked={current}
+            className={`${styles.progChip}${done ? ` ${styles.progChipDone}` : ""}`}
             onClick={() => onCommit(o.name)}
           >
             {o.name}
           </button>
-        ))}
-      </span>
+        );
+      })}
     </span>
   );
 }

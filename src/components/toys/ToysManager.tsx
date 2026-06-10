@@ -345,6 +345,7 @@ export default function ToysManager() {
       "boolean",
       "number",
       "radio_button",
+      "progress_bar",
     ];
     function renderFieldCell(toy: Toy, def: CustomField) {
       const value = toy.customFieldValues.find(

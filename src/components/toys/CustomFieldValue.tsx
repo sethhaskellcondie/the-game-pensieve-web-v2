@@ -44,15 +44,13 @@ export default function CustomFieldValue({
 
     case "progress_bar": {
       const ordered = [...options].sort((a, b) => a.order - b.order);
-      const idx = ordered.findIndex((o) => o.name === v);
+      const pos = ordered.findIndex((o) => o.name === v) + 1;
       return (
-        <span className={styles.prog} role="img" aria-label={v}>
-          {ordered.map((o, i) => (
-            <span
-              key={o.id}
-              className={`${styles.progSeg}${i <= idx ? ` ${styles.progDone}` : ""}`}
-            />
-          ))}
+        <span className={styles.prog}>
+          <span className={styles.pillLabel}>{v}</span>
+          <span className={styles.progCount}>
+            {pos}/{ordered.length}
+          </span>
         </span>
       );
     }

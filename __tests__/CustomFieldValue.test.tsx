@@ -61,13 +61,13 @@ describe("CustomFieldValue", () => {
     expect(screen.getByText("Good")).toBeInTheDocument();
   });
 
-  it("renders a progress bar labelled by its current stage", () => {
+  it("renders a progress value as a pill with its position (e.g. Painted 3/4)", () => {
     render(
       <CustomFieldValue type="progress_bar" value="Painted" options={stages} />,
     );
-    const bar = screen.getByRole("img", { name: "Painted" });
-    // One segment per stage.
-    expect(bar.children).toHaveLength(4);
+    expect(screen.getByText("Painted")).toBeInTheDocument();
+    // Painted is the 3rd of 4 stages.
+    expect(screen.getByText("3/4")).toBeInTheDocument();
   });
 
   it("shows a dash for missing values", () => {

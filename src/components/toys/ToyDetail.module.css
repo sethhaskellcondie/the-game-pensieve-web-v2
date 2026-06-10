@@ -414,74 +414,39 @@
   background: radial-gradient(circle, #c0392b 0 38%, #fff 42%);
 }
 
-/* ---- progress (ordered stages) ---- */
-.vProg {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-  width: 100%;
-  max-width: 440px;
-}
-
-.progSegs {
-  display: flex;
-  gap: 5px;
-}
-
-.progSeg {
-  flex: 1;
-  height: 11px;
-  border-radius: 5px;
-  background: #e2e7ee;
-  transition: background 0.15s;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-}
-
-.progSeg:hover {
-  background: #cbd3de;
-}
-
-.progSeg.done {
-  background: #157e74;
-}
-
-.progSeg.done:hover {
-  filter: brightness(1.06);
-}
-
-.progSteps {
-  display: flex;
-  gap: 5px;
-}
-
-.progStep {
-  flex: 1;
-  text-align: center;
-  font-size: 11px;
+/* ---- progress (ordered stages as cumulative chips) ---- */
+/* Chips reuse the radio container (.vRadios) for side-by-side layout. Incomplete
+   stages are plain pills; a "done" stage (the current one and every stage to its
+   left) inverts to solid dark green with white text. */
+.progChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 13px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  color: var(--gray-500);
+  font-size: 12.5px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  color: #aeb6c2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: clip;
-  background: none;
-  border: none;
+  background: #fff;
   font-family: var(--font-jetbrains-mono), monospace;
   cursor: pointer;
-  padding: 2px 0;
-  transition: color 0.12s;
+  white-space: nowrap;
+  transition: 0.12s;
 }
 
-.progStep:hover {
+.progChip:hover {
+  border-color: #a9d3cd;
   color: #157e74;
 }
 
-.progStep.past {
-  color: #5da59c;
+.progChipDone {
+  border-color: #157e74;
+  background: #157e74;
+  color: #fff;
 }
 
-.progStep.cur {
-  color: #157e74;
+.progChipDone:hover {
+  border-color: #126b62;
+  background: #126b62;
+  color: #fff;
 }

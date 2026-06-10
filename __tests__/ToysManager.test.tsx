@@ -37,6 +37,18 @@ const toyFields: CustomField[] = [
       { id: 32, customFieldId: 13, name: "Used", isDefault: false, order: 1 },
     ],
   },
+  {
+    id: 14,
+    name: "Build",
+    type: "progress_bar",
+    entityKey: "toy",
+    order: 4,
+    options: [
+      { id: 41, customFieldId: 14, name: "Purchased", isDefault: true, order: 0 },
+      { id: 42, customFieldId: 14, name: "Opened", isDefault: false, order: 1 },
+      { id: 43, customFieldId: 14, name: "Painted", isDefault: false, order: 2 },
+    ],
+  },
 ];
 
 const toys: Toy[] = [
@@ -50,6 +62,7 @@ const toys: Toy[] = [
       { customFieldId: 11, customFieldName: "Year", customFieldType: "number", value: "1977" },
       { customFieldId: 12, customFieldName: "Series", customFieldType: "dropdown", value: "Original" },
       { customFieldId: 13, customFieldName: "Condition", customFieldType: "radio_button", value: "Mint" },
+      { customFieldId: 14, customFieldName: "Build", customFieldType: "progress_bar", value: "Opened" },
     ],
     createdAt: "",
     updatedAt: "",
@@ -294,6 +307,35 @@ describe("ToysManager", () => {
       ([url, init]) => /\/api\/toys\/1$/.test(url) && init?.method === "PUT",
     );
     expect(put).toBeUndefined();
+  });
+
+  it("shows a progress value as a read-only pill with its position when mass edit is off", async () => {
+    renderManager(false);
+    await screen.findByText("R2-D2");
+
+    // "Opened" is the 2nd of 3 stages.
+    expect(screen.getByText("Opened")).toBeInTheDocument();
+    expect(screen.getByText("2/3")).toBeInTheDocument();
+  });
+
+  it("sets a progress stage inline and PUTs the toy when mass edit is on", async () => {
+    renderManager(true);
+    await screen.findByText("R2-D2");
+
+    const row = screen.getByText("R2-D2").closest("tr") as HTMLElement;
+    // Stages render as chips; selecting "Painted" commits it.
+    fireEvent.click(within(row).getByRole("radio", { name: "Painted" }));
+
+    await waitFor(() => {
+      const put = mockFetch.mock.calls.find(
+        ([url, init]) => /\/api\/toys\/1$/.test(url) && init?.method === "PUT",
+      );
+      expect(put).toBeDefined();
+      const cf = JSON.parse(put![1].body).customFieldValues.find(
+        (v: { customFieldId: number }) => v.customFieldId === 14,
+      );
+      expect(cf.value).toBe("Painted");
+    });
   });
 
   it("shows a radio value as a read-only pill when mass edit is off", async () => {
