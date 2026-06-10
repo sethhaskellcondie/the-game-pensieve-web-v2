@@ -130,17 +130,20 @@ test("exposes the New, Filter, and per-row delete controls", async ({ page }) =>
   await expect(row.getByRole("button", { name: "Delete R2-D2" })).toBeVisible();
 });
 
-// Row-click navigation depends on mass-edit mode (loaded server-side, so it
-// can't be stubbed here); that path is covered in the unit tests. This verifies
-// the detail page itself and its back link in a real browser.
-test("the toy detail page carries the Toys header and a back link to the list", async ({
+// The detail page fetches its toy server-side (Playwright's page.route can't
+// stub that), so this smoke test runs against the live dev backend's toy #1;
+// the deterministic edit-logic coverage lives in __tests__/ToyDetail.test.tsx.
+test("the toy detail page shows the Fields card and links back to the list", async ({
   page,
 }) => {
   await page.goto("/toys/1");
 
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("TOYS");
+  // The Fields card with the fixed Name + Set rows is the heart of the screen.
+  await expect(page.getByText("Fields", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit Name" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit Set" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Back to Toys" }).click();
+  await page.getByRole("link", { name: "Back" }).click();
   await expect(page).toHaveURL("/toys");
   await expect(page.getByRole("heading", { level: 2, name: "2 Toys" })).toBeVisible();
 });

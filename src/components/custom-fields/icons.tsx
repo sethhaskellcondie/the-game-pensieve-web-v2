@@ -52,6 +52,44 @@ export function CaretIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+// Pencil — the "this value is editable" affordance on text/number cells.
+export function PencilIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M11.2 2.8l2 2L6 12H4v-2zM10 4l2 2" />
+    </svg>
+  );
+}
+
+// Two-way arrows — the "tap to toggle" hint on the Yes/No badge.
+export function SwapIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width="12"
+      height="12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M4 5h7l-2-2M12 11H5l2 2" />
+    </svg>
+  );
+}
+
 export function TrashIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg

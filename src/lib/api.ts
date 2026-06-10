@@ -308,6 +308,12 @@ export function updateToy(id: number, input: UpdateToyInput): Promise<Toy> {
   return apiPut<Toy>(`/toys/${id}`, { toy: input });
 }
 
+// Fetch a single toy by id. Returns null on 404 so the detail page can render
+// its own not-found state instead of throwing.
+export function getToyById(id: number): Promise<Toy | null> {
+  return apiGetOrNull<Toy>(`/toys/${id}`);
+}
+
 export async function checkHeartbeat(
   { debug = false }: { debug?: boolean } = {},
 ): Promise<boolean> {

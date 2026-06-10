@@ -1,0 +1,467 @@
+/* Toy detail screen — the single-record edit view. Ported from the design
+   handoff (localFiles/design_handoff_toy_detail/Toy Detail.html), substituting
+   project CSS variables where they map. Per-type glyph colors come from
+   FIELD_TYPE_META via inline styles (see ToyDetail.tsx), like KindBadge.
+   Shared by ToyDetail.tsx and toyFieldEditors.tsx. */
+
+/* Fills the area below the app Header. */
+.main {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 34px 44px 56px;
+  background: var(--paper);
+}
+
+.wrap {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+/* ---- top bar (Back) ---- */
+.topbar {
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
+.backbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 15px 0 12px;
+  border-radius: 9px;
+  white-space: nowrap;
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--ink-navy);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: 0.13s;
+  box-shadow: 0 1px 2px rgba(var(--ink-navy-rgb), 0.04);
+}
+
+.backbtn:hover {
+  border-color: #c9d2df;
+  background: #fff;
+  color: var(--primary-600);
+}
+
+.backbtn svg {
+  opacity: 0.85;
+}
+
+/* ---- fields card ---- */
+.card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow:
+    0 1px 2px rgba(var(--ink-navy-rgb), 0.04),
+    0 16px 42px -28px rgba(var(--ink-navy-rgb), 0.26);
+}
+
+.caphdr {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 22px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.caphdrTitle {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gray-500);
+}
+
+.caphdrCount {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gray-500);
+  white-space: nowrap;
+}
+
+.caphdrCount b {
+  color: var(--ink-navy);
+}
+
+/* ---- field rows ---- */
+.row {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  align-items: center;
+  gap: 24px;
+  padding: 15px 22px;
+  border-bottom: 1px solid #eef1f6;
+  min-height: 60px;
+}
+
+.row:last-of-type {
+  border-bottom: none;
+}
+
+.row:hover {
+  background: #f6faff;
+}
+
+.rowlabel {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.glyph {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lblwrap {
+  min-width: 0;
+}
+
+.lbl {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink-navy);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.lblkind {
+  margin-top: 2px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #aeb6c2;
+  white-space: nowrap;
+}
+
+.rowval {
+  font-size: 14px;
+  color: var(--ink-navy);
+  min-width: 0;
+}
+
+/* ---- value primitives ---- */
+.vText {
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.vNum {
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #6242be;
+}
+
+/* ---- editable affordances (text / number) ---- */
+.editable {
+  position: relative;
+  cursor: pointer;
+  border-radius: 8px;
+  transition:
+    background 0.12s,
+    box-shadow 0.12s;
+}
+
+.editable:focus {
+  outline: none;
+}
+
+/* padded hit area + hover tint + reveal pencil */
+.editable.vText,
+.editable.vNum {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: -5px -9px;
+  padding: 5px 9px;
+  max-width: 100%;
+}
+
+.editable.vText:hover,
+.editable.vNum:hover,
+.editable.vText:focus-visible,
+.editable.vNum:focus-visible {
+  background: #eef4fe;
+  box-shadow: inset 0 0 0 1px #d3e1f8;
+}
+
+.editPen {
+  flex: 0 0 auto;
+  margin-top: 3px;
+  color: var(--primary-600);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.editable.vText:hover .editPen,
+.editable.vNum:hover .editPen,
+.editable.vText:focus-visible .editPen,
+.editable.vNum:focus-visible .editPen {
+  opacity: 0.75;
+}
+
+.ph {
+  color: #b4bcc8;
+  font-style: italic;
+  font-weight: 600;
+}
+
+/* ---- inline inputs ---- */
+.inp {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-navy);
+  background: #fff;
+  border: 1.5px solid var(--primary-600);
+  border-radius: 8px;
+  padding: 8px 11px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 0 0 3px rgba(47, 112, 236, 0.14);
+  outline: none;
+}
+
+.inpNum {
+  max-width: 140px;
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- yes/no badge ---- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px 5px 9px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  font-family: var(--font-jetbrains-mono), monospace;
+  border: none;
+  cursor: pointer;
+  transition:
+    filter 0.12s,
+    box-shadow 0.12s;
+}
+
+.badge:hover {
+  filter: brightness(0.97);
+  box-shadow: 0 0 0 2px rgba(var(--ink-navy-rgb), 0.08);
+}
+
+.badgeDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.badgeYes {
+  background: #d7eede;
+  color: #1c7a38;
+}
+
+.badgeYes .badgeDot {
+  background: var(--success);
+}
+
+.badgeNo {
+  background: #fbe9c8;
+  color: #9a7416;
+}
+
+.badgeNo .badgeDot {
+  background: var(--warning);
+}
+
+.editSwap {
+  margin-left: 3px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.badge:hover .editSwap {
+  opacity: 0.7;
+}
+
+/* ---- dropdown ---- */
+.vDrop {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  font-weight: 700;
+  color: #7c5a0e;
+  background: #faedcf;
+  border: 1px solid #ead49a;
+  padding: 6px 13px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: var(--font-jetbrains-mono), monospace;
+  cursor: pointer;
+}
+
+.vDrop svg {
+  opacity: 0.7;
+}
+
+.vDropEdit {
+  padding-right: 11px;
+  cursor: default;
+}
+
+.dropSel {
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  background: transparent;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #7c5a0e;
+  cursor: pointer;
+  outline: none;
+  padding-right: 2px;
+}
+
+/* ---- radio ---- */
+.vRadios {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vRadio {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 13px 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  color: var(--gray-500);
+  font-size: 12.5px;
+  font-weight: 700;
+  background: #fff;
+  font-family: var(--font-jetbrains-mono), monospace;
+  cursor: pointer;
+  transition: 0.12s;
+}
+
+.vRadio:hover {
+  border-color: #c5ccd6;
+  color: var(--ink-navy);
+}
+
+.rdot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #c5ccd6;
+}
+
+.vRadio.on {
+  border-color: #c0392b;
+  color: #c0392b;
+  background: #fbe4e2;
+}
+
+.vRadio.on .rdot {
+  border-color: #c0392b;
+  background: radial-gradient(circle, #c0392b 0 38%, #fff 42%);
+}
+
+/* ---- progress (ordered stages) ---- */
+.vProg {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  width: 100%;
+  max-width: 440px;
+}
+
+.progSegs {
+  display: flex;
+  gap: 5px;
+}
+
+.progSeg {
+  flex: 1;
+  height: 11px;
+  border-radius: 5px;
+  background: #e2e7ee;
+  transition: background 0.15s;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.progSeg:hover {
+  background: #cbd3de;
+}
+
+.progSeg.done {
+  background: #157e74;
+}
+
+.progSeg.done:hover {
+  filter: brightness(1.06);
+}
+
+.progSteps {
+  display: flex;
+  gap: 5px;
+}
+
+.progStep {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #aeb6c2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  background: none;
+  border: none;
+  font-family: var(--font-jetbrains-mono), monospace;
+  cursor: pointer;
+  padding: 2px 0;
+  transition: color 0.12s;
+}
+
+.progStep:hover {
+  color: #157e74;
+}
+
+.progStep.past {
+  color: #5da59c;
+}
+
+.progStep.cur {
+  color: #157e74;
+}
