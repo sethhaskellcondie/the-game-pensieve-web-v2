@@ -315,6 +315,29 @@ describe("ToysManager", () => {
     });
   });
 
+  it("edits a number custom field inline and PUTs the toy when mass edit is on", async () => {
+    renderManager(true);
+    await screen.findByText("R2-D2");
+
+    const row = screen.getByText("R2-D2").closest("tr") as HTMLElement;
+    // R2-D2's "Year" is 1977 → click to edit, change, commit.
+    fireEvent.click(within(row).getByRole("button", { name: "Edit Year" }));
+    const input = within(row).getByRole("spinbutton", { name: "Year" });
+    fireEvent.change(input, { target: { value: "1980" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => {
+      const put = mockFetch.mock.calls.find(
+        ([url, init]) => /\/api\/toys\/1$/.test(url) && init?.method === "PUT",
+      );
+      expect(put).toBeDefined();
+      const cf = JSON.parse(put![1].body).customFieldValues.find(
+        (v: { customFieldId: number }) => v.customFieldId === 11,
+      );
+      expect(cf.value).toBe("1980");
+    });
+  });
+
   it("edits a dropdown inline and PUTs the toy when mass edit is on", async () => {
     renderManager(true);
     await screen.findByText("R2-D2");

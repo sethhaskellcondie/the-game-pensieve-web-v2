@@ -340,7 +340,11 @@ export default function ToysManager() {
     // editor (the same controls as the toy detail page) — clicking commits the
     // change. Otherwise every type shows its read-only display. Remaining types
     // get inline editing in follow-ups.
-    const editableInline: CustomFieldType[] = ["dropdown", "boolean"];
+    const editableInline: CustomFieldType[] = [
+      "dropdown",
+      "boolean",
+      "number",
+    ];
     function renderFieldCell(toy: Toy, def: CustomField) {
       const value = toy.customFieldValues.find(
         (cv) => cv.customFieldId === def.id,
