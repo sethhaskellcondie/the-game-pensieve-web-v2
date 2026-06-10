@@ -144,9 +144,15 @@
   border-right-color: rgba(255, 255, 255, 0.5) !important;
 }
 
-/* Body cells + hover wash */
-.cell {
+/* Body cells + hover wash. The padding is scoped to `.table td.cell` so it
+   outranks the blanket `.table td { padding: 0 }` rule on specificity —
+   otherwise the cell content (plain text here, with no inner span to carry a
+   margin) sits flush against the left edge. */
+.table td.cell {
   padding: 0 12px;
+}
+
+.cell {
   color: var(--ink-navy);
   overflow: hidden;
   text-overflow: ellipsis;
