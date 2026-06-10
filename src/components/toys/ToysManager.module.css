@@ -48,6 +48,53 @@
   font-weight: 600;
 }
 
+/* Inline-edit (mass-edit mode) — a click target that swaps to a text input.
+   The negative side margins pull the control back so its text lines up with the
+   cell's static text (the DataTable cell already pads 12px), while its hover
+   wash / focus ring still fill the cell. */
+.editTrigger {
+  display: block;
+  width: calc(100% + 12px);
+  margin: 0 -6px;
+  padding: 3px 6px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-navy);
+  text-align: left;
+  cursor: text;
+  transition: background 0.12s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editTrigger:hover {
+  background: #eaf1ff;
+}
+
+.editInput {
+  display: block;
+  width: calc(100% + 12px);
+  box-sizing: border-box;
+  margin: 0 -6px;
+  padding: 3px 6px;
+  border: 1px solid var(--primary-600);
+  border-radius: 6px;
+  background: var(--white-pure);
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-navy);
+  outline: none;
+}
+
+/* Muted dash shown in an editable cell whose value is empty. */
+.dash {
+  color: var(--gray-500);
+}
+
 .actions {
   margin-left: auto;
   display: flex;

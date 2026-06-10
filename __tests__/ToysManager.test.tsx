@@ -3,6 +3,8 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { CustomField, Toy } from "@/lib/api";
 import ToysManager from "@/components/toys/ToysManager";
 import { ToastProvider } from "@/components/ToastProvider";
+import { UiSettingsProvider } from "@/components/UiSettingsProvider";
+import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
 
 const toyFields: CustomField[] = [
   { id: 10, name: "Boxed", type: "boolean", entityKey: "toy", order: 0, options: [] },
@@ -49,20 +51,27 @@ function jsonResponse(body: unknown, { ok = true, status = 200 } = {}): Response
 
 const mockFetch = jest.fn();
 
-function routedFetch(url: string) {
-  if (url.includes("/api/toys")) {
-    return Promise.resolve(jsonResponse({ status: "ok", data: toys }));
+function routedFetch(url: string, init?: RequestInit) {
+  const method = init?.method ?? "GET";
+  // A toy update: echo back the body so the route's success path is exercised.
+  if (/\/api\/toys\/\d+$/.test(url) && method === "PUT") {
+    return Promise.resolve(jsonResponse({ status: "ok", data: {} }));
   }
   if (url.includes("/entity/toy")) {
     return Promise.resolve(jsonResponse({ status: "ok", data: toyFields }));
   }
+  if (url.includes("/api/toys")) {
+    return Promise.resolve(jsonResponse({ status: "ok", data: toys }));
+  }
   return Promise.resolve(jsonResponse({ status: "ok", data: {} }));
 }
 
-function renderManager() {
+function renderManager(massEditMode = false) {
   return render(
     <ToastProvider>
-      <ToysManager />
+      <UiSettingsProvider initial={{ ...DEFAULT_UI_SETTINGS, massEditMode }}>
+        <ToysManager />
+      </UiSettingsProvider>
     </ToastProvider>,
   );
 }
@@ -138,5 +147,63 @@ describe("ToysManager", () => {
     expect(
       within(row as HTMLElement).getByRole("button", { name: "Delete R2-D2" }),
     ).toBeInTheDocument();
+  });
+
+  it("omits the mass-edit crumb when mass edit mode is off", async () => {
+    renderManager(false);
+    await screen.findByText("R2-D2");
+
+    expect(screen.queryByText("Mass edit mode on.")).not.toBeInTheDocument();
+    // Name/Set stay plain text, not inline-edit trigger buttons.
+    expect(
+      screen.queryByRole("button", { name: "R2-D2" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the mass-edit crumb when mass edit mode is on", async () => {
+    renderManager(true);
+    await screen.findByText("R2-D2");
+
+    expect(screen.getByText("Mass edit mode on.")).toBeInTheDocument();
+  });
+
+  it("inline-edits a toy's name and PUTs the full toy in mass edit mode", async () => {
+    renderManager(true);
+    await screen.findByText("R2-D2");
+
+    // Click the Name trigger to open the inline input, then edit + commit.
+    fireEvent.click(screen.getByRole("button", { name: "R2-D2" }));
+    const input = screen.getByRole("textbox", { name: "Name for R2-D2" });
+    fireEvent.change(input, { target: { value: "Artoo" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    // Optimistic update lands immediately.
+    expect(await screen.findByText("Artoo")).toBeInTheDocument();
+
+    const put = mockFetch.mock.calls.find(
+      ([url, init]) => /\/api\/toys\/1$/.test(url) && init?.method === "PUT",
+    );
+    expect(put).toBeDefined();
+    expect(JSON.parse(put![1].body)).toEqual({
+      name: "Artoo",
+      set: "Star Wars",
+      customFieldValues: toys[0].customFieldValues,
+    });
+  });
+
+  it("commits a blank name as a no-op (no PUT, value unchanged)", async () => {
+    renderManager(true);
+    await screen.findByText("R2-D2");
+
+    fireEvent.click(screen.getByRole("button", { name: "R2-D2" }));
+    const input = screen.getByRole("textbox", { name: "Name for R2-D2" });
+    fireEvent.change(input, { target: { value: "   " } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(screen.getByText("R2-D2")).toBeInTheDocument();
+    const put = mockFetch.mock.calls.find(
+      ([url, init]) => /\/api\/toys\/1$/.test(url) && init?.method === "PUT",
+    );
+    expect(put).toBeUndefined();
   });
 });

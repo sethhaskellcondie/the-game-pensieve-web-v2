@@ -295,6 +295,19 @@ export function searchToys(): Promise<Toy[]> {
   return apiPost<Toy[]>("/toys/function/search", { filters: [] });
 }
 
+// The update payload mirrors ToyRequest: name + set + the full custom-field
+// value set are all required, so an inline edit of one field must resend the
+// toy's existing values alongside the change.
+export type UpdateToyInput = {
+  name: string;
+  set: string;
+  customFieldValues: CustomFieldValue[];
+};
+
+export function updateToy(id: number, input: UpdateToyInput): Promise<Toy> {
+  return apiPut<Toy>(`/toys/${id}`, { toy: input });
+}
+
 export async function checkHeartbeat(
   { debug = false }: { debug?: boolean } = {},
 ): Promise<boolean> {

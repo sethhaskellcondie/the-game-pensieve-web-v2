@@ -1,14 +1,100 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { CustomField, Toy } from "@/lib/api";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CustomField, Toy, UpdateToyInput } from "@/lib/api";
 import Button from "@/components/Button";
 import DataTable, { type ColumnDef } from "@/components/data-table/DataTable";
 import { useToast } from "@/components/ToastProvider";
+import { useUiSettings } from "@/components/UiSettingsProvider";
 import { PlusIcon } from "@/components/custom-fields/icons";
 import { formatCustomFieldValue } from "./format";
 import { FilterIcon, SearchIcon } from "./icons";
 import styles from "./ToysManager.module.css";
+
+// The two toy columns that mass-edit mode makes inline-editable.
+type EditField = "name" | "set";
+const FIELD_LABEL: Record<EditField, string> = { name: "Name", set: "Set" };
+
+// Self-contained inline editor: holds its own draft so a keystroke re-renders
+// only this input, not the whole table. Commits on Enter/blur, cancels on
+// Escape. A latch keeps the Enter-then-blur sequence from committing twice.
+function InlineEditInput({
+  initial,
+  ariaLabel,
+  onCommit,
+  onCancel,
+}: {
+  initial: string;
+  ariaLabel: string;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(initial);
+  const done = useRef(false);
+  const commit = () => {
+    if (done.current) return;
+    done.current = true;
+    onCommit(value);
+  };
+  const cancel = () => {
+    if (done.current) return;
+    done.current = true;
+    onCancel();
+  };
+  return (
+    <input
+      className={styles.editInput}
+      aria-label={ariaLabel}
+      value={value}
+      autoFocus
+      onChange={(e) => setValue(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          cancel();
+        }
+      }}
+      onBlur={commit}
+    />
+  );
+}
+
+// One mass-edit-mode cell for the Name/Set columns: the value as a click-to-edit
+// trigger, or the inline input while this cell is the one being edited.
+function EditableToyCell({
+  toy,
+  field,
+  editing,
+  onStart,
+  onCommit,
+  onCancel,
+}: {
+  toy: Toy;
+  field: EditField;
+  editing: boolean;
+  onStart: () => void;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+}) {
+  if (editing) {
+    return (
+      <InlineEditInput
+        initial={toy[field]}
+        ariaLabel={`${FIELD_LABEL[field]} for ${toy.name}`}
+        onCommit={onCommit}
+        onCancel={onCancel}
+      />
+    );
+  }
+  return (
+    <button type="button" className={styles.editTrigger} onClick={onStart}>
+      {toy[field] || <span className={styles.dash}>—</span>}
+    </button>
+  );
+}
 
 // Reads a route handler's response once, throwing the forwarded backend message
 // on failure. Route handlers answer { status, data } or { status, message }.
@@ -42,11 +128,17 @@ function loadErrorMessage(error: unknown): string {
 }
 
 export default function ToysManager() {
-  const { showSnackbar } = useToast();
+  const { showToast, showSnackbar } = useToast();
+  const { settings } = useUiSettings();
+  const massEditMode = settings.massEditMode;
   const [toys, setToys] = useState<Toy[]>([]);
   const [definitions, setDefinitions] = useState<CustomField[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  // The cell being inline-edited (row id + which column), or null when idle.
+  const [editing, setEditing] = useState<{ id: number; field: EditField } | null>(
+    null,
+  );
 
   // Load toys and their field definitions together on mount. setState lives in
   // the promise callbacks (not the effect body); `active` drops a stale response
@@ -78,9 +170,77 @@ export default function ToysManager() {
     };
   }, [showSnackbar]);
 
+  const startEdit = useCallback((toy: Toy, field: EditField) => {
+    setEditing({ id: toy.id, field });
+  }, []);
+
+  const cancelEdit = useCallback(() => setEditing(null), []);
+
+  // Commit an inline edit. Blank or unchanged values just exit edit mode.
+  // Otherwise the change is applied optimistically and rolled back on failure.
+  // The PUT resends the whole toy (name + set + values are all required by the
+  // backend), swapping in only the edited field.
+  const commitEdit = useCallback(
+    async (toy: Toy, field: EditField, raw: string) => {
+      setEditing(null);
+      const next = raw.trim();
+      if (next === "" || next === toy[field]) return;
+      // Capture the pre-edit list inside the functional update so this callback
+      // doesn't need `toys` as a dependency.
+      let prev: Toy[] = [];
+      setToys((ts) => {
+        prev = ts;
+        return ts.map((t) => (t.id === toy.id ? { ...t, [field]: next } : t));
+      });
+      try {
+        const input: UpdateToyInput = {
+          name: field === "name" ? next : toy.name,
+          set: field === "set" ? next : toy.set,
+          customFieldValues: toy.customFieldValues,
+        };
+        const res = await fetch(`/api/toys/${toy.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input),
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as {
+            message?: string;
+          } | null;
+          throw new Error(body?.message ?? "Request failed");
+        }
+        showToast({ message: "Toy updated.", variant: "success" });
+      } catch (error) {
+        console.error("Update toy failed", error);
+        setToys(prev);
+        showSnackbar({
+          message:
+            error instanceof Error
+              ? `Couldn't update the toy: ${error.message}`
+              : "Couldn't update the toy. Please try again.",
+          variant: "error",
+        });
+      }
+    },
+    [showToast, showSnackbar],
+  );
+
   // Name and Set are always first; the rest of the columns are the toy custom
   // fields, in their defined order. Each cell maps the toy's values by field id.
+  // In mass-edit mode, Name and Set become inline-editable.
   const columns = useMemo<ColumnDef<Toy>[]>(() => {
+    function renderEditable(toy: Toy, field: EditField) {
+      return (
+        <EditableToyCell
+          toy={toy}
+          field={field}
+          editing={editing?.id === toy.id && editing.field === field}
+          onStart={() => startEdit(toy, field)}
+          onCommit={(value) => commitEdit(toy, field, value)}
+          onCancel={cancelEdit}
+        />
+      );
+    }
     const base: ColumnDef<Toy>[] = [
       {
         key: "name",
@@ -88,9 +248,18 @@ export default function ToysManager() {
         width: 272,
         frozen: true,
         seam: true,
-        render: (toy) => toy.name,
+        render: massEditMode
+          ? (toy) => renderEditable(toy, "name")
+          : (toy) => toy.name,
       },
-      { key: "set", label: "Set", width: 200, render: (toy) => toy.set },
+      {
+        key: "set",
+        label: "Set",
+        width: 200,
+        render: massEditMode
+          ? (toy) => renderEditable(toy, "set")
+          : (toy) => toy.set,
+      },
     ];
     const dynamic: ColumnDef<Toy>[] = definitions.map((def) => ({
       key: `cf-${def.id}`,
@@ -103,7 +272,7 @@ export default function ToysManager() {
         ),
     }));
     return [...base, ...dynamic];
-  }, [definitions]);
+  }, [definitions, massEditMode, editing, startEdit, cancelEdit, commitEdit]);
 
   // Client-side search over name + set. (Server-side filtering via the search
   // endpoint is a follow-up.)
@@ -122,6 +291,11 @@ export default function ToysManager() {
       <div className={styles.head}>
         <div className={styles.titleWrap}>
           <h2 className={styles.entName}><b>{filteredToys.length}</b> {filteredToys.length === 1 ? "Toy" : "Toys"}</h2>
+          {massEditMode && (
+            <div className={styles.crumb}>
+              <span>Mass edit mode is on. (adjust in options)</span>
+            </div>
+          )}
         </div>
         <div className={styles.actions}>
           <div className={styles.search}>
