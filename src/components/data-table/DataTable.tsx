@@ -39,7 +39,9 @@ export type DataTableProps<Row> = {
   rowClickLabel?: (row: Row) => string;
 };
 
-const MIN_COL = 110;
+// The default per-column resize floor; also a handy default width for columns
+// whose content is narrow (e.g. a number or a Yes/No badge).
+export const MIN_COL = 110;
 const MAX_COL = 560;
 // Fixed width for the delete column. It must be a real <col> width because
 // table-layout: fixed honors those but ignores a cell's min-width — without it

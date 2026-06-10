@@ -9,7 +9,10 @@ import type {
   UpdateToyInput,
 } from "@/lib/api";
 import Button from "@/components/Button";
-import DataTable, { type ColumnDef } from "@/components/data-table/DataTable";
+import DataTable, {
+  MIN_COL,
+  type ColumnDef,
+} from "@/components/data-table/DataTable";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import { PlusIcon } from "@/components/custom-fields/icons";
@@ -356,10 +359,13 @@ export default function ToysManager() {
         <CustomFieldValue type={def.type} value={value} options={def.options} />
       );
     }
+    // Number and Yes/No values are narrow, so those columns default to the
+    // minimum width to save space; the rest start wider.
     const dynamic: ColumnDef<Toy>[] = definitions.map((def) => ({
       key: `cf-${def.id}`,
       label: def.name,
-      width: 180,
+      width:
+        def.type === "number" || def.type === "boolean" ? MIN_COL : 180,
       render: (toy) => renderFieldCell(toy, def),
     }));
     return [...base, ...dynamic];
