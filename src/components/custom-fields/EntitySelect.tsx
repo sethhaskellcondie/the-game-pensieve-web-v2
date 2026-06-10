@@ -6,23 +6,26 @@ import type { EntityKey } from "@/lib/api";
 import { ENTITY_META, ENTITY_ORDER } from "./registry";
 import { CaretIcon, CheckIcon } from "./icons";
 import {
+  BoardGameBoxIcon,
   BoardGamesIcon,
   SystemsIcon,
   ToysIcon,
+  VideoGameBoxIcon,
   VideoGamesIcon,
 } from "@/components/icons";
 import styles from "./EntitySelect.module.css";
 
 // Reuse the same line icons the Sidebar and Header show for each record type,
-// so the scope picker matches them. The two "Box" variants have no shared icon
-// yet, so they're intentionally left blank for now.
+// so the scope picker matches them.
 const ENTITY_ICON: Partial<
   Record<EntityKey, ComponentType<SVGProps<SVGSVGElement>>>
 > = {
   system: SystemsIcon,
   toy: ToysIcon,
   videoGame: VideoGamesIcon,
+  videoGameBox: VideoGameBoxIcon,
   boardGame: BoardGamesIcon,
+  boardGameBox: BoardGameBoxIcon,
 };
 
 const ICON_SIZE = 18;
