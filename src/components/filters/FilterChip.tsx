@@ -6,9 +6,10 @@ import FieldGlyph from "./FieldGlyph";
 import type { ActiveFilter } from "./types";
 import styles from "./FilterBar.module.css";
 
-// Render the operand for display: booleans read as Yes/No, everything else shows
-// its raw string.
+// Render the operand for display: id operands show their snapshotted label,
+// booleans read as Yes/No, everything else shows its raw string.
 function displayOperand(filter: ActiveFilter): string {
+  if (filter.operandLabel) return filter.operandLabel;
   if (filter.kind === "boolean") return filter.operand === "true" ? "Yes" : "No";
   return filter.operand;
 }

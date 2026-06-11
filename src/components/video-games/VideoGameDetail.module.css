@@ -1,0 +1,7 @@
+/* Strip the list chrome from the boxes card so each box renders as a plain
+   detail row, matching the Fields card above it. */
+.boxList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

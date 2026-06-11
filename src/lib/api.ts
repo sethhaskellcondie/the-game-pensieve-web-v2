@@ -405,6 +405,60 @@ export function getSystemById(id: number): Promise<System | null> {
   return apiGetOrNull<System>(`/systems/${id}`);
 }
 
+// ---------- Video Games ----------
+// Shapes mirror the VideoGame schemas in backend-documentation/openapi.yaml,
+// with one divergence: the live API also returns a videoGameBoxes array on
+// each game (the spec omits it). Only the fields the UI uses are typed here.
+// Video games have no create or delete endpoints — they are created (and
+// removed) through video game boxes.
+
+export type SlimVideoGameBox = {
+  id: number;
+  title: string;
+};
+
+export type VideoGame = {
+  id: number;
+  key: "videoGame";
+  title: string;
+  system: System;
+  videoGameBoxes: SlimVideoGameBox[];
+  customFieldValues: CustomFieldValue[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+};
+
+// The backend lists video games through a POST search endpoint; an empty
+// filter set returns them all. apiPost unwraps the { data, errors } envelope.
+export function searchVideoGames(
+  filters: FilterRequestDto[] = [],
+): Promise<VideoGame[]> {
+  return apiPost<VideoGame[]>("/videoGames/function/search", { filters });
+}
+
+// The update payload mirrors VideoGameRequest: title + systemId + the full
+// custom-field value set are all required, so an inline edit of one field must
+// resend the game's existing values alongside the change.
+export type UpdateVideoGameInput = {
+  title: string;
+  systemId: number;
+  customFieldValues: CustomFieldValue[];
+};
+
+export function updateVideoGame(
+  id: number,
+  input: UpdateVideoGameInput,
+): Promise<VideoGame> {
+  return apiPut<VideoGame>(`/videoGames/${id}`, { videoGame: input });
+}
+
+// Fetch a single video game by id. Returns null on 404 so the detail page can
+// render its own not-found state instead of throwing.
+export function getVideoGameById(id: number): Promise<VideoGame | null> {
+  return apiGetOrNull<VideoGame>(`/videoGames/${id}`);
+}
+
 export async function checkHeartbeat(
   { debug = false }: { debug?: boolean } = {},
 ): Promise<boolean> {

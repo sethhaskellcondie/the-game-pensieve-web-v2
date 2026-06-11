@@ -41,6 +41,11 @@ export type FilterFieldDef = {
   operators: FilterOperator[];
   options?: CustomFieldOption[];
   customFieldId?: number;
+  // Value/label choices for fields whose operand is an id that should display
+  // as a label (e.g. a video game's system_id → system names). When present
+  // (and the operator is an equality), the value input offers a listbox of the
+  // labels and commits the value.
+  valueOptions?: { value: string; label: string }[];
 };
 
 // One applied filter held in component state. `id` is a local key for React and
@@ -55,6 +60,9 @@ export type ActiveFilter = {
   operator: FilterOperator;
   operand: string;
   options?: CustomFieldOption[];
+  // Display label for an id operand, snapshotted when the filter is applied so
+  // the chip can show e.g. the system's name instead of its numeric id.
+  operandLabel?: string;
 };
 
 export type { EntityKey };

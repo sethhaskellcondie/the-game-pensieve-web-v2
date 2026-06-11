@@ -32,6 +32,28 @@ export default function FilterValueInput({
     }
   };
 
+  // Fields with value/label choices (e.g. system_id → system names) get a
+  // listbox of the labels committing the value, for whole-value matches.
+  if (
+    field.valueOptions &&
+    field.valueOptions.length > 0 &&
+    (operator === "equals" || operator === "not_equals")
+  ) {
+    return (
+      <Listbox
+        value={value}
+        options={field.valueOptions.map((o) => ({
+          value: o.value,
+          label: o.label,
+        }))}
+        onChange={onChange}
+        ariaLabel={`${field.label} value`}
+        placeholder="Select…"
+        className={styles.valueListbox}
+      />
+    );
+  }
+
   // Option fields show their option picker only when matching a whole value
   // (is / is not); substring operators get a free-text input.
   const isOptionKind =

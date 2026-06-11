@@ -208,6 +208,94 @@ describe("FilterBar", () => {
     expect(next[0]).toMatchObject({ id: "a", operand: "Special" });
   });
 
+  describe("system fields with valueOptions", () => {
+    const systemField: FilterFieldDef = {
+      field: "system_id",
+      label: "System",
+      kind: "system",
+      source: "standard",
+      operators: ["equals", "not_equals"],
+      valueOptions: [
+        { value: "1", label: "NES" },
+        { value: "2", label: "SNES" },
+      ],
+    };
+
+    function setupSystem(filters: ActiveFilter[] = []) {
+      const onChange = jest.fn();
+      render(
+        <FilterBar
+          entityKey="videoGame"
+          fields={[...fields, systemField]}
+          filters={filters}
+          onChange={onChange}
+          searchValue=""
+          onSearchChange={jest.fn()}
+          searchAriaLabel="Search video games"
+        />,
+      );
+      return { onChange };
+    }
+
+    it("offers a listbox of labels and applies the value with its label snapshot", () => {
+      const { onChange } = setupSystem();
+      fireEvent.click(screen.getByRole("button", { name: "Add filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "Filter field" }));
+      fireEvent.click(screen.getByRole("option", { name: "System" }));
+
+      // The value control is a listbox of system names, defaulting to the first.
+      fireEvent.click(screen.getByRole("button", { name: "System value" }));
+      fireEvent.click(screen.getByRole("option", { name: "SNES" }));
+      fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      const next = onChange.mock.calls[0][0] as ActiveFilter[];
+      expect(next).toHaveLength(1);
+      expect(next[0]).toMatchObject({
+        field: "system_id",
+        operator: "equals",
+        operand: "2",
+        operandLabel: "SNES",
+      });
+    });
+
+    it("shows the operand label on the chip instead of the raw id", () => {
+      setupSystem([
+        {
+          id: "a",
+          field: "system_id",
+          label: "System",
+          kind: "system",
+          operator: "equals",
+          operand: "1",
+          operandLabel: "NES",
+        },
+      ]);
+      const chip = screen.getByRole("button", { name: "Edit System filter" });
+      expect(within(chip).getByText("NES")).toBeInTheDocument();
+      expect(within(chip).queryByText("1")).not.toBeInTheDocument();
+    });
+
+    it("falls back to a number input for a system field without valueOptions", () => {
+      const onChange = jest.fn();
+      render(
+        <FilterBar
+          entityKey="videoGame"
+          fields={[{ ...systemField, valueOptions: undefined }]}
+          filters={[]}
+          onChange={onChange}
+          searchValue=""
+          onSearchChange={jest.fn()}
+          searchAriaLabel="Search video games"
+        />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Add filter" }));
+      expect(
+        screen.getByRole("spinbutton", { name: "System value" }),
+      ).toBeInTheDocument();
+    });
+  });
+
   it("removes a filter via its ✕", () => {
     const { onChange } = setup([
       {
