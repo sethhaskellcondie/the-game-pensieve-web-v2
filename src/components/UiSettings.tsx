@@ -3,14 +3,19 @@
 import type { ReactNode } from "react";
 import SettingsSection from "./SettingsSection";
 import Toggle from "./Toggle";
+import { BoardGamesIcon, VideoGamesIcon } from "./icons";
 import { useUiSettings } from "./UiSettingsProvider";
-import type { UiSettings, VideoGamesView } from "@/lib/uiSettings.types";
+import type { CollectionView, UiSettings } from "@/lib/uiSettings.types";
 import styles from "./UiSettings.module.css";
 
-// Only the boolean settings render as switches; videoGamesDefaultView gets its
-// own segmented control below.
+// Only the boolean settings render as switches; the default-view settings get
+// their own segmented controls below.
 type SettingKey = {
   [K in keyof UiSettings]: UiSettings[K] extends boolean ? K : never;
+}[keyof UiSettings];
+
+type ViewSettingKey = {
+  [K in keyof UiSettings]: UiSettings[K] extends CollectionView ? K : never;
 }[keyof UiSettings];
 
 type SettingMeta = {
@@ -20,9 +25,32 @@ type SettingMeta = {
   icon: ReactNode;
 };
 
-const VIDEO_GAMES_VIEWS: { value: VideoGamesView; label: string }[] = [
+const VIEW_OPTIONS: { value: CollectionView; label: string }[] = [
   { value: "list", label: "List" },
   { value: "shelf", label: "Shelf" },
+];
+
+// One List/Shelf default-view choice per game collection. Board games is
+// stored ahead of its page being built, so the preference is already in place
+// when that screen lands.
+const VIEW_SETTINGS: {
+  key: ViewSettingKey;
+  title: string;
+  description: string;
+  icon: ReactNode;
+}[] = [
+  {
+    key: "videoGamesDefaultView",
+    title: "Default Video Games View",
+    description: "Which view the Video Games page opens with.",
+    icon: <VideoGamesIcon />,
+  },
+  {
+    key: "boardGamesDefaultView",
+    title: "Default Board Games View",
+    description: "Which view the Board Games page opens with.",
+    icon: <BoardGamesIcon />,
+  },
 ];
 
 const SETTINGS: SettingMeta[] = [
@@ -101,42 +129,34 @@ export default function UiSettings() {
           />
         </div>
       ))}
-      <div className={styles.row}>
-        <span className={styles.icon}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            {/* A shelf with three boxes standing on it. */}
-            <path d="M3 19h18" />
-            <rect x="4" y="8" width="4" height="11" rx="1" />
-            <rect x="10" y="5" width="4" height="14" rx="1" />
-            <rect x="16" y="10" width="4" height="9" rx="1" />
-          </svg>
-        </span>
-        <div className={styles.text}>
-          <span className={styles.title}>Default Video Games View</span>
-          <span className={styles.description}>
-            Which view the Video Games page opens with.
-          </span>
+      {VIEW_SETTINGS.map((setting) => (
+        <div key={setting.key} className={styles.row}>
+          <span className={styles.icon}>{setting.icon}</span>
+          <div className={styles.text}>
+            <span className={styles.title}>{setting.title}</span>
+            <span className={styles.description}>{setting.description}</span>
+          </div>
+          <div
+            className={styles.segments}
+            role="radiogroup"
+            aria-label={setting.title}
+          >
+            {VIEW_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={settings[setting.key] === option.value}
+                className={styles.segment}
+                disabled={saving}
+                onClick={() => void setSetting(setting.key, option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
-        <div
-          className={styles.segments}
-          role="radiogroup"
-          aria-label="Default Video Games View"
-        >
-          {VIDEO_GAMES_VIEWS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              role="radio"
-              aria-checked={settings.videoGamesDefaultView === option.value}
-              className={styles.segment}
-              disabled={saving}
-              onClick={() => void setSetting("videoGamesDefaultView", option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      ))}
     </SettingsSection>
   );
 }

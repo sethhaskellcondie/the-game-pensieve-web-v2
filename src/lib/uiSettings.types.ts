@@ -8,16 +8,18 @@
 // This module is intentionally free of any server-only code (no API_BASE_URL,
 // no fetch) so it is safe to import from Client Components.
 
-// The two views the video games page offers. Lives here (not in the view
-// components) because the user's preferred default is a persisted UI setting.
-export type VideoGamesView = "list" | "shelf";
+// The two views a game collection page offers (video games today, board games
+// to come). Lives here (not in the view components) because the user's
+// preferred default per collection is a persisted UI setting.
+export type CollectionView = "list" | "shelf";
 
 export type UiSettings = {
   massInputMode: boolean;
   massEditMode: boolean;
   developerMode: boolean;
   hideAnimations: boolean;
-  videoGamesDefaultView: VideoGamesView;
+  videoGamesDefaultView: CollectionView;
+  boardGamesDefaultView: CollectionView;
 };
 
 export const DEFAULT_UI_SETTINGS: UiSettings = {
@@ -26,10 +28,11 @@ export const DEFAULT_UI_SETTINGS: UiSettings = {
   developerMode: false,
   hideAnimations: false,
   videoGamesDefaultView: "list",
+  boardGamesDefaultView: "list",
 };
 
-// Narrows an untrusted value to a VideoGamesView, falling back to "list".
-export function asVideoGamesView(value: unknown): VideoGamesView {
+// Narrows an untrusted value to a CollectionView, falling back to "list".
+export function asCollectionView(value: unknown): CollectionView {
   return value === "shelf" ? "shelf" : "list";
 }
 
@@ -41,7 +44,8 @@ type StoredUiSettings = {
   mass_edit_mode: boolean;
   developer_mode: boolean;
   hide_animations: boolean;
-  video_games_default_view: VideoGamesView;
+  video_games_default_view: CollectionView;
+  board_games_default_view: CollectionView;
 };
 
 // Parses the metadata `value` JSON string into UiSettings. Defensive by design:
@@ -55,7 +59,8 @@ export function parseUiSettingsValue(value: string): UiSettings {
       massEditMode: Boolean(parsed?.mass_edit_mode),
       developerMode: Boolean(parsed?.developer_mode),
       hideAnimations: Boolean(parsed?.hide_animations),
-      videoGamesDefaultView: asVideoGamesView(parsed?.video_games_default_view),
+      videoGamesDefaultView: asCollectionView(parsed?.video_games_default_view),
+      boardGamesDefaultView: asCollectionView(parsed?.board_games_default_view),
     };
   } catch {
     return { ...DEFAULT_UI_SETTINGS };
@@ -70,6 +75,7 @@ export function serializeUiSettings(settings: UiSettings): string {
     developer_mode: settings.developerMode,
     hide_animations: settings.hideAnimations,
     video_games_default_view: settings.videoGamesDefaultView,
+    board_games_default_view: settings.boardGamesDefaultView,
   };
   return JSON.stringify(stored);
 }

@@ -52,7 +52,7 @@
   flex: 0 0 auto;
   display: inline-flex;
   border: 2px solid var(--line);
-  border-radius: 10px;
+  border-radius: 20px;
   overflow: hidden;
 }
 
@@ -62,6 +62,7 @@
   justify-content: center;
   min-width: 64px;
   padding: 8px 14px;
+  border: none;
   font-size: var(--text-label);
   font-weight: 700;
   color: var(--gray-500);

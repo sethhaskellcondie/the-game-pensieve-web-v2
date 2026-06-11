@@ -1,5 +1,11 @@
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import UiSettings from "@/components/UiSettings";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
@@ -55,36 +61,63 @@ describe("UiSettings", () => {
     expect(developer).toHaveAttribute("aria-checked", "false");
   });
 
-  it("renders the Default Video Games View choice with List selected by default", () => {
+  it("renders a default-view choice per collection with List selected by default", () => {
     renderWithProvider();
 
+    for (const name of [
+      "Default Video Games View",
+      "Default Board Games View",
+    ]) {
+      const group = screen.getByRole("radiogroup", { name });
+      expect(within(group).getByRole("radio", { name: "List" })).toHaveAttribute(
+        "aria-checked",
+        "true",
+      );
+      expect(
+        within(group).getByRole("radio", { name: "Shelf" }),
+      ).toHaveAttribute("aria-checked", "false");
+    }
+  });
+
+  it("selects Shelf for video games and persists it once the write is confirmed", async () => {
+    renderWithProvider();
     const group = screen.getByRole("radiogroup", {
       name: "Default Video Games View",
     });
-    expect(group).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "List" })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
-    expect(screen.getByRole("radio", { name: "Shelf" })).toHaveAttribute(
-      "aria-checked",
-      "false",
-    );
-  });
-
-  it("selects Shelf and persists it once the write is confirmed", async () => {
-    renderWithProvider();
-    const shelf = screen.getByRole("radio", { name: "Shelf" });
+    const shelf = within(group).getByRole("radio", { name: "Shelf" });
 
     fireEvent.click(shelf);
 
     await waitFor(() => expect(shelf).toHaveAttribute("aria-checked", "true"));
-    expect(screen.getByRole("radio", { name: "List" })).toHaveAttribute(
+    expect(within(group).getByRole("radio", { name: "List" })).toHaveAttribute(
       "aria-checked",
       "false",
     );
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
     expect(body.videoGamesDefaultView).toBe("shelf");
+    expect(body.boardGamesDefaultView).toBe("list");
+  });
+
+  it("selects Shelf for board games without touching the video games choice", async () => {
+    renderWithProvider();
+    const boardGroup = screen.getByRole("radiogroup", {
+      name: "Default Board Games View",
+    });
+    const shelf = within(boardGroup).getByRole("radio", { name: "Shelf" });
+
+    fireEvent.click(shelf);
+
+    await waitFor(() => expect(shelf).toHaveAttribute("aria-checked", "true"));
+    const videoGroup = screen.getByRole("radiogroup", {
+      name: "Default Video Games View",
+    });
+    expect(
+      within(videoGroup).getByRole("radio", { name: "List" }),
+    ).toHaveAttribute("aria-checked", "true");
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
+    expect(body.boardGamesDefaultView).toBe("shelf");
+    expect(body.videoGamesDefaultView).toBe("list");
   });
 });

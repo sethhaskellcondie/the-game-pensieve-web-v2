@@ -1,8 +1,8 @@
 import Link from "next/link";
-import type { VideoGamesView } from "@/lib/uiSettings.types";
+import type { CollectionView } from "@/lib/uiSettings.types";
 import styles from "./ViewToggle.module.css";
 
-export type { VideoGamesView };
+export type VideoGamesView = CollectionView;
 
 // Segmented List/Shelf control for the video games page. The view is encoded
 // in the URL (?view=list / ?view=shelf) so it's shareable and back-button

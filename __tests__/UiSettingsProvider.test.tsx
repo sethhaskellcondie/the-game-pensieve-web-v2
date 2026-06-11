@@ -40,6 +40,7 @@ describe("UiSettingsProvider", () => {
           developerMode: false,
           hideAnimations: false,
           videoGamesDefaultView: "list",
+          boardGamesDefaultView: "list",
         }}
       >
         <Probe />
@@ -72,6 +73,7 @@ describe("UiSettingsProvider", () => {
       developerMode: true,
       hideAnimations: false,
       videoGamesDefaultView: "list",
+      boardGamesDefaultView: "list",
     });
 
     await waitFor(() =>

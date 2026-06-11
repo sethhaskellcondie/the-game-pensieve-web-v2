@@ -33,6 +33,7 @@ describe("serializeUiSettings / parseUiSettingsValue", () => {
       developerMode: true,
       hideAnimations: true,
       videoGamesDefaultView: "shelf",
+      boardGamesDefaultView: "list",
     };
     const value = serializeUiSettings(settings);
     expect(JSON.parse(value)).toEqual({
@@ -41,6 +42,7 @@ describe("serializeUiSettings / parseUiSettingsValue", () => {
       developer_mode: true,
       hide_animations: true,
       video_games_default_view: "shelf",
+      board_games_default_view: "list",
     });
     expect(parseUiSettingsValue(value)).toEqual(settings);
   });
@@ -57,16 +59,20 @@ describe("serializeUiSettings / parseUiSettingsValue", () => {
         developerMode: true,
         hideAnimations: false,
         videoGamesDefaultView: "list",
+        boardGamesDefaultView: "list",
       },
     );
   });
 
   it("falls back to the list view for an unrecognized stored view", () => {
-    expect(
-      parseUiSettingsValue(
-        JSON.stringify({ video_games_default_view: "carousel" }),
-      ).videoGamesDefaultView,
-    ).toBe("list");
+    const parsed = parseUiSettingsValue(
+      JSON.stringify({
+        video_games_default_view: "carousel",
+        board_games_default_view: "carousel",
+      }),
+    );
+    expect(parsed.videoGamesDefaultView).toBe("list");
+    expect(parsed.boardGamesDefaultView).toBe("list");
   });
 });
 
@@ -94,6 +100,7 @@ describe("loadUiSettings", () => {
           developer_mode: true,
           hide_animations: true,
           video_games_default_view: "shelf",
+          board_games_default_view: "shelf",
         }),
       ),
     );
@@ -106,6 +113,7 @@ describe("loadUiSettings", () => {
       developerMode: true,
       hideAnimations: true,
       videoGamesDefaultView: "shelf",
+      boardGamesDefaultView: "shelf",
     });
     expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(mockFetch).toHaveBeenCalledWith(
@@ -141,6 +149,7 @@ describe("loadUiSettings", () => {
       developer_mode: false,
       hide_animations: false,
       video_games_default_view: "list",
+      board_games_default_view: "list",
     });
   });
 
