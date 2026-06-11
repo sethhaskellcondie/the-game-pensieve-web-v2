@@ -54,4 +54,37 @@ describe("UiSettings", () => {
     );
     expect(developer).toHaveAttribute("aria-checked", "false");
   });
+
+  it("renders the Default Video Games View choice with List selected by default", () => {
+    renderWithProvider();
+
+    const group = screen.getByRole("radiogroup", {
+      name: "Default Video Games View",
+    });
+    expect(group).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "List" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByRole("radio", { name: "Shelf" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+  });
+
+  it("selects Shelf and persists it once the write is confirmed", async () => {
+    renderWithProvider();
+    const shelf = screen.getByRole("radio", { name: "Shelf" });
+
+    fireEvent.click(shelf);
+
+    await waitFor(() => expect(shelf).toHaveAttribute("aria-checked", "true"));
+    expect(screen.getByRole("radio", { name: "List" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
+    expect(body.videoGamesDefaultView).toBe("shelf");
+  });
 });

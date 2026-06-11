@@ -39,6 +39,7 @@ describe("UiSettingsProvider", () => {
           massEditMode: false,
           developerMode: false,
           hideAnimations: false,
+          videoGamesDefaultView: "list",
         }}
       >
         <Probe />
@@ -70,6 +71,7 @@ describe("UiSettingsProvider", () => {
       massEditMode: false,
       developerMode: true,
       hideAnimations: false,
+      videoGamesDefaultView: "list",
     });
 
     await waitFor(() =>

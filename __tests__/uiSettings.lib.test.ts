@@ -32,6 +32,7 @@ describe("serializeUiSettings / parseUiSettingsValue", () => {
       massEditMode: false,
       developerMode: true,
       hideAnimations: true,
+      videoGamesDefaultView: "shelf",
     };
     const value = serializeUiSettings(settings);
     expect(JSON.parse(value)).toEqual({
@@ -39,6 +40,7 @@ describe("serializeUiSettings / parseUiSettingsValue", () => {
       mass_edit_mode: false,
       developer_mode: true,
       hide_animations: true,
+      video_games_default_view: "shelf",
     });
     expect(parseUiSettingsValue(value)).toEqual(settings);
   });
@@ -54,8 +56,17 @@ describe("serializeUiSettings / parseUiSettingsValue", () => {
         massEditMode: false,
         developerMode: true,
         hideAnimations: false,
+        videoGamesDefaultView: "list",
       },
     );
+  });
+
+  it("falls back to the list view for an unrecognized stored view", () => {
+    expect(
+      parseUiSettingsValue(
+        JSON.stringify({ video_games_default_view: "carousel" }),
+      ).videoGamesDefaultView,
+    ).toBe("list");
   });
 });
 
@@ -82,6 +93,7 @@ describe("loadUiSettings", () => {
           mass_edit_mode: false,
           developer_mode: true,
           hide_animations: true,
+          video_games_default_view: "shelf",
         }),
       ),
     );
@@ -93,6 +105,7 @@ describe("loadUiSettings", () => {
       massEditMode: false,
       developerMode: true,
       hideAnimations: true,
+      videoGamesDefaultView: "shelf",
     });
     expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(mockFetch).toHaveBeenCalledWith(
@@ -127,6 +140,7 @@ describe("loadUiSettings", () => {
       mass_edit_mode: false,
       developer_mode: false,
       hide_animations: false,
+      video_games_default_view: "list",
     });
   });
 

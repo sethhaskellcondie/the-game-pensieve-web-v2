@@ -1,0 +1,303 @@
+import { test, expect, type Page } from "@playwright/test";
+
+type StubSystem = {
+  id: number;
+  key: "system";
+  name: string;
+  generation: number;
+  handheld: boolean;
+  customFieldValues: [];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: null;
+};
+
+type StubBox = {
+  id: number;
+  key: "videoGameBox";
+  title: string;
+  system: StubSystem;
+  videoGames: { id: number; title: string }[];
+  isPhysical: boolean;
+  isCollection: boolean;
+  customFieldValues: [];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: null;
+};
+
+const SYSTEMS: StubSystem[] = [
+  { id: 1, key: "system", name: "NES", generation: 3, handheld: false, customFieldValues: [], createdAt: "", updatedAt: "", deletedAt: null },
+  { id: 2, key: "system", name: "SNES", generation: 4, handheld: false, customFieldValues: [], createdAt: "", updatedAt: "", deletedAt: null },
+];
+
+const BOXES: StubBox[] = [
+  {
+    id: 31,
+    key: "videoGameBox",
+    title: "Super Mario Bros.",
+    system: SYSTEMS[0],
+    videoGames: [{ id: 1, title: "Super Mario Bros." }],
+    isPhysical: true,
+    isCollection: false,
+    customFieldValues: [],
+    createdAt: "",
+    updatedAt: "",
+    deletedAt: null,
+  },
+  {
+    id: 32,
+    key: "videoGameBox",
+    title: "Super Mario All-Stars",
+    system: SYSTEMS[1],
+    videoGames: [
+      { id: 2, title: "Super Mario Bros." },
+      { id: 3, title: "Super Mario Bros. 3" },
+    ],
+    isPhysical: true,
+    isCollection: true,
+    customFieldValues: [],
+    createdAt: "",
+    updatedAt: "",
+    deletedAt: null,
+  },
+  {
+    id: 33,
+    key: "videoGameBox",
+    title: "Chrono Trigger",
+    system: SYSTEMS[1],
+    videoGames: [{ id: 4, title: "Chrono Trigger" }],
+    isPhysical: false,
+    isCollection: false,
+    customFieldValues: [],
+    createdAt: "",
+    updatedAt: "",
+    deletedAt: null,
+  },
+];
+
+// Mirrors the live /filters/videoGameBox response shape, including the
+// sort/pagination/time pseudo-fields the UI drops.
+const FILTER_SPEC = {
+  type: "videoGameBox_filters",
+  fields: {
+    title: "text",
+    system_id: "system",
+    isPhysical: "boolean",
+    isCollection: "boolean",
+    created_at: "time",
+    updated_at: "time",
+    all_fields: "sort",
+    pagination_fields: "pagination",
+  },
+  filters: {
+    title: ["equals", "not_equals", "contains", "starts_with", "ends_with"],
+    system_id: ["equals", "not_equals"],
+    isPhysical: ["equals", "not_equals"],
+    isCollection: ["equals", "not_equals"],
+    created_at: ["since", "before"],
+    updated_at: ["since", "before"],
+    all_fields: ["order_by", "order_by_desc"],
+    pagination_fields: ["limit", "offset"],
+  },
+};
+
+type StubFilter = { key: string; field: string; operator: string; operand: string };
+
+// A small stand-in for the backend's filter matching, enough to drive the
+// shelf's server-side search in these specs.
+function applyFilters(list: StubBox[], filters: StubFilter[]): StubBox[] {
+  return (filters ?? []).reduce<StubBox[]>((out, f) => {
+    return out.filter((box) => {
+      const raw =
+        f.field === "title"
+          ? box.title
+          : f.field === "system_id"
+            ? String(box.system.id)
+            : f.field === "isPhysical"
+              ? String(box.isPhysical)
+              : "";
+      const a = String(raw).toLowerCase();
+      const b = f.operand.toLowerCase();
+      switch (f.operator) {
+        case "contains":
+          return a.includes(b);
+        case "equals":
+          return a === b;
+        case "not_equals":
+          return a !== b;
+        default:
+          return true;
+      }
+    });
+  }, list);
+}
+
+// Stubs the video-game-box, video-game (for the list view the toggle starts
+// from), system, and custom-field proxies so the screen runs end-to-end
+// without a live backend.
+async function stubShelf(page: Page) {
+  const json = (route: Parameters<Parameters<Page["route"]>[1]>[0], body: unknown) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+
+  await page.route("**/api/video-game-boxes/search", (route) => {
+    const { filters } = route.request().postDataJSON() as {
+      filters: StubFilter[];
+    };
+    return json(route, { status: "ok", data: applyFilters(BOXES, filters) });
+  });
+  // The list view (the toggle's other side) loads through these.
+  await page.route("**/api/video-games**", (route) =>
+    json(route, { status: "ok", data: [] }),
+  );
+  await page.route("**/api/systems**", (route) =>
+    json(route, { status: "ok", data: SYSTEMS }),
+  );
+  await page.route("**/api/filters/**", (route) =>
+    json(route, { status: "ok", data: FILTER_SPEC }),
+  );
+  await page.route("**/api/custom-fields/entity/**", (route) =>
+    json(route, { status: "ok", data: [] }),
+  );
+}
+
+// The mass modes and the default video-games view are loaded server-side, so
+// page.route can't stub them. Pin the modes off and the default view to list
+// (the bare /video-games assertions below assume it) — the same values every
+// other spec pins, to avoid clashing writes to the shared backend state.
+async function pinNormalMode(page: Page) {
+  const current = await (await page.request.get("/api/ui-settings")).json();
+  await page.request.post("/api/ui-settings", {
+    data: {
+      ...current,
+      massInputMode: false,
+      massEditMode: false,
+      videoGamesDefaultView: "list",
+    },
+  });
+}
+
+test.beforeEach(async ({ page }) => {
+  await pinNormalMode(page);
+  await stubShelf(page);
+});
+
+test("the Shelf toggle swaps the list for the shelf of boxes", async ({ page }) => {
+  await page.goto("/video-games");
+
+  // List view is active by default.
+  const list = page.getByRole("link", { name: "List" });
+  const shelf = page.getByRole("link", { name: "Shelf" });
+  await expect(list).toHaveAttribute("aria-current", "page");
+  await expect(shelf).not.toHaveAttribute("aria-current", "page");
+
+  await shelf.click();
+
+  await expect(page).toHaveURL("/video-games?view=shelf");
+  await expect(shelf).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("heading", { level: 2, name: "3 Video Game Boxes" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Super Mario Bros.", { exact: true }),
+  ).toBeVisible();
+
+  // And back: List restores the games view (explicitly, since the bare URL
+  // follows the default-view setting).
+  await page.getByRole("link", { name: "List" }).click();
+  await expect(page).toHaveURL("/video-games?view=list");
+  await expect(page.getByRole("link", { name: "List" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+});
+
+test("the shelf URL loads directly and renders the boxes table", async ({
+  page,
+}) => {
+  await page.goto("/video-games?view=shelf");
+
+  await expect(
+    page.getByRole("heading", { level: 2, name: "3 Video Game Boxes" }),
+  ).toBeVisible();
+
+  // The same table treatment as the games list, with the box columns.
+  await expect(page.getByRole("columnheader", { name: "Title" })).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "System" })).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "Games" })).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "Physical" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "Collection" }),
+  ).toBeVisible();
+
+  // Each row shows its box's system, game count, and Yes/No badges.
+  const allStarsRow = page
+    .getByRole("row")
+    .filter({ hasText: "Super Mario All-Stars" });
+  await expect(allStarsRow.getByText("SNES", { exact: true })).toBeVisible();
+  await expect(allStarsRow.getByText("2", { exact: true })).toBeVisible();
+  await expect(allStarsRow.getByRole("img", { name: "Yes" })).toHaveCount(2);
+
+  const chronoRow = page.getByRole("row").filter({ hasText: "Chrono Trigger" });
+  await expect(chronoRow.getByText("1", { exact: true })).toBeVisible();
+  await expect(chronoRow.getByRole("img", { name: "No" })).toHaveCount(2);
+});
+
+test("filters the shelf via the search box on Enter", async ({ page }) => {
+  await page.goto("/video-games?view=shelf");
+  await expect(
+    page.getByText("Super Mario Bros.", { exact: true }),
+  ).toBeVisible();
+
+  const box = page.getByRole("searchbox", { name: "Search video game boxes" });
+  await box.fill("chrono");
+  await box.press("Enter");
+
+  // The text becomes a title-contains chip and the box clears.
+  await expect(page.getByRole("button", { name: "Edit Title filter" })).toBeVisible();
+  await expect(box).toHaveValue("");
+
+  await expect(page.getByText("Chrono Trigger", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Super Mario Bros.", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { level: 2, name: "1 Video Game Box" }),
+  ).toBeVisible();
+});
+
+// The box detail page fetches its box server-side (Playwright's page.route
+// can't stub that), so this smoke test runs against the live dev backend's
+// box #1; the deterministic edit-logic coverage lives in
+// __tests__/VideoGameBoxDetail.test.tsx.
+test("the box detail page shows the Fields and Video Games cards and links back to the shelf", async ({
+  page,
+}) => {
+  await page.goto("/video-game-boxes/1");
+
+  // The Fields card with the fixed Title + System + Physical rows is the heart
+  // of the screen; the Video Games card lists the games inside the box.
+  await expect(page.getByText("Fields", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit Title" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "System" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Physical: / })).toBeVisible();
+  // Collection is derived, so it renders as a static badge, not a toggle.
+  await expect(page.getByText("Collection", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Collection/ })).toHaveCount(0);
+  // Scoped to main: the sidebar also has a "Video Games" link.
+  await expect(
+    page.getByRole("main").getByText("Video Games", { exact: true }),
+  ).toBeVisible();
+
+  await page.getByRole("link", { name: "Back" }).click();
+  await expect(page).toHaveURL("/video-games?view=shelf");
+  await expect(
+    page.getByRole("heading", { level: 2, name: "3 Video Game Boxes" }),
+  ).toBeVisible();
+});

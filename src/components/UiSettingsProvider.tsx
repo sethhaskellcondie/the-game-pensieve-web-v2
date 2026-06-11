@@ -12,7 +12,10 @@ type UiSettingsContextValue = {
   // Resolves to true once the change is confirmed by the backend, false if the
   // write was rejected/failed (in which case the in-memory settings are left
   // untouched). Awaitable so callers can react to the outcome.
-  setSetting: (key: keyof UiSettings, next: boolean) => Promise<boolean>;
+  setSetting: <K extends keyof UiSettings>(
+    key: K,
+    next: UiSettings[K],
+  ) => Promise<boolean>;
   // True while a write is in flight, so the UI can disable controls and avoid
   // overlapping writes.
   saving: boolean;
@@ -43,9 +46,9 @@ export function UiSettingsProvider({
   const [settings, setSettings] = useState<UiSettings>(initial);
   const [saving, setSaving] = useState(false);
 
-  const setSetting = async (
-    key: keyof UiSettings,
-    next: boolean,
+  const setSetting = async <K extends keyof UiSettings>(
+    key: K,
+    next: UiSettings[K],
   ): Promise<boolean> => {
     const updated = { ...settings, [key]: next };
     setSaving(true);

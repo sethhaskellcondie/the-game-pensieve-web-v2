@@ -459,6 +459,74 @@ export function getVideoGameById(id: number): Promise<VideoGame | null> {
   return apiGetOrNull<VideoGame>(`/videoGames/${id}`);
 }
 
+// ---------- Video Game Boxes ----------
+// Shapes mirror the VideoGameBox schemas in backend-documentation/openapi.yaml.
+// A box is the case (physical or digital) that holds one or more video games;
+// games themselves are created and removed through boxes.
+
+export type SlimVideoGame = {
+  id: number;
+  title: string;
+  customFieldValues: CustomFieldValue[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+};
+
+export type VideoGameBox = {
+  id: number;
+  key: "videoGameBox";
+  title: string;
+  system: System;
+  videoGames: SlimVideoGame[];
+  isPhysical: boolean;
+  isCollection: boolean;
+  customFieldValues: CustomFieldValue[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+};
+
+// The backend lists video game boxes through a POST search endpoint; an empty
+// filter set returns them all. apiPost unwraps the { data, errors } envelope.
+export function searchVideoGameBoxes(
+  filters: FilterRequestDto[] = [],
+): Promise<VideoGameBox[]> {
+  return apiPost<VideoGameBox[]>("/videoGameBoxes/function/search", {
+    filters,
+  });
+}
+
+// The update payload mirrors VideoGameBoxRequest: every field is required, so
+// an edit of one field must resend the rest. existingVideoGameIds carries the
+// box's current game ids and newVideoGames stays empty when only editing box
+// fields. isCollection is absent — the backend derives it from the game count.
+export type UpdateVideoGameBoxInput = {
+  title: string;
+  systemId: number;
+  existingVideoGameIds: number[];
+  newVideoGames: { title: string; customFieldValues: CustomFieldValue[] }[];
+  isPhysical: boolean;
+  customFieldValues: CustomFieldValue[];
+};
+
+export function updateVideoGameBox(
+  id: number,
+  input: UpdateVideoGameBoxInput,
+): Promise<VideoGameBox> {
+  return apiPut<VideoGameBox>(`/videoGameBoxes/${id}`, {
+    videoGameBox: input,
+  });
+}
+
+// Fetch a single video game box by id. Returns null on 404 so the detail page
+// can render its own not-found state instead of throwing.
+export function getVideoGameBoxById(
+  id: number,
+): Promise<VideoGameBox | null> {
+  return apiGetOrNull<VideoGameBox>(`/videoGameBoxes/${id}`);
+}
+
 export async function checkHeartbeat(
   { debug = false }: { debug?: boolean } = {},
 ): Promise<boolean> {

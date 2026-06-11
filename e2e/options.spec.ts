@@ -59,6 +59,43 @@ test("UI Settings toggles flip and persist when clicked", async ({ page }) => {
   await persisted;
 });
 
+test("Default Video Games View segments flip and persist when clicked", async ({
+  page,
+}) => {
+  // Same approach as the toggles: stub the write proxy so the click persists
+  // through it without mutating the shared backend state.
+  await page.route("**/api/ui-settings", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true }),
+    }),
+  );
+
+  await page.goto("/options");
+
+  const group = page.getByRole("radiogroup", {
+    name: "Default Video Games View",
+  });
+  const list = group.getByRole("radio", { name: "List" });
+  const shelf = group.getByRole("radio", { name: "Shelf" });
+
+  // Exactly one segment is selected; pick the other one and assert the
+  // selection moves once the (stubbed) write confirms.
+  const shelfSelected =
+    (await shelf.getAttribute("aria-checked")) === "true";
+  const target = shelfSelected ? list : shelf;
+  const other = shelfSelected ? shelf : list;
+
+  const persisted = page.waitForRequest(
+    (req) => req.url().includes("/api/ui-settings") && req.method() === "POST",
+  );
+  await target.click();
+  await expect(target).toHaveAttribute("aria-checked", "true");
+  await expect(other).toHaveAttribute("aria-checked", "false");
+  await persisted;
+});
+
 test("toggle does not change when the persist request fails", async ({
   page,
 }) => {

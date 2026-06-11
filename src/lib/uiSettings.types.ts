@@ -8,11 +8,16 @@
 // This module is intentionally free of any server-only code (no API_BASE_URL,
 // no fetch) so it is safe to import from Client Components.
 
+// The two views the video games page offers. Lives here (not in the view
+// components) because the user's preferred default is a persisted UI setting.
+export type VideoGamesView = "list" | "shelf";
+
 export type UiSettings = {
   massInputMode: boolean;
   massEditMode: boolean;
   developerMode: boolean;
   hideAnimations: boolean;
+  videoGamesDefaultView: VideoGamesView;
 };
 
 export const DEFAULT_UI_SETTINGS: UiSettings = {
@@ -20,7 +25,13 @@ export const DEFAULT_UI_SETTINGS: UiSettings = {
   massEditMode: false,
   developerMode: false,
   hideAnimations: false,
+  videoGamesDefaultView: "list",
 };
+
+// Narrows an untrusted value to a VideoGamesView, falling back to "list".
+export function asVideoGamesView(value: unknown): VideoGamesView {
+  return value === "shelf" ? "shelf" : "list";
+}
 
 export const UI_SETTINGS_KEY = "ui-settings";
 
@@ -30,6 +41,7 @@ type StoredUiSettings = {
   mass_edit_mode: boolean;
   developer_mode: boolean;
   hide_animations: boolean;
+  video_games_default_view: VideoGamesView;
 };
 
 // Parses the metadata `value` JSON string into UiSettings. Defensive by design:
@@ -43,6 +55,7 @@ export function parseUiSettingsValue(value: string): UiSettings {
       massEditMode: Boolean(parsed?.mass_edit_mode),
       developerMode: Boolean(parsed?.developer_mode),
       hideAnimations: Boolean(parsed?.hide_animations),
+      videoGamesDefaultView: asVideoGamesView(parsed?.video_games_default_view),
     };
   } catch {
     return { ...DEFAULT_UI_SETTINGS };
@@ -56,6 +69,7 @@ export function serializeUiSettings(settings: UiSettings): string {
     mass_edit_mode: settings.massEditMode,
     developer_mode: settings.developerMode,
     hide_animations: settings.hideAnimations,
+    video_games_default_view: settings.videoGamesDefaultView,
   };
   return JSON.stringify(stored);
 }

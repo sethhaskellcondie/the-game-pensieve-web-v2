@@ -175,11 +175,18 @@ async function stubVideoGames(page: Page) {
 // all assume the normal (non-mass) UI, so pin both off (the same values every
 // other spec pins, to avoid clashing writes to the shared backend state); the
 // mass-mode behaviors are covered deterministically by the VideoGamesManager
-// unit tests. Other settings are read back and preserved.
+// unit tests. The default view is pinned to list because these specs visit the
+// bare /video-games URL and assume the list renders. Other settings are read
+// back and preserved.
 async function pinNormalMode(page: Page) {
   const current = await (await page.request.get("/api/ui-settings")).json();
   await page.request.post("/api/ui-settings", {
-    data: { ...current, massInputMode: false, massEditMode: false },
+    data: {
+      ...current,
+      massInputMode: false,
+      massEditMode: false,
+      videoGamesDefaultView: "list",
+    },
   });
 }
 
@@ -277,7 +284,7 @@ test("the video game detail page shows the Fields and Boxes cards and links back
   await expect(page.getByText("Video Game Boxes", { exact: true })).toBeVisible();
 
   await page.getByRole("link", { name: "Back" }).click();
-  await expect(page).toHaveURL("/video-games");
+  await expect(page).toHaveURL("/video-games?view=list");
   await expect(
     page.getByRole("heading", { level: 2, name: "2 Video Games" }),
   ).toBeVisible();

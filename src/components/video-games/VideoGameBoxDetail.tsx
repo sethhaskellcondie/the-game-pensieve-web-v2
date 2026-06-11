@@ -8,12 +8,13 @@ import type {
   CustomFieldType,
   CustomFieldValue,
   System,
-  UpdateVideoGameInput,
-  VideoGame,
+  UpdateVideoGameBoxInput,
+  VideoGameBox,
 } from "@/lib/api";
 import Header from "@/components/Header";
 import Button from "@/components/Button";
-import { VideoGamesIcon } from "@/components/icons";
+import BooleanBadge from "@/components/BooleanBadge";
+import { VideoGameBoxIcon } from "@/components/icons";
 import { ChevronLeftIcon } from "@/components/custom-fields/icons";
 import {
   FIELD_TYPE_META,
@@ -28,11 +29,8 @@ import FieldEditor, {
 import styles from "@/components/toys/ToyDetail.module.css";
 import localStyles from "./VideoGameDetail.module.css";
 
-// One rendered field: the fixed Title/System rows and every custom field share
-// this shape so a single row renderer drives them all. `kind` reuses the
-// backend custom-field types so the standard fields borrow the text/dropdown
-// editors. `standard` marks the built-in rows so they get the neutral
-// standard-field glyph + label instead of a custom-field type's.
+// One rendered field — the same Row shape VideoGameDetail uses, so a single
+// row renderer drives the standard rows and the custom fields alike.
 type Row = {
   key: string;
   name: string;
@@ -43,34 +41,38 @@ type Row = {
   onCommit: (value: string) => void;
 };
 
-export default function VideoGameDetail({
-  game: initialGame,
+export default function VideoGameBoxDetail({
+  box: initialBox,
   definitions,
   systems,
 }: {
-  game: VideoGame;
+  box: VideoGameBox;
   definitions: CustomField[];
   systems: System[];
 }) {
   const { showToast, showSnackbar } = useToast();
-  const [game, setGame] = useState<VideoGame>(initialGame);
+  const [box, setBox] = useState<VideoGameBox>(initialBox);
 
-  // Optimistically apply `next`, then persist the whole game (title + systemId
-  // + values are all required by the backend). Roll back and surface the error
-  // on failure.
-  const persist = async (next: VideoGame) => {
-    let prev: VideoGame = game;
-    setGame((cur) => {
+  // Optimistically apply `next`, then persist the whole box — the backend's
+  // VideoGameBoxRequest requires every field, so the box's current game ids
+  // ride along (newVideoGames stays empty: this page edits box fields only).
+  // Roll back and surface the error on failure.
+  const persist = async (next: VideoGameBox) => {
+    let prev: VideoGameBox = box;
+    setBox((cur) => {
       prev = cur;
       return next;
     });
     try {
-      const input: UpdateVideoGameInput = {
+      const input: UpdateVideoGameBoxInput = {
         title: next.title,
         systemId: next.system.id,
+        existingVideoGameIds: next.videoGames.map((g) => g.id),
+        newVideoGames: [],
+        isPhysical: next.isPhysical,
         customFieldValues: next.customFieldValues,
       };
-      const res = await fetch(`/api/video-games/${next.id}`, {
+      const res = await fetch(`/api/video-game-boxes/${next.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
@@ -81,15 +83,15 @@ export default function VideoGameDetail({
         } | null;
         throw new Error(body?.message ?? "Request failed");
       }
-      showToast({ message: "Video game updated.", variant: "success" });
+      showToast({ message: "Video game box updated.", variant: "success" });
     } catch (error) {
-      console.error("Update video game failed", error);
-      setGame(prev);
+      console.error("Update video game box failed", error);
+      setBox(prev);
       showSnackbar({
         message:
           error instanceof Error
-            ? `Couldn't update the video game: ${error.message}`
-            : "Couldn't update the video game. Please try again.",
+            ? `Couldn't update the video game box: ${error.message}`
+            : "Couldn't update the video game box. Please try again.",
         variant: "error",
       });
     }
@@ -98,8 +100,8 @@ export default function VideoGameDetail({
   // Title is required by the backend (minLength 1), so a blank commit is a no-op.
   const commitTitle = (raw: string) => {
     const title = raw.trim();
-    if (title === "" || title === game.title) return;
-    void persist({ ...game, title });
+    if (title === "" || title === box.title) return;
+    void persist({ ...box, title });
   };
 
   // The System dropdown commits by name; map it back to the system itself
@@ -107,14 +109,20 @@ export default function VideoGameDetail({
   // are no-ops.
   const commitSystem = (systemName: string) => {
     const next = systems.find((s) => s.name === systemName);
-    if (!next || next.id === game.system.id) return;
-    void persist({ ...game, system: next });
+    if (!next || next.id === box.system.id) return;
+    void persist({ ...box, system: next });
   };
 
-  // Replace (or insert) this field's value in the game's customFieldValues.
+  const commitPhysical = (raw: string) => {
+    const isPhysical = raw === "true";
+    if (isPhysical === box.isPhysical) return;
+    void persist({ ...box, isPhysical });
+  };
+
+  // Replace (or insert) this field's value in the box's customFieldValues.
   const commitField = (def: CustomField, raw: string) => {
     const current =
-      game.customFieldValues.find((v) => v.customFieldId === def.id)?.value ??
+      box.customFieldValues.find((v) => v.customFieldId === def.id)?.value ??
       "";
     if (raw === current) return;
     const entry: CustomFieldValue = {
@@ -123,15 +131,15 @@ export default function VideoGameDetail({
       customFieldType: def.type,
       value: raw,
     };
-    const exists = game.customFieldValues.some(
+    const exists = box.customFieldValues.some(
       (v) => v.customFieldId === def.id,
     );
     const customFieldValues = exists
-      ? game.customFieldValues.map((v) =>
+      ? box.customFieldValues.map((v) =>
           v.customFieldId === def.id ? entry : v,
         )
-      : [...game.customFieldValues, entry];
-    void persist({ ...game, customFieldValues });
+      : [...box.customFieldValues, entry];
+    void persist({ ...box, customFieldValues });
   };
 
   // The System row borrows the dropdown editor, with the systems list as its
@@ -144,14 +152,17 @@ export default function VideoGameDetail({
     order: i,
   }));
 
-  // Title + System first (guaranteeing at least two rows), then the custom
-  // fields in their defined order.
+  // Title + System + Physical first, then the custom fields in their defined
+  // order. Collection is rendered separately below — it's backend-derived
+  // (a box becomes a collection by holding multiple games), so it gets a
+  // read-only badge instead of an editor.
   const rows: Row[] = [
-    { key: "title", name: "Title", kind: "text", value: game.title, standard: true, onCommit: commitTitle },
-    { key: "system", name: "System", kind: "dropdown", value: game.system?.name ?? "", options: systemOptions, standard: true, onCommit: commitSystem },
+    { key: "title", name: "Title", kind: "text", value: box.title, standard: true, onCommit: commitTitle },
+    { key: "system", name: "System", kind: "dropdown", value: box.system?.name ?? "", options: systemOptions, standard: true, onCommit: commitSystem },
+    { key: "physical", name: "Physical", kind: "boolean", value: box.isPhysical ? "true" : "false", standard: true, onCommit: commitPhysical },
     ...definitions.map<Row>((def) => {
       const options = [...def.options].sort((a, b) => a.order - b.order);
-      const raw = game.customFieldValues.find(
+      const raw = box.customFieldValues.find(
         (v) => v.customFieldId === def.id,
       )?.value;
       return {
@@ -166,22 +177,20 @@ export default function VideoGameDetail({
     }),
   ];
 
-  const boxes = game.videoGameBoxes ?? [];
+  const games = box.videoGames ?? [];
 
   return (
     <>
       <Header
-        icon={<VideoGamesIcon />}
-        title="VIDEO GAME"
-        tagline={`${game.title} · ${game.system?.name ?? ""}`}
+        icon={<VideoGameBoxIcon />}
+        title="VIDEO GAME BOX"
+        tagline={`${box.title} · ${box.system?.name ?? ""}`}
       />
 
       <main className={styles.main}>
         <div className={styles.wrap}>
           <div className={styles.topbar}>
-            {/* Explicit ?view=list: the bare URL follows the user's default
-                view, but game details are reached from the list. */}
-            <Button href="/video-games?view=list" className={styles.backbtn}>
+            <Button href="/video-games?view=shelf" className={styles.backbtn}>
               <ChevronLeftIcon aria-hidden="true" /> Back
             </Button>
           </div>
@@ -231,30 +240,53 @@ export default function VideoGameDetail({
                 </div>
               );
             })}
+
+            {/* Collection is derived by the backend from the box's game count,
+                so it shows a static badge rather than an editor. */}
+            <div className={styles.row}>
+              <div className={styles.rowlabel}>
+                <span
+                  className={styles.glyph}
+                  style={{
+                    background: STANDARD_FIELD_META.bg,
+                    color: STANDARD_FIELD_META.fg,
+                  }}
+                >
+                  <StandardFieldGlyph size={15} />
+                </span>
+                <span className={styles.lblwrap}>
+                  <div className={styles.lbl}>Collection</div>
+                  <div className={styles.lblkind}>Derived</div>
+                </span>
+              </div>
+              <div className={styles.rowval}>
+                <BooleanBadge value={box.isCollection} />
+              </div>
+            </div>
           </div>
 
-          {/* The boxes this game belongs to, each linking to its detail page.
-              The membership itself is managed through video game boxes. */}
+          {/* The games inside this box, each linking to its detail page. The
+              membership itself is read-only here for now. */}
           <div className={styles.card}>
             <div className={styles.caphdr}>
-              <span className={styles.caphdrTitle}>Video Game Boxes</span>
+              <span className={styles.caphdrTitle}>Video Games</span>
               <span className={styles.caphdrCount}>
-                <b>{boxes.length}</b> {boxes.length === 1 ? "box" : "boxes"}
+                <b>{games.length}</b> {games.length === 1 ? "game" : "games"}
               </span>
             </div>
-            {boxes.length === 0 ? (
+            {games.length === 0 ? (
               <div className={styles.row}>
-                <span className={styles.vText}>No boxes yet.</span>
+                <span className={styles.vText}>No games yet.</span>
               </div>
             ) : (
-              <ul aria-label="Video game boxes" className={localStyles.boxList}>
-                {boxes.map((box) => (
-                  <li className={styles.row} key={box.id}>
+              <ul aria-label="Video games" className={localStyles.boxList}>
+                {games.map((game) => (
+                  <li className={styles.row} key={game.id}>
                     <Link
-                      href={`/video-game-boxes/${box.id}`}
+                      href={`/video-games/${game.id}`}
                       className={styles.vText}
                     >
-                      {box.title}
+                      {game.title}
                     </Link>
                   </li>
                 ))}

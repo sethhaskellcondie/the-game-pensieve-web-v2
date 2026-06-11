@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { loadUiSettings, updateUiSettings } from "@/lib/uiSettings";
-import type { UiSettings } from "@/lib/uiSettings.types";
+import { asVideoGamesView, type UiSettings } from "@/lib/uiSettings.types";
 
 // Returns the current settings. loadUiSettings never throws (it falls back to
 // defaults), so this always answers with a usable settings object.
@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
       massEditMode: Boolean(settings.massEditMode),
       developerMode: Boolean(settings.developerMode),
       hideAnimations: Boolean(settings.hideAnimations),
+      videoGamesDefaultView: asVideoGamesView(settings.videoGamesDefaultView),
     });
     return NextResponse.json({ ok: true });
   } catch {

@@ -115,7 +115,7 @@ describe("VideoGameDetail", () => {
     expect(screen.getByText("Secret of Mana · SNES")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back" })).toHaveAttribute(
       "href",
-      "/video-games",
+      "/video-games?view=list",
     );
 
     // Fixed Title + System rows, plus the three custom-field rows.

@@ -1,0 +1,51 @@
+/* Segmented control rendered as a Header child, pinned to the header's right
+   edge and vertically centered on the hero row. Header's .content wrapper is
+   position: relative (and spans the hero), which this anchors against.
+   Styled to the header itself: a white-bordered pill the header wash shows
+   through, with the active segment knocked out in white and labels in the
+   same pixel font as the hero title. */
+.toggle {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  display: inline-flex;
+  border: 2px solid var(--white-pure);
+  border-radius: 10px;
+  background: transparent;
+  box-shadow: 0 14px 30px -16px rgba(var(--ink-navy-rgb), 0.8);
+  overflow: hidden;
+}
+
+.segment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  padding: 13px 18px;
+  font-family: var(--font-press-start), monospace;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--white-pure);
+  background: transparent;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.segment + .segment {
+  border-left: 2px solid var(--white-pure);
+}
+
+.segment:hover {
+  background: rgba(var(--white-rgb), 0.18);
+}
+
+.segment[aria-current="page"] {
+  background: var(--white-pure);
+  color: var(--ink-navy);
+}
+
+.segment:focus-visible {
+  outline: 2px solid var(--mm-cyan-bright);
+  outline-offset: -4px;
+}

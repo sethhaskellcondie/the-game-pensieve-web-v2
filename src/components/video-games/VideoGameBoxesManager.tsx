@@ -9,8 +9,8 @@ import type {
   CustomFieldValue as CustomFieldValueType,
   FilterSpecification,
   System,
-  UpdateVideoGameInput,
-  VideoGame,
+  UpdateVideoGameBoxInput,
+  VideoGameBox,
 } from "@/lib/api";
 import DataTable, {
   MIN_COL,
@@ -23,16 +23,16 @@ import { buildFieldList } from "@/components/filters/fieldList";
 import { toFilterRequest } from "@/components/filters/serialize";
 import type { ActiveFilter } from "@/components/filters/types";
 import CustomFieldValue from "@/components/toys/CustomFieldValue";
-import {
-  fetchEntityFields,
-  fetchFilterSpec,
-  searchSystemsClient,
-  searchVideoGamesClient,
-} from "./searchClient";
 import FieldEditor, {
   normalizeFieldValue,
 } from "@/components/toys/toyFieldEditors";
 import styles from "@/components/toys/ToysManager.module.css";
+import {
+  fetchEntityFields,
+  fetchFilterSpec,
+  searchSystemsClient,
+  searchVideoGameBoxesClient,
+} from "./searchClient";
 
 // Self-contained inline editor for the Title column: holds its own draft so a
 // keystroke re-renders only this input, not the whole table. Commits on
@@ -83,16 +83,15 @@ function InlineEditInput({
 }
 
 // One mass-edit-mode cell for the Title column: the value as a click-to-edit
-// trigger, or the inline input while this cell is the one being edited. (The
-// System cell uses FieldEditor's dropdown; Boxes is a read-only count.)
+// trigger, or the inline input while this cell is the one being edited.
 function EditableTitleCell({
-  game,
+  box,
   editing,
   onStart,
   onCommit,
   onCancel,
 }: {
-  game: VideoGame;
+  box: VideoGameBox;
   editing: boolean;
   onStart: () => void;
   onCommit: (value: string) => void;
@@ -101,8 +100,8 @@ function EditableTitleCell({
   if (editing) {
     return (
       <InlineEditInput
-        initial={game.title}
-        ariaLabel={`Title for ${game.title}`}
+        initial={box.title}
+        ariaLabel={`Title for ${box.title}`}
         onCommit={onCommit}
         onCancel={onCancel}
       />
@@ -110,23 +109,26 @@ function EditableTitleCell({
   }
   return (
     <button type="button" className={styles.editTrigger} onClick={onStart}>
-      {game.title || <span className={styles.dash}>—</span>}
+      {box.title || <span className={styles.dash}>—</span>}
     </button>
   );
 }
 
 function loadErrorMessage(error: unknown): string {
   return error instanceof Error
-    ? `Couldn't load video games: ${error.message}`
-    : "Couldn't load video games. Please try again.";
+    ? `Couldn't load video game boxes: ${error.message}`
+    : "Couldn't load video game boxes. Please try again.";
 }
 
-export default function VideoGamesManager() {
+// The shelf view of the video games page: the same table treatment as the
+// list view, but each row is a video game box (the case the games live in)
+// searched through the videoGameBox endpoints.
+export default function VideoGameBoxesManager() {
   const router = useRouter();
   const { showToast, showSnackbar } = useToast();
   const { settings } = useUiSettings();
   const massEditMode = settings.massEditMode;
-  const [games, setGames] = useState<VideoGame[]>([]);
+  const [boxes, setBoxes] = useState<VideoGameBox[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
   const [definitions, setDefinitions] = useState<CustomField[]>([]);
   const [spec, setSpec] = useState<FilterSpecification | null>(null);
@@ -172,7 +174,7 @@ export default function VideoGamesManager() {
     [systems],
   );
 
-  // Load the initial (unfiltered) games, the systems for the dropdowns, the
+  // Load the initial (unfiltered) boxes, the systems for the dropdowns, the
   // field definitions, and the filter spec together on mount. setState lives in
   // the promise callbacks (not the effect body); `active` drops a stale
   // response if the component unmounts before the requests resolve.
@@ -180,14 +182,14 @@ export default function VideoGamesManager() {
     const controller = new AbortController();
     let active = true;
     Promise.all([
-      searchVideoGamesClient([], controller.signal),
+      searchVideoGameBoxesClient([], controller.signal),
       searchSystemsClient(controller.signal),
-      fetchEntityFields("videoGame", controller.signal),
-      fetchFilterSpec("videoGame", controller.signal),
+      fetchEntityFields("videoGameBox", controller.signal),
+      fetchFilterSpec("videoGameBox", controller.signal),
     ])
-      .then(([loadedGames, loadedSystems, loadedDefs, loadedSpec]) => {
+      .then(([loadedBoxes, loadedSystems, loadedDefs, loadedSpec]) => {
         if (!active) return;
-        setGames(loadedGames);
+        setBoxes(loadedBoxes);
         setSystems(loadedSystems);
         setDefinitions(loadedDefs);
         setSpec(loadedSpec);
@@ -195,8 +197,8 @@ export default function VideoGamesManager() {
       })
       .catch((error) => {
         if (!active || controller.signal.aborted) return;
-        console.error("Load video games failed", error);
-        setGames([]);
+        console.error("Load video game boxes failed", error);
+        setBoxes([]);
         setDefinitions([]);
         setLoading(false);
         showSnackbar({ message: loadErrorMessage(error), variant: "error" });
@@ -222,15 +224,15 @@ export default function VideoGamesManager() {
     }
     const controller = new AbortController();
     const seq = ++searchSeq.current;
-    const dto = toFilterRequest("videoGame", filters);
+    const dto = toFilterRequest("videoGameBox", filters);
     const timer = setTimeout(() => {
-      searchVideoGamesClient(dto, controller.signal)
+      searchVideoGameBoxesClient(dto, controller.signal)
         .then((rows) => {
-          if (seq === searchSeq.current) setGames(rows);
+          if (seq === searchSeq.current) setBoxes(rows);
         })
         .catch((error) => {
           if (controller.signal.aborted) return;
-          console.error("Search video games failed", error);
+          console.error("Search video game boxes failed", error);
           showSnackbar({ message: loadErrorMessage(error), variant: "error" });
         });
     }, 250);
@@ -240,25 +242,29 @@ export default function VideoGamesManager() {
     };
   }, [filters, showSnackbar]);
 
-  // Apply `next` optimistically and PUT the whole game (title + systemId +
-  // values are all required by the backend), rolling the list back on failure.
+  // Apply `next` optimistically and PUT the whole box — the backend's
+  // VideoGameBoxRequest requires every field, so the box's current game ids
+  // ride along (newVideoGames stays empty: this grid edits box fields only).
   // Every inline commit below funnels through here.
   const persist = useCallback(
-    async (next: VideoGame) => {
+    async (next: VideoGameBox) => {
       // Capture the pre-edit list inside the functional update so this callback
-      // doesn't need `games` as a dependency.
-      let prev: VideoGame[] = [];
-      setGames((gs) => {
-        prev = gs;
-        return gs.map((g) => (g.id === next.id ? next : g));
+      // doesn't need `boxes` as a dependency.
+      let prev: VideoGameBox[] = [];
+      setBoxes((bs) => {
+        prev = bs;
+        return bs.map((b) => (b.id === next.id ? next : b));
       });
       try {
-        const input: UpdateVideoGameInput = {
+        const input: UpdateVideoGameBoxInput = {
           title: next.title,
           systemId: next.system.id,
+          existingVideoGameIds: next.videoGames.map((g) => g.id),
+          newVideoGames: [],
+          isPhysical: next.isPhysical,
           customFieldValues: next.customFieldValues,
         };
-        const res = await fetch(`/api/video-games/${next.id}`, {
+        const res = await fetch(`/api/video-game-boxes/${next.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(input),
@@ -269,15 +275,15 @@ export default function VideoGamesManager() {
           } | null;
           throw new Error(body?.message ?? "Request failed");
         }
-        showToast({ message: "Video game updated.", variant: "success" });
+        showToast({ message: "Video game box updated.", variant: "success" });
       } catch (error) {
-        console.error("Update video game failed", error);
-        setGames(prev);
+        console.error("Update video game box failed", error);
+        setBoxes(prev);
         showSnackbar({
           message:
             error instanceof Error
-              ? `Couldn't update the video game: ${error.message}`
-              : "Couldn't update the video game. Please try again.",
+              ? `Couldn't update the video game box: ${error.message}`
+              : "Couldn't update the video game box. Please try again.",
           variant: "error",
         });
       }
@@ -288,11 +294,11 @@ export default function VideoGamesManager() {
   // Commit an inline Title edit. Title is required, so blank (or unchanged)
   // values just exit edit mode.
   const commitTitle = useCallback(
-    (game: VideoGame, raw: string) => {
+    (box: VideoGameBox, raw: string) => {
       setEditingId(null);
       const title = raw.trim();
-      if (title === "" || title === game.title) return;
-      void persist({ ...game, title });
+      if (title === "" || title === box.title) return;
+      void persist({ ...box, title });
     },
     [persist],
   );
@@ -301,20 +307,29 @@ export default function VideoGamesManager() {
   // which maps back to the system itself (duplicate names resolve to the first
   // match). Unknown or unchanged picks are no-ops.
   const commitSystem = useCallback(
-    (game: VideoGame, systemName: string) => {
+    (box: VideoGameBox, systemName: string) => {
       const next = systems.find((s) => s.name === systemName);
-      if (!next || next.id === game.system.id) return;
-      void persist({ ...game, system: next });
+      if (!next || next.id === box.system.id) return;
+      void persist({ ...box, system: next });
     },
     [systems, persist],
   );
 
+  const commitPhysical = useCallback(
+    (box: VideoGameBox, raw: string) => {
+      const isPhysical = raw === "true";
+      if (isPhysical === box.isPhysical) return;
+      void persist({ ...box, isPhysical });
+    },
+    [persist],
+  );
+
   // Commit a custom-field value edited inline in the grid (mass-edit mode):
-  // merge the value into the game's customFieldValues and persist.
+  // merge the value into the box's customFieldValues and persist.
   const commitFieldValue = useCallback(
-    (game: VideoGame, def: CustomField, value: string) => {
+    (box: VideoGameBox, def: CustomField, value: string) => {
       const current =
-        game.customFieldValues.find((v) => v.customFieldId === def.id)?.value ??
+        box.customFieldValues.find((v) => v.customFieldId === def.id)?.value ??
         "";
       if (value === current) return;
       const entry: CustomFieldValueType = {
@@ -323,26 +338,28 @@ export default function VideoGamesManager() {
         customFieldType: def.type,
         value,
       };
-      const exists = game.customFieldValues.some(
+      const exists = box.customFieldValues.some(
         (v) => v.customFieldId === def.id,
       );
       const customFieldValues = exists
-        ? game.customFieldValues.map((v) =>
+        ? box.customFieldValues.map((v) =>
             v.customFieldId === def.id ? entry : v,
           )
-        : [...game.customFieldValues, entry];
-      void persist({ ...game, customFieldValues });
+        : [...box.customFieldValues, entry];
+      void persist({ ...box, customFieldValues });
     },
     [persist],
   );
 
-  // Title, System, and Boxes are always first; the rest of the columns are the
-  // video game custom fields, in their defined order. In mass-edit mode the
-  // Title cell becomes click-to-edit and System becomes a dropdown of all
-  // systems. Boxes is always a read-only count — the box relationship is
-  // managed through video game boxes, not here.
-  const columns = useMemo<ColumnDef<VideoGame>[]>(() => {
-    const base: ColumnDef<VideoGame>[] = [
+  // Title, System, Games, Physical, and Collection are always first; the rest
+  // of the columns are the box custom fields, in their defined order. In
+  // mass-edit mode the Title cell becomes click-to-edit, System becomes a
+  // dropdown of all systems, and Physical gets the inline boolean editor.
+  // Games stays a read-only count (the game relationship isn't edited here)
+  // and Collection is always read-only — the backend derives it from the
+  // box's game count.
+  const columns = useMemo<ColumnDef<VideoGameBox>[]>(() => {
+    const base: ColumnDef<VideoGameBox>[] = [
       {
         key: "title",
         label: "Title",
@@ -350,49 +367,82 @@ export default function VideoGamesManager() {
         frozen: true,
         seam: true,
         render: massEditMode
-          ? (game) => (
+          ? (box) => (
               <EditableTitleCell
-                game={game}
-                editing={editingId === game.id}
-                onStart={() => setEditingId(game.id)}
-                onCommit={(value) => commitTitle(game, value)}
+                box={box}
+                editing={editingId === box.id}
+                onStart={() => setEditingId(box.id)}
+                onCommit={(value) => commitTitle(box, value)}
                 onCancel={() => setEditingId(null)}
               />
             )
-          : (game) => game.title,
+          : (box) => box.title,
       },
       {
         key: "system",
         label: "System",
         width: 180,
         render: massEditMode
-          ? (game) => (
+          ? (box) => (
               <FieldEditor
                 field={{
                   name: "System",
                   kind: "dropdown",
-                  value: game.system?.name ?? "",
+                  value: box.system?.name ?? "",
                   options: systemOptions,
                 }}
-                onCommit={(v) => commitSystem(game, v)}
+                onCommit={(v) => commitSystem(box, v)}
               />
             )
-          : (game) => game.system?.name ?? "",
+          : (box) => box.system?.name ?? "",
       },
       {
-        key: "boxes",
-        label: "Boxes",
+        key: "games",
+        label: "Games",
         width: MIN_COL,
-        render: (game) => (
+        render: (box) => (
           <CustomFieldValue
             type="number"
-            value={String(game.videoGameBoxes?.length ?? 0)}
+            value={String(box.videoGames?.length ?? 0)}
+          />
+        ),
+      },
+      {
+        key: "physical",
+        label: "Physical",
+        width: MIN_COL,
+        render: massEditMode
+          ? (box) => (
+              <FieldEditor
+                field={{
+                  name: "Physical",
+                  kind: "boolean",
+                  value: box.isPhysical ? "true" : "false",
+                }}
+                onCommit={(v) => commitPhysical(box, v)}
+              />
+            )
+          : (box) => (
+              <CustomFieldValue
+                type="boolean"
+                value={box.isPhysical ? "true" : "false"}
+              />
+            ),
+      },
+      {
+        key: "collection",
+        label: "Collection",
+        width: MIN_COL,
+        render: (box) => (
+          <CustomFieldValue
+            type="boolean"
+            value={box.isCollection ? "true" : "false"}
           />
         ),
       },
     ];
     // In mass-edit mode, every custom-field cell becomes the full interactive
-    // editor (the same controls as the game detail page) — committing an edit
+    // editor (the same controls as the box detail page) — committing an edit
     // persists the change. Otherwise every type shows its read-only display.
     const editableInline: CustomFieldType[] = [
       "text",
@@ -402,8 +452,8 @@ export default function VideoGamesManager() {
       "radio_button",
       "progress_bar",
     ];
-    function renderFieldCell(game: VideoGame, def: CustomField) {
-      const value = game.customFieldValues.find(
+    function renderFieldCell(box: VideoGameBox, def: CustomField) {
+      const value = box.customFieldValues.find(
         (cv) => cv.customFieldId === def.id,
       )?.value;
       if (massEditMode && editableInline.includes(def.type)) {
@@ -415,7 +465,7 @@ export default function VideoGamesManager() {
               value: normalizeFieldValue(def.type, value, def.options),
               options: [...def.options].sort((a, b) => a.order - b.order),
             }}
-            onCommit={(v) => commitFieldValue(game, def, v)}
+            onCommit={(v) => commitFieldValue(box, def, v)}
           />
         );
       }
@@ -425,11 +475,11 @@ export default function VideoGamesManager() {
     }
     // Number and Yes/No values are narrow, so those columns default to the
     // minimum width to save space; the rest start wider.
-    const dynamic: ColumnDef<VideoGame>[] = definitions.map((def) => ({
+    const dynamic: ColumnDef<VideoGameBox>[] = definitions.map((def) => ({
       key: `cf-${def.id}`,
       label: def.name,
       width: def.type === "number" || def.type === "boolean" ? MIN_COL : 180,
-      render: (game) => renderFieldCell(game, def),
+      render: (box) => renderFieldCell(box, def),
     }));
     return [...base, ...dynamic];
   }, [
@@ -439,6 +489,7 @@ export default function VideoGamesManager() {
     systemOptions,
     commitTitle,
     commitSystem,
+    commitPhysical,
     commitFieldValue,
   ]);
 
@@ -448,7 +499,7 @@ export default function VideoGamesManager() {
     <div className={styles.page}>
       <div className={styles.head}>
         <div className={styles.titleWrap}>
-          <h2 className={styles.entName}><b>{games.length}</b> {games.length === 1 ? "Video Game" : "Video Games"}</h2>
+          <h2 className={styles.entName}><b>{boxes.length}</b> {boxes.length === 1 ? "Video Game Box" : "Video Game Boxes"}</h2>
           {massEditMode && (
             <div className={styles.crumb}>
               <span>Mass edit mode is on. (adjust in options)</span>
@@ -456,46 +507,47 @@ export default function VideoGamesManager() {
           )}
         </div>
         <FilterBar
-          entityKey="videoGame"
+          entityKey="videoGameBox"
           fields={fieldDefs}
           filters={filters}
           onChange={setFilters}
           searchValue={query}
           onSearchChange={setQuery}
-          searchPlaceholder="Search video games…"
-          searchAriaLabel="Search video games"
+          searchPlaceholder="Search video game boxes…"
+          searchAriaLabel="Search video game boxes"
         />
-        {/* No New button: video games are created through video game boxes. */}
+        {/* No New button yet: box creation stays on the backlog. */}
       </div>
 
       <DataTable
         columns={columns}
-        rows={games}
-        getRowKey={(game) => game.id}
+        rows={boxes}
+        getRowKey={(box) => box.id}
         loading={loading}
-        loadingMessage="Loading video games…"
+        loadingMessage="Loading video game boxes…"
         emptyMessage={
           hasFilters
-            ? "No video games match your filters."
-            : "No video games yet."
+            ? "No video game boxes match your filters."
+            : "No video game boxes yet."
         }
-        // No onDelete: the backend has no video game delete endpoint (games are
-        // removed through their boxes), so the delete column is omitted.
+        // No onDelete yet: box deletion (which also removes its games) is a
+        // bigger decision than a row control, so it stays on the detail-page
+        // backlog alongside creation.
         // The leading details column only appears in mass edit mode; otherwise
-        // the whole row navigates to the game's detail page. Both routes are
+        // the whole row navigates to the box's detail page. Both routes are
         // the same — they just differ in affordance per mode.
         onOpenDetails={
           massEditMode
-            ? (game) => router.push(`/video-games/${game.id}`)
+            ? (box) => router.push(`/video-game-boxes/${box.id}`)
             : undefined
         }
-        detailsLabel={(game) => `View ${game.title}`}
+        detailsLabel={(box) => `View ${box.title}`}
         onRowClick={
           massEditMode
             ? undefined
-            : (game) => router.push(`/video-games/${game.id}`)
+            : (box) => router.push(`/video-game-boxes/${box.id}`)
         }
-        rowClickLabel={(game) => `View ${game.title}`}
+        rowClickLabel={(box) => `View ${box.title}`}
       />
     </div>
   );

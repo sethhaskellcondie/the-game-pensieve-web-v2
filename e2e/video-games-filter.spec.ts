@@ -165,12 +165,18 @@ async function stub(page: Page) {
 }
 
 // ui_settings load server-side (page.route can't stub them); pin both modes off
-// so the bar renders in its normal (non-mass) form. Shared backend state, so
-// every spec touching these settings pins the same values — see toys.spec.ts.
+// so the bar renders in its normal (non-mass) form, and the default view to
+// list since these specs visit the bare /video-games URL. Shared backend state,
+// so every spec touching these settings pins the same values — see toys.spec.ts.
 async function pinNormalMode(page: Page) {
   const current = await (await page.request.get("/api/ui-settings")).json();
   await page.request.post("/api/ui-settings", {
-    data: { ...current, massInputMode: false, massEditMode: false },
+    data: {
+      ...current,
+      massInputMode: false,
+      massEditMode: false,
+      videoGamesDefaultView: "list",
+    },
   });
 }
 
