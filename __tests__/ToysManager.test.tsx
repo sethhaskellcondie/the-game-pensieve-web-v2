@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useRouter } from "next/navigation";
-import type { CustomField, Toy } from "@/lib/api";
+import type { CustomField, FilterRequestDto, FilterSpecification, Toy } from "@/lib/api";
 import ToysManager from "@/components/toys/ToysManager";
 import { ToastProvider } from "@/components/ToastProvider";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
@@ -83,6 +83,51 @@ const toys: Toy[] = [
   },
 ];
 
+const filterSpec: FilterSpecification = {
+  type: "toy",
+  fields: { name: "text", set: "text", created_at: "time" },
+  filters: {
+    name: ["equals", "not_equals", "contains", "starts_with", "ends_with"],
+    set: ["equals", "not_equals", "contains", "starts_with", "ends_with"],
+    created_at: ["since", "before"],
+  },
+};
+
+// A tiny stand-in for the backend's filter matching, enough to exercise the
+// server-search wiring (the search box folds into a name-contains filter).
+function matchOne(toy: Toy, f: FilterRequestDto): boolean {
+  const raw =
+    f.field === "name"
+      ? toy.name
+      : f.field === "set"
+        ? toy.set
+        : (toy.customFieldValues.find((v) => v.customFieldName === f.field)
+            ?.value ?? "");
+  const a = String(raw).toLowerCase();
+  const b = f.operand.toLowerCase();
+  switch (f.operator) {
+    case "contains":
+      return a.includes(b);
+    case "equals":
+      return a === b;
+    case "not_equals":
+      return a !== b;
+    case "starts_with":
+      return a.startsWith(b);
+    case "ends_with":
+      return a.endsWith(b);
+    default:
+      return true;
+  }
+}
+
+function applyFilters(list: Toy[], filters: FilterRequestDto[]): Toy[] {
+  return (filters ?? []).reduce(
+    (out, f) => out.filter((t) => matchOne(t, f)),
+    list,
+  );
+}
+
 function jsonResponse(body: unknown, { ok = true, status = 200 } = {}): Response {
   return {
     ok,
@@ -100,8 +145,18 @@ function routedFetch(url: string, init?: RequestInit) {
   if (/\/api\/toys\/\d+$/.test(url) && method === "PUT") {
     return Promise.resolve(jsonResponse({ status: "ok", data: {} }));
   }
+  if (url.includes("/api/filters/toy")) {
+    return Promise.resolve(jsonResponse({ status: "ok", data: filterSpec }));
+  }
   if (url.includes("/entity/toy")) {
     return Promise.resolve(jsonResponse({ status: "ok", data: toyFields }));
+  }
+  // Server search: apply the request's filters to the toy list.
+  if (url.includes("/api/toys/search")) {
+    const body = init?.body ? JSON.parse(init.body as string) : { filters: [] };
+    return Promise.resolve(
+      jsonResponse({ status: "ok", data: applyFilters(toys, body.filters) }),
+    );
   }
   if (url.includes("/api/toys")) {
     return Promise.resolve(jsonResponse({ status: "ok", data: toys }));
@@ -154,7 +209,7 @@ describe("ToysManager", () => {
     expect(screen.getByRole("img", { name: "No" })).toBeInTheDocument();
   });
 
-  it("filters the rows and count as you type in the search box", async () => {
+  it("filters the rows and count via a server search as you type", async () => {
     renderManager();
     await screen.findByText("R2-D2");
 
@@ -162,14 +217,24 @@ describe("ToysManager", () => {
       target: { value: "pika" },
     });
 
+    // The search is debounced + server-side, so the rows update asynchronously.
+    await waitFor(() =>
+      expect(screen.queryByText("R2-D2")).not.toBeInTheDocument(),
+    );
     expect(screen.getByText("Pikachu")).toBeInTheDocument();
-    expect(screen.queryByText("R2-D2")).not.toBeInTheDocument();
     expect(
       screen.getByRole("heading", { level: 2, name: "1 Toy" }),
     ).toBeInTheDocument();
+
+    // The folded search filter went to the search endpoint as a name-contains.
+    const search = mockFetch.mock.calls.find(
+      ([url, init]) =>
+        url.includes("/api/toys/search") && init?.method === "POST",
+    );
+    expect(search).toBeDefined();
   });
 
-  it("shows an empty-search message when nothing matches", async () => {
+  it("shows an empty-filter message when nothing matches", async () => {
     renderManager();
     await screen.findByText("R2-D2");
 
@@ -177,7 +242,9 @@ describe("ToysManager", () => {
       target: { value: "zzz" },
     });
 
-    expect(screen.getByText("No toys match your search.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("No toys match your filters."),
+    ).toBeInTheDocument();
   });
 
   it("renders the New, Filter, and per-row delete controls", async () => {
@@ -185,7 +252,7 @@ describe("ToysManager", () => {
     await screen.findByText("R2-D2");
 
     expect(screen.getByRole("button", { name: "New" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Filter" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add filter" })).toBeInTheDocument();
 
     const row = screen.getByText("R2-D2").closest("tr");
     expect(row).not.toBeNull();

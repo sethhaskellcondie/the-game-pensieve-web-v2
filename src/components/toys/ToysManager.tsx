@@ -6,6 +6,8 @@ import type {
   CustomField,
   CustomFieldType,
   CustomFieldValue as CustomFieldValueType,
+  FilterRequestDto,
+  FilterSpecification,
   Toy,
   UpdateToyInput,
 } from "@/lib/api";
@@ -17,10 +19,13 @@ import DataTable, {
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import { PlusIcon } from "@/components/custom-fields/icons";
+import FilterBar from "@/components/filters/FilterBar";
+import { buildFieldList } from "@/components/filters/fieldList";
+import { effectiveFilters, toFilterRequest } from "@/components/filters/serialize";
+import type { ActiveFilter } from "@/components/filters/types";
 import CustomFieldValue from "./CustomFieldValue";
 import FieldEditor, { normalizeFieldValue } from "./toyFieldEditors";
 import ToyCreateModal from "./ToyCreateModal";
-import { FilterIcon, SearchIcon } from "./icons";
 import styles from "./ToysManager.module.css";
 
 // The two toy columns that mass-edit mode makes inline-editable.
@@ -120,8 +125,18 @@ async function readJson<T>(res: Response): Promise<T> {
   return body?.data as T;
 }
 
-async function fetchToys(signal?: AbortSignal): Promise<Toy[]> {
-  const res = await fetch("/api/toys", { signal });
+// Run the backend search through the route handler (the lib/api search runs
+// server-side). An empty filter set returns every toy.
+async function searchToysClient(
+  filters: FilterRequestDto[],
+  signal?: AbortSignal,
+): Promise<Toy[]> {
+  const res = await fetch("/api/toys/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filters }),
+    signal,
+  });
   return readJson<Toy[]>(res);
 }
 
@@ -131,6 +146,15 @@ async function fetchToyFields(signal?: AbortSignal): Promise<CustomField[]> {
   const res = await fetch("/api/custom-fields/entity/toy", { signal });
   const data = await readJson<CustomField[]>(res);
   return [...data].sort((a, b) => a.order - b.order);
+}
+
+// The toy filter spec (standard filterable fields + their operators). Merged
+// with the custom fields to build the field list the filter bar offers.
+async function fetchFilterSpec(
+  signal?: AbortSignal,
+): Promise<FilterSpecification> {
+  const res = await fetch("/api/filters/toy", { signal });
+  return readJson<FilterSpecification>(res);
 }
 
 function loadErrorMessage(error: unknown): string {
@@ -146,8 +170,18 @@ export default function ToysManager() {
   const massEditMode = settings.massEditMode;
   const [toys, setToys] = useState<Toy[]>([]);
   const [definitions, setDefinitions] = useState<CustomField[]>([]);
+  const [spec, setSpec] = useState<FilterSpecification | null>(null);
   const [loading, setLoading] = useState(true);
+  // The quick-search text (folded into a name-contains filter) and the explicit
+  // filter chips. Both feed the server-side search.
   const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState<ActiveFilter[]>([]);
+  // The unified field list (standard spec fields + custom fields) the filter bar
+  // offers. Recomputed only when the spec or definitions change.
+  const fieldDefs = useMemo(
+    () => buildFieldList(spec, definitions),
+    [spec, definitions],
+  );
   // Whether the create-toy dialog is open, and whether its POST is in flight.
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -156,20 +190,23 @@ export default function ToysManager() {
     null,
   );
 
-  // Load toys and their field definitions together on mount. setState lives in
-  // the promise callbacks (not the effect body); `active` drops a stale response
-  // if the component unmounts before the requests resolve.
+  // Load the initial (unfiltered) toys, their field definitions, and the filter
+  // spec together on mount. setState lives in the promise callbacks (not the
+  // effect body); `active` drops a stale response if the component unmounts
+  // before the requests resolve.
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
     Promise.all([
-      fetchToys(controller.signal),
+      searchToysClient([], controller.signal),
       fetchToyFields(controller.signal),
+      fetchFilterSpec(controller.signal),
     ])
-      .then(([loadedToys, loadedDefs]) => {
+      .then(([loadedToys, loadedDefs, loadedSpec]) => {
         if (!active) return;
         setToys(loadedToys);
         setDefinitions(loadedDefs);
+        setSpec(loadedSpec);
         setLoading(false);
       })
       .catch((error) => {
@@ -185,6 +222,48 @@ export default function ToysManager() {
       controller.abort();
     };
   }, [showSnackbar]);
+
+  // Keep the latest field list in a ref so the search effect can read it without
+  // re-running when it loads (it changes exactly once, after mount).
+  const fieldDefsRef = useRef(fieldDefs);
+  useEffect(() => {
+    fieldDefsRef.current = fieldDefs;
+  }, [fieldDefs]);
+
+  // Re-run the server search whenever the chips or search text change. Debounced
+  // so rapid typing/edits coalesce, abortable so an in-flight request is
+  // cancelled, and seq-guarded so only the newest response is committed
+  // (last-write-wins). The initial load is handled by the mount effect, so the
+  // first run here (before any user change) is skipped.
+  const didSearch = useRef(false);
+  const searchSeq = useRef(0);
+  useEffect(() => {
+    if (!didSearch.current) {
+      didSearch.current = true;
+      return;
+    }
+    const controller = new AbortController();
+    const seq = ++searchSeq.current;
+    const dto = toFilterRequest(
+      "toy",
+      effectiveFilters(query, filters, fieldDefsRef.current),
+    );
+    const timer = setTimeout(() => {
+      searchToysClient(dto, controller.signal)
+        .then((rows) => {
+          if (seq === searchSeq.current) setToys(rows);
+        })
+        .catch((error) => {
+          if (controller.signal.aborted) return;
+          console.error("Search toys failed", error);
+          showSnackbar({ message: loadErrorMessage(error), variant: "error" });
+        });
+    }, 250);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, filters, showSnackbar]);
 
   const startEdit = useCallback((toy: Toy, field: EditField) => {
     setEditing({ id: toy.id, field });
@@ -426,23 +505,13 @@ export default function ToysManager() {
     commitFieldValue,
   ]);
 
-  // Client-side search over name + set. (Server-side filtering via the search
-  // endpoint is a follow-up.)
-  const filteredToys = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return toys;
-    return toys.filter(
-      (toy) =>
-        toy.name.toLowerCase().includes(q) ||
-        toy.set.toLowerCase().includes(q),
-    );
-  }, [toys, query]);
+  const hasQuery = query.trim().length > 0 || filters.length > 0;
 
   return (
     <div className={styles.page}>
       <div className={styles.head}>
         <div className={styles.titleWrap}>
-          <h2 className={styles.entName}><b>{filteredToys.length}</b> {filteredToys.length === 1 ? "Toy" : "Toys"}</h2>
+          <h2 className={styles.entName}><b>{toys.length}</b> {toys.length === 1 ? "Toy" : "Toys"}</h2>
           {massEditMode && (
             <div className={styles.crumb}>
               <span>Mass edit mode is on. (adjust in options)</span>
@@ -450,34 +519,30 @@ export default function ToysManager() {
           )}
         </div>
         <div className={styles.actions}>
-          <div className={styles.search}>
-            <SearchIcon className={styles.searchIcon} aria-hidden="true" />
-            <input
-              type="search"
-              className={styles.searchInput}
-              placeholder="Search toys…"
-              aria-label="Search toys"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-          {/* Filter + per-row delete are not wired to the backend yet (inert). */}
-          <Button className={styles.filterBtn}>
-            <FilterIcon /> Filter
-          </Button>
           <Button className={styles.newBtn} onClick={() => setCreating(true)}>
             <PlusIcon /> New
           </Button>
         </div>
       </div>
 
+      <FilterBar
+        entityKey="toy"
+        fields={fieldDefs}
+        filters={filters}
+        onChange={setFilters}
+        searchValue={query}
+        onSearchChange={setQuery}
+        searchPlaceholder="Search toys…"
+        searchAriaLabel="Search toys"
+      />
+
       <DataTable
         columns={columns}
-        rows={filteredToys}
+        rows={toys}
         getRowKey={(toy) => toy.id}
         loading={loading}
         loadingMessage="Loading toys…"
-        emptyMessage={query.trim() ? "No toys match your search." : "No toys yet."}
+        emptyMessage={hasQuery ? "No toys match your filters." : "No toys yet."}
         onDelete={() => {}}
         deleteLabel={(toy) => `Delete ${toy.name}`}
         // The leading details column only appears in mass edit mode; otherwise

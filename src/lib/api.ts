@@ -265,6 +265,33 @@ export function deleteCustomField(id: number): Promise<void> {
   return apiDelete(`/custom_fields/${id}`);
 }
 
+// ---------- Filters ----------
+// Shapes mirror the FilterSpecification + FilterRequest schemas in
+// backend-documentation/openapi.yaml.
+
+// The available filters for an entity: `fields` maps each field name to its data
+// type (text/number/boolean/time/system plus the sort/pagination pseudo-fields),
+// and `filters` maps each field name to the operators it accepts. Only standard
+// fields are listed here — custom fields are merged in client-side.
+export type FilterSpecification = {
+  type: string;
+  fields: Record<string, string>;
+  filters: Record<string, string[]>;
+};
+
+// One filter in a search request. `operand` is always a string (the backend
+// coerces it per the field's type), matching how custom-field values are stored.
+export type FilterRequestDto = {
+  key: EntityKey;
+  field: string;
+  operator: string;
+  operand: string;
+};
+
+export function getFilterSpec(entity: EntityKey): Promise<FilterSpecification> {
+  return apiGet<FilterSpecification>(`/filters/${entity}`);
+}
+
 // ---------- Toys ----------
 // Shapes mirror the Toy + CustomFieldValue schemas in
 // backend-documentation/openapi.yaml.
@@ -291,8 +318,8 @@ export type Toy = {
 
 // The backend lists toys through a POST search endpoint; an empty filter set
 // returns them all. apiPost unwraps the { data, errors } envelope for us.
-export function searchToys(): Promise<Toy[]> {
-  return apiPost<Toy[]>("/toys/function/search", { filters: [] });
+export function searchToys(filters: FilterRequestDto[] = []): Promise<Toy[]> {
+  return apiPost<Toy[]>("/toys/function/search", { filters });
 }
 
 // The update payload mirrors ToyRequest: name + set + the full custom-field

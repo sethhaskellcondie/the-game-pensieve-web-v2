@@ -102,61 +102,6 @@
   gap: 10px;
 }
 
-/* Search box: a rounded input with a leading magnifier. */
-.search {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.searchIcon {
-  position: absolute;
-  left: 12px;
-  color: var(--gray-500);
-  pointer-events: none;
-}
-
-.searchInput {
-  height: 40px;
-  width: 240px;
-  padding: 0 12px 0 34px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--white);
-  font-size: 13px;
-  color: var(--ink-navy);
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.searchInput::placeholder {
-  color: var(--gray-500);
-}
-
-.searchInput:focus-visible {
-  outline: none;
-  border-color: var(--primary-600);
-  box-shadow: 0 0 0 3px rgba(var(--ink-navy-rgb), 0.1);
-}
-
-/* Filter reuses the shared <Button> but takes an outlined/white palette.
-   Scoping under .actions raises specificity above Button's own base/:hover
-   rules (cross-file class order isn't guaranteed otherwise). */
-.actions .filterBtn {
-  background: var(--white);
-  color: var(--ink-navy);
-  border: 1px solid var(--line);
-  white-space: nowrap;
-}
-
-.actions .filterBtn:hover:not(:disabled) {
-  background: var(--paper);
-  border-color: #cad3e0;
-}
-
-.actions .filterBtn:active:not(:disabled) {
-  background: #eef1f6;
-}
-
 /* The New button reuses the shared <Button> for its height, focus-visible,
    :active, and disabled behavior, and only swaps the palette to the design's
    green. Scoping under .actions raises specificity above Button's own

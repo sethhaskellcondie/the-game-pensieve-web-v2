@@ -30,6 +30,50 @@ const FIELDS: StubField[] = [
   { id: 11, name: "Year", type: "number", entityKey: "toy", order: 1, options: [] },
 ];
 
+const FILTER_SPEC = {
+  type: "toy",
+  fields: { name: "text", set: "text", created_at: "time" },
+  filters: {
+    name: ["equals", "not_equals", "contains", "starts_with", "ends_with"],
+    set: ["equals", "not_equals", "contains", "starts_with", "ends_with"],
+    created_at: ["since", "before"],
+  },
+};
+
+type StubFilter = { key: string; field: string; operator: string; operand: string };
+
+// A small stand-in for the backend's filter matching, enough to drive the
+// server-side search in these specs.
+function applyFilters(list: StubToy[], filters: StubFilter[]): StubToy[] {
+  return (filters ?? []).reduce<StubToy[]>((out, f) => {
+    return out.filter((t) => {
+      const raw =
+        f.field === "name"
+          ? t.name
+          : f.field === "set"
+            ? t.set
+            : (t.customFieldValues.find((v) => v.customFieldName === f.field)
+                ?.value ?? "");
+      const a = String(raw).toLowerCase();
+      const b = f.operand.toLowerCase();
+      switch (f.operator) {
+        case "contains":
+          return a.includes(b);
+        case "equals":
+          return a === b;
+        case "not_equals":
+          return a !== b;
+        case "starts_with":
+          return a.startsWith(b);
+        case "ends_with":
+          return a.endsWith(b);
+        default:
+          return true;
+      }
+    });
+  }, list);
+}
+
 const TOYS: StubToy[] = [
   {
     id: 1,
@@ -68,8 +112,18 @@ async function stubToys(page: Page) {
       body: JSON.stringify(body),
     });
 
-  await page.route("**/api/toys**", (route) =>
-    json(route, { status: "ok", data: TOYS }),
+  // The list loads and searches through the POST search endpoint; branch it so a
+  // search applies its filters and any other call returns the full list.
+  await page.route("**/api/toys**", (route) => {
+    const req = route.request();
+    if (req.url().includes("/search") && req.method() === "POST") {
+      const { filters } = req.postDataJSON() as { filters: StubFilter[] };
+      return json(route, { status: "ok", data: applyFilters(TOYS, filters) });
+    }
+    return json(route, { status: "ok", data: TOYS });
+  });
+  await page.route("**/api/filters/toy", (route) =>
+    json(route, { status: "ok", data: FILTER_SPEC }),
   );
   await page.route("**/api/custom-fields/entity/toy", (route) =>
     json(route, { status: "ok", data: FIELDS }),
@@ -136,7 +190,7 @@ test("exposes the New, Filter, and per-row delete controls", async ({ page }) =>
   await page.goto("/toys");
 
   await expect(page.getByRole("button", { name: "New" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Filter" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add filter" })).toBeVisible();
 
   const row = page.getByRole("row").filter({ hasText: "R2-D2" });
   await row.hover();
@@ -146,12 +200,14 @@ test("exposes the New, Filter, and per-row delete controls", async ({ page }) =>
 test("creates a toy through the New dialog and shows it in the list", async ({
   page,
 }) => {
-  // Branch the toys proxy by method: POST echoes back a saved toy (with a fresh
-  // id), GET still lists the originals. Registered here so it overrides the
+  // Branch the toys proxy by url + method: a create POST (/api/toys) echoes back
+  // a saved toy with a fresh id; a search POST (/api/toys/search) lists the
+  // originals; GET still lists the originals. Registered here so it overrides the
   // beforeEach stub.
   await page.route("**/api/toys**", (route) => {
-    if (route.request().method() === "POST") {
-      const input = route.request().postDataJSON() as {
+    const req = route.request();
+    if (req.method() === "POST" && !req.url().includes("/search")) {
+      const input = req.postDataJSON() as {
         name: string;
         set: string;
       };

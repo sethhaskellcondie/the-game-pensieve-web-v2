@@ -1,0 +1,151 @@
+/* The add/edit filter popover, anchored below the "+ Add" control (or the chip
+   being edited). Mirrors the modal's surface/shadow but as a lightweight panel. */
+
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 65;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 24px 60px -18px rgba(var(--ink-navy-rgb), 0.42);
+  padding: 14px;
+  animation: filter-pop 0.14s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@keyframes filter-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popover {
+    animation: none;
+  }
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fieldListbox {
+  min-width: 150px;
+}
+
+.operatorListbox {
+  min-width: 130px;
+}
+
+/* Text/number/date value input, sized to sit beside the two pickers. */
+.valueInput {
+  height: 36px;
+  width: 170px;
+  box-sizing: border-box;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-navy);
+  outline: none;
+  transition: 0.13s;
+}
+
+.valueInput:focus-visible {
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 3px rgba(47, 112, 236, 0.14);
+}
+
+.valueListbox {
+  min-width: 150px;
+}
+
+/* Yes/No segmented control for boolean filters. */
+.boolGroup {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.boolBtn {
+  height: 36px;
+  min-width: 54px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--gray-500);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.12s;
+}
+
+.boolBtn:hover {
+  border-color: #c5ccd6;
+  color: var(--ink-navy);
+}
+
+.boolOn {
+  border-color: var(--field-mint-text);
+  background: var(--field-mint-bg);
+  color: var(--field-mint-text);
+}
+
+.foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.cancel {
+  height: 36px;
+  min-width: 80px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink-navy);
+}
+
+.cancel:hover {
+  background: #f3f5f9;
+}
+
+.apply {
+  height: 36px;
+  min-width: 88px;
+  padding: 0 16px;
+  border: none;
+  background: var(--primary-600);
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  transition: 0.12s;
+}
+
+.apply:hover:not(:disabled) {
+  background: #205fd6;
+}
+
+.apply:disabled {
+  background: #c6d4ea;
+  cursor: not-allowed;
+}

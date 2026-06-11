@@ -1,0 +1,306 @@
+import { test, expect, type Page } from "@playwright/test";
+
+type StubToy = {
+  id: number;
+  key: "toy";
+  name: string;
+  set: string;
+  customFieldValues: {
+    customFieldId: number;
+    customFieldName: string;
+    customFieldType: string;
+    value: string;
+  }[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: null;
+};
+
+type StubFilter = { key: string; field: string; operator: string; operand: string };
+
+// Custom-field definitions (supply the dropdown's options; the spec doesn't).
+const FIELDS = [
+  { id: 10, name: "Broken", type: "boolean", entityKey: "toy", order: 0, options: [] },
+  { id: 11, name: "Quantity", type: "number", entityKey: "toy", order: 1, options: [] },
+  {
+    id: 12,
+    name: "Series",
+    type: "dropdown",
+    entityKey: "toy",
+    order: 2,
+    options: [
+      { id: 21, customFieldId: 12, name: "Original", isDefault: true, order: 0 },
+      { id: 22, customFieldId: 12, name: "Special", isDefault: false, order: 1 },
+    ],
+  },
+];
+
+// Mirrors the real /filters/toy response: standard fields (name, set, the two
+// timestamps) plus the custom fields keyed by name, each with its operators.
+const FILTER_SPEC = {
+  type: "toy_filters",
+  fields: {
+    name: "text",
+    set: "text",
+    created_at: "time",
+    updated_at: "time",
+    all_fields: "sort",
+    pagination_fields: "pagination",
+    Broken: "boolean",
+    Quantity: "number",
+    Series: "dropdown",
+  },
+  filters: {
+    name: ["equals", "not_equals", "contains", "starts_with", "ends_with"],
+    set: ["equals", "not_equals", "contains", "starts_with", "ends_with"],
+    created_at: ["since", "before"],
+    updated_at: ["since", "before"],
+    all_fields: ["order_by", "order_by_desc"],
+    pagination_fields: ["limit", "offset"],
+    Broken: ["equals"],
+    Quantity: [
+      "equals",
+      "not_equals",
+      "greater_than",
+      "greater_than_equal_to",
+      "less_than",
+      "less_than_equal_to",
+    ],
+    Series: ["equals", "not_equals", "contains", "starts_with", "ends_with"],
+  },
+};
+
+const TOYS: StubToy[] = [
+  {
+    id: 1,
+    key: "toy",
+    name: "R2-D2",
+    set: "Star Wars",
+    customFieldValues: [
+      { customFieldId: 11, customFieldName: "Quantity", customFieldType: "number", value: "10" },
+      { customFieldId: 12, customFieldName: "Series", customFieldType: "dropdown", value: "Original" },
+    ],
+    createdAt: "",
+    updatedAt: "",
+    deletedAt: null,
+  },
+  {
+    id: 2,
+    key: "toy",
+    name: "Pikachu",
+    set: "Pokemon",
+    customFieldValues: [
+      { customFieldId: 11, customFieldName: "Quantity", customFieldType: "number", value: "3" },
+      { customFieldId: 12, customFieldName: "Series", customFieldType: "dropdown", value: "Special" },
+    ],
+    createdAt: "",
+    updatedAt: "",
+    deletedAt: null,
+  },
+];
+
+function valueOf(toy: StubToy, field: string): string {
+  if (field === "name") return toy.name;
+  if (field === "set") return toy.set;
+  return toy.customFieldValues.find((v) => v.customFieldName === field)?.value ?? "";
+}
+
+function applyFilters(list: StubToy[], filters: StubFilter[]): StubToy[] {
+  return (filters ?? []).reduce<StubToy[]>((out, f) => {
+    return out.filter((t) => {
+      const raw = valueOf(t, f.field);
+      const a = String(raw).toLowerCase();
+      const b = f.operand.toLowerCase();
+      switch (f.operator) {
+        case "contains":
+          return a.includes(b);
+        case "equals":
+          return a === b;
+        case "not_equals":
+          return a !== b;
+        case "starts_with":
+          return a.startsWith(b);
+        case "ends_with":
+          return a.endsWith(b);
+        case "greater_than":
+          return Number(raw) > Number(f.operand);
+        case "greater_than_equal_to":
+          return Number(raw) >= Number(f.operand);
+        case "less_than":
+          return Number(raw) < Number(f.operand);
+        case "less_than_equal_to":
+          return Number(raw) <= Number(f.operand);
+        default:
+          return true;
+      }
+    });
+  }, list);
+}
+
+async function stub(page: Page) {
+  const json = (route: Parameters<Parameters<Page["route"]>[1]>[0], body: unknown) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+
+  await page.route("**/api/toys**", (route) => {
+    const req = route.request();
+    if (req.url().includes("/search") && req.method() === "POST") {
+      const { filters } = req.postDataJSON() as { filters: StubFilter[] };
+      return json(route, { status: "ok", data: applyFilters(TOYS, filters) });
+    }
+    return json(route, { status: "ok", data: TOYS });
+  });
+  await page.route("**/api/filters/toy", (route) =>
+    json(route, { status: "ok", data: FILTER_SPEC }),
+  );
+  await page.route("**/api/custom-fields/entity/toy", (route) =>
+    json(route, { status: "ok", data: FIELDS }),
+  );
+}
+
+// ui_settings load server-side (page.route can't stub them); pin both modes off
+// so the bar renders in its normal (non-mass) form. Shared backend state, so
+// every spec touching these settings pins the same values — see toys.spec.ts.
+async function pinNormalMode(page: Page) {
+  const current = await (await page.request.get("/api/ui-settings")).json();
+  await page.request.post("/api/ui-settings", {
+    data: { ...current, massInputMode: false, massEditMode: false },
+  });
+}
+
+test.beforeEach(async ({ page }) => {
+  await pinNormalMode(page);
+  await stub(page);
+});
+
+// Open the add-filter editor and build a Set <operator> <value> text filter.
+async function addSetFilter(page: Page, operatorLabel: string, value: string) {
+  await page.getByRole("button", { name: "Add filter" }).click();
+  const editor = page.getByRole("dialog", { name: "Add filter" });
+  await expect(editor).toBeVisible();
+
+  await editor.getByRole("button", { name: "Filter field" }).click();
+  await page.getByRole("option", { name: "Set" }).click();
+
+  await editor.getByRole("button", { name: "Filter operator" }).click();
+  await page.getByRole("option", { name: operatorLabel, exact: true }).click();
+
+  await editor.getByRole("textbox", { name: "Set value" }).fill(value);
+  await editor.getByRole("button", { name: "Add" }).click();
+}
+
+test("offers each spec field exactly once, with only real standard fields", async ({
+  page,
+}) => {
+  await page.goto("/toys");
+  await page.getByRole("button", { name: "Add filter" }).click();
+
+  await page
+    .getByRole("dialog", { name: "Add filter" })
+    .getByRole("button", { name: "Filter field" })
+    .click();
+  const listbox = page.getByRole("listbox", { name: "Filter field" });
+
+  // Exactly the spec's filterable fields, no duplicates: sort/pagination and the
+  // timestamp (time) fields are dropped, and custom fields no longer leak in as
+  // extra "standard" fields.
+  await expect(listbox.getByRole("option")).toHaveCount(5);
+  for (const name of ["Name", "Set", "Broken", "Quantity", "Series"]) {
+    await expect(listbox.getByRole("option", { name, exact: true })).toHaveCount(1);
+  }
+  for (const name of ["Created At", "Updated At"]) {
+    await expect(listbox.getByRole("option", { name, exact: true })).toHaveCount(0);
+  }
+});
+
+test("adds a filter that narrows the list to the matching toys", async ({
+  page,
+}) => {
+  await page.goto("/toys");
+  await expect(page.getByText("R2-D2", { exact: true })).toBeVisible();
+
+  await addSetFilter(page, "is", "Pokemon");
+
+  await expect(page.getByRole("button", { name: "Edit Set filter" })).toBeVisible();
+  await expect(page.getByText("Pikachu", { exact: true })).toBeVisible();
+  await expect(page.getByText("R2-D2", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 2, name: "1 Toy" })).toBeVisible();
+});
+
+test("filters on a numeric custom field with a comparison operator", async ({
+  page,
+}) => {
+  await page.goto("/toys");
+  const editor = page.getByRole("dialog", { name: "Add filter" });
+
+  await page.getByRole("button", { name: "Add filter" }).click();
+  await editor.getByRole("button", { name: "Filter field" }).click();
+  await page.getByRole("option", { name: "Quantity", exact: true }).click();
+  await editor.getByRole("button", { name: "Filter operator" }).click();
+  await page.getByRole("option", { name: ">", exact: true }).click();
+  await editor.getByRole("spinbutton", { name: "Quantity value" }).fill("5");
+  await editor.getByRole("button", { name: "Add" }).click();
+
+  // R2-D2 has Quantity 10 (> 5); Pikachu has 3.
+  await expect(page.getByText("R2-D2", { exact: true })).toBeVisible();
+  await expect(page.getByText("Pikachu", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 2, name: "1 Toy" })).toBeVisible();
+});
+
+test("filters on a dropdown custom field via its option picker", async ({
+  page,
+}) => {
+  await page.goto("/toys");
+  const editor = page.getByRole("dialog", { name: "Add filter" });
+
+  await page.getByRole("button", { name: "Add filter" }).click();
+  await editor.getByRole("button", { name: "Filter field" }).click();
+  await page.getByRole("option", { name: "Series", exact: true }).click();
+  // Operator defaults to "is"; the value control is an option picker.
+  await editor.getByRole("button", { name: "Series value" }).click();
+  await page.getByRole("option", { name: "Special", exact: true }).click();
+  await editor.getByRole("button", { name: "Add" }).click();
+
+  await expect(page.getByText("Pikachu", { exact: true })).toBeVisible();
+  await expect(page.getByText("R2-D2", { exact: true })).toHaveCount(0);
+});
+
+test("removing a filter restores the full list", async ({ page }) => {
+  await page.goto("/toys");
+  await addSetFilter(page, "is", "Pokemon");
+  await expect(page.getByRole("heading", { level: 2, name: "1 Toy" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Remove Set filter" }).click();
+
+  await expect(page.getByText("R2-D2", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "2 Toys" })).toBeVisible();
+});
+
+test("editing a filter re-runs the search", async ({ page }) => {
+  await page.goto("/toys");
+  await addSetFilter(page, "is", "Pokemon");
+  await expect(page.getByRole("heading", { level: 2, name: "1 Toy" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Edit Set filter" }).click();
+  const editor = page.getByRole("dialog", { name: "Edit filter" });
+  await editor.getByRole("textbox", { name: "Set value" }).fill("Star Wars");
+  await editor.getByRole("button", { name: "Update" }).click();
+
+  await expect(page.getByText("R2-D2", { exact: true })).toBeVisible();
+  await expect(page.getByText("Pikachu", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 2, name: "1 Toy" })).toBeVisible();
+});
+
+test("the search box folds into a server-side name filter", async ({ page }) => {
+  await page.goto("/toys");
+  await expect(page.getByText("R2-D2", { exact: true })).toBeVisible();
+
+  await page.getByRole("searchbox", { name: "Search toys" }).fill("pika");
+
+  await expect(page.getByText("Pikachu", { exact: true })).toBeVisible();
+  await expect(page.getByText("R2-D2", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 2, name: "1 Toy" })).toBeVisible();
+});

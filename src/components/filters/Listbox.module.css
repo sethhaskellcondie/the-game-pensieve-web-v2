@@ -1,0 +1,112 @@
+/* A neutral custom listbox shared by the field, operator, and option pickers.
+   Mirrors the gold DropdownEditor structure but in the app's neutral palette. */
+
+.wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 120px;
+  padding: 7px 10px 7px 11px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink-navy);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.13s;
+}
+
+.trigger:hover {
+  border-color: #c5ccd6;
+}
+
+.trigger.open,
+.trigger:focus-visible {
+  outline: none;
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 3px rgba(47, 112, 236, 0.14);
+}
+
+.value {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.placeholder {
+  color: var(--gray-500);
+  font-style: normal;
+}
+
+.caret {
+  display: flex;
+  flex: 0 0 auto;
+  opacity: 0.7;
+  transition: transform 0.15s;
+}
+
+.trigger.open .caret {
+  transform: rotate(180deg);
+}
+
+.menu {
+  position: fixed;
+  z-index: 70;
+  max-height: 280px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  box-shadow: 0 20px 48px -16px rgba(var(--ink-navy-rgb), 0.34);
+  padding: 6px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--ink-navy);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: 0.1s;
+}
+
+.option:hover {
+  background: var(--paper);
+}
+
+.optionSelected {
+  background: #eef3fb;
+}
+
+.optionLabel {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.optionCheck {
+  display: flex;
+  flex: 0 0 auto;
+  color: var(--primary-600);
+}

@@ -1,0 +1,168 @@
+/* The filter bar sits below the page toolbar: a quick-search box, the applied
+   filter chips, and the add control, wrapping onto multiple lines as needed. */
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+/* Search box: a rounded input with a leading magnifier (matches the previous
+   toolbar search). */
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  color: var(--gray-500);
+  pointer-events: none;
+}
+
+.searchInput {
+  height: 40px;
+  width: 240px;
+  padding: 0 12px 0 34px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+  font-size: 13px;
+  color: var(--ink-navy);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.searchInput::placeholder {
+  color: var(--gray-500);
+}
+
+.searchInput:focus-visible {
+  outline: none;
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 3px rgba(var(--ink-navy-rgb), 0.1);
+}
+
+/* Positioning context so the editor popover anchors under its chip / add btn. */
+.anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+/* A field glyph chip, colored via inline bg/fg by FieldGlyph. */
+.glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border-radius: 6px;
+}
+
+/* Applied-filter pill. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.chipBody {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 100%;
+  padding: 0 4px 0 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12.5px;
+  color: var(--ink-navy);
+  transition: background 0.12s;
+}
+
+.chipBody:hover {
+  background: var(--paper);
+}
+
+.chipLabel {
+  font-weight: 800;
+}
+
+.chipOp {
+  color: var(--gray-500);
+  font-weight: 700;
+}
+
+.chipVal {
+  font-weight: 800;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chipRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 100%;
+  border: none;
+  border-left: 1px solid var(--line);
+  background: transparent;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: 0.12s;
+}
+
+.chipRemove:hover {
+  background: #fdecec;
+  color: var(--cannon-red);
+}
+
+/* "+ Add filter" / "Filter" control — the outlined toolbar style. */
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--ink-navy);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: 0.12s;
+}
+
+.addBtn:hover:not(:disabled) {
+  background: var(--paper);
+  border-color: #cad3e0;
+}
+
+.addBtn:active:not(:disabled) {
+  background: #eef1f6;
+}
+
+.addBtn:disabled {
+  color: var(--gray-500);
+  cursor: not-allowed;
+}
+
+.addBtn:focus-visible {
+  outline: 2px solid var(--primary-600);
+  outline-offset: 2px;
+}
