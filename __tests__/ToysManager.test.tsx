@@ -49,6 +49,7 @@ const toyFields: CustomField[] = [
       { id: 43, customFieldId: 14, name: "Painted", isDefault: false, order: 2 },
     ],
   },
+  { id: 15, name: "Line", type: "text", entityKey: "toy", order: 5, options: [] },
 ];
 
 const toys: Toy[] = [
@@ -63,6 +64,7 @@ const toys: Toy[] = [
       { customFieldId: 12, customFieldName: "Series", customFieldType: "dropdown", value: "Original" },
       { customFieldId: 13, customFieldName: "Condition", customFieldType: "radio_button", value: "Mint" },
       { customFieldId: 14, customFieldName: "Build", customFieldType: "progress_bar", value: "Opened" },
+      { customFieldId: 15, customFieldName: "Line", customFieldType: "text", value: "Astromech" },
     ],
     createdAt: "",
     updatedAt: "",
@@ -492,6 +494,38 @@ describe("ToysManager", () => {
         (v: { customFieldId: number }) => v.customFieldId === 11,
       );
       expect(cf.value).toBe("1980");
+    });
+  });
+
+  it("shows a text custom field as plain read-only text when mass edit is off", async () => {
+    renderManager(false);
+    await screen.findByText("R2-D2");
+
+    expect(screen.getByText("Astromech")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Edit Line" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("edits a text custom field inline and PUTs the toy when mass edit is on", async () => {
+    renderManager(true);
+    await screen.findByText("R2-D2");
+
+    const row = screen.getByText("R2-D2").closest("tr") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "Edit Line" }));
+    const input = within(row).getByRole("textbox", { name: "Line" });
+    fireEvent.change(input, { target: { value: "Protocol Droid" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => {
+      const put = mockFetch.mock.calls.find(
+        ([url, init]) => /\/api\/toys\/1$/.test(url) && init?.method === "PUT",
+      );
+      expect(put).toBeDefined();
+      const cf = JSON.parse(put![1].body).customFieldValues.find(
+        (v: { customFieldId: number }) => v.customFieldId === 15,
+      );
+      expect(cf.value).toBe("Protocol Droid");
     });
   });
 

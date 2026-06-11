@@ -349,6 +349,62 @@ export function getToyById(id: number): Promise<Toy | null> {
   return apiGetOrNull<Toy>(`/toys/${id}`);
 }
 
+// ---------- Systems ----------
+// Shapes mirror the System + CustomFieldValue schemas in
+// backend-documentation/openapi.yaml. Systems differ from toys only in their
+// standard fields: generation (integer) and handheld (boolean) replace set.
+
+export type System = {
+  id: number;
+  key: "system";
+  name: string;
+  generation: number;
+  handheld: boolean;
+  customFieldValues: CustomFieldValue[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+};
+
+// The backend lists systems through a POST search endpoint; an empty filter set
+// returns them all. apiPost unwraps the { data, errors } envelope for us.
+export function searchSystems(
+  filters: FilterRequestDto[] = [],
+): Promise<System[]> {
+  return apiPost<System[]>("/systems/function/search", { filters });
+}
+
+// The update payload mirrors SystemRequest: name + generation + handheld + the
+// full custom-field value set are all required, so an inline edit of one field
+// must resend the system's existing values alongside the change.
+export type UpdateSystemInput = {
+  name: string;
+  generation: number;
+  handheld: boolean;
+  customFieldValues: CustomFieldValue[];
+};
+
+export function updateSystem(
+  id: number,
+  input: UpdateSystemInput,
+): Promise<System> {
+  return apiPut<System>(`/systems/${id}`, { system: input });
+}
+
+// Creating a system takes the same shape as updating one (SystemRequest), so
+// the create payload reuses UpdateSystemInput.
+export type CreateSystemInput = UpdateSystemInput;
+
+export function createSystem(input: CreateSystemInput): Promise<System> {
+  return apiPost<System>("/systems", { system: input });
+}
+
+// Fetch a single system by id. Returns null on 404 so the detail page can
+// render its own not-found state instead of throwing.
+export function getSystemById(id: number): Promise<System | null> {
+  return apiGetOrNull<System>(`/systems/${id}`);
+}
+
 export async function checkHeartbeat(
   { debug = false }: { debug?: boolean } = {},
 ): Promise<boolean> {

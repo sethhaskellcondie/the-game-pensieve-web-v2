@@ -8,8 +8,8 @@ import type {
   CustomFieldValue as CustomFieldValueType,
   FilterRequestDto,
   FilterSpecification,
-  Toy,
-  UpdateToyInput,
+  System,
+  UpdateSystemInput,
 } from "@/lib/api";
 import Button from "@/components/Button";
 import DataTable, {
@@ -23,18 +23,17 @@ import FilterBar from "@/components/filters/FilterBar";
 import { buildFieldList } from "@/components/filters/fieldList";
 import { toFilterRequest } from "@/components/filters/serialize";
 import type { ActiveFilter } from "@/components/filters/types";
-import CustomFieldValue from "./CustomFieldValue";
-import FieldEditor, { normalizeFieldValue } from "./toyFieldEditors";
-import ToyCreateModal from "./ToyCreateModal";
-import styles from "./ToysManager.module.css";
+import CustomFieldValue from "@/components/toys/CustomFieldValue";
+import FieldEditor, {
+  normalizeFieldValue,
+} from "@/components/toys/toyFieldEditors";
+import SystemCreateModal from "./SystemCreateModal";
+import styles from "@/components/toys/ToysManager.module.css";
 
-// The two toy columns that mass-edit mode makes inline-editable.
-type EditField = "name" | "set";
-const FIELD_LABEL: Record<EditField, string> = { name: "Name", set: "Set" };
-
-// Self-contained inline editor: holds its own draft so a keystroke re-renders
-// only this input, not the whole table. Commits on Enter/blur, cancels on
-// Escape. A latch keeps the Enter-then-blur sequence from committing twice.
+// Self-contained inline editor for the Name column: holds its own draft so a
+// keystroke re-renders only this input, not the whole table. Commits on
+// Enter/blur, cancels on Escape. A latch keeps the Enter-then-blur sequence
+// from committing twice.
 function InlineEditInput({
   initial,
   ariaLabel,
@@ -79,18 +78,18 @@ function InlineEditInput({
   );
 }
 
-// One mass-edit-mode cell for the Name/Set columns: the value as a click-to-edit
+// One mass-edit-mode cell for the Name column: the value as a click-to-edit
 // trigger, or the inline input while this cell is the one being edited.
-function EditableToyCell({
-  toy,
-  field,
+// (Generation and Handheld use FieldEditor directly — they're a number and a
+// boolean, so they get the same inline editors as custom fields of those types.)
+function EditableNameCell({
+  system,
   editing,
   onStart,
   onCommit,
   onCancel,
 }: {
-  toy: Toy;
-  field: EditField;
+  system: System;
   editing: boolean;
   onStart: () => void;
   onCommit: (value: string) => void;
@@ -99,8 +98,8 @@ function EditableToyCell({
   if (editing) {
     return (
       <InlineEditInput
-        initial={toy[field]}
-        ariaLabel={`${FIELD_LABEL[field]} for ${toy.name}`}
+        initial={system.name}
+        ariaLabel={`Name for ${system.name}`}
         onCommit={onCommit}
         onCancel={onCancel}
       />
@@ -108,7 +107,7 @@ function EditableToyCell({
   }
   return (
     <button type="button" className={styles.editTrigger} onClick={onStart}>
-      {toy[field] || <span className={styles.dash}>—</span>}
+      {system.name || <span className={styles.dash}>—</span>}
     </button>
   );
 }
@@ -126,49 +125,49 @@ async function readJson<T>(res: Response): Promise<T> {
 }
 
 // Run the backend search through the route handler (the lib/api search runs
-// server-side). An empty filter set returns every toy.
-async function searchToysClient(
+// server-side). An empty filter set returns every system.
+async function searchSystemsClient(
   filters: FilterRequestDto[],
   signal?: AbortSignal,
-): Promise<Toy[]> {
-  const res = await fetch("/api/toys/search", {
+): Promise<System[]> {
+  const res = await fetch("/api/systems/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ filters }),
     signal,
   });
-  return readJson<Toy[]>(res);
+  return readJson<System[]>(res);
 }
 
-// Toy custom-field definitions, reusing the existing custom-fields route. They
-// give the authoritative ordered column set for the dynamic columns.
-async function fetchToyFields(signal?: AbortSignal): Promise<CustomField[]> {
-  const res = await fetch("/api/custom-fields/entity/toy", { signal });
+// System custom-field definitions, reusing the existing custom-fields route.
+// They give the authoritative ordered column set for the dynamic columns.
+async function fetchSystemFields(signal?: AbortSignal): Promise<CustomField[]> {
+  const res = await fetch("/api/custom-fields/entity/system", { signal });
   const data = await readJson<CustomField[]>(res);
   return [...data].sort((a, b) => a.order - b.order);
 }
 
-// The toy filter spec (standard filterable fields + their operators). Merged
+// The system filter spec (standard filterable fields + their operators). Merged
 // with the custom fields to build the field list the filter bar offers.
 async function fetchFilterSpec(
   signal?: AbortSignal,
 ): Promise<FilterSpecification> {
-  const res = await fetch("/api/filters/toy", { signal });
+  const res = await fetch("/api/filters/system", { signal });
   return readJson<FilterSpecification>(res);
 }
 
 function loadErrorMessage(error: unknown): string {
   return error instanceof Error
-    ? `Couldn't load toys: ${error.message}`
-    : "Couldn't load toys. Please try again.";
+    ? `Couldn't load systems: ${error.message}`
+    : "Couldn't load systems. Please try again.";
 }
 
-export default function ToysManager() {
+export default function SystemsManager() {
   const router = useRouter();
   const { showToast, showSnackbar } = useToast();
   const { settings } = useUiSettings();
   const massEditMode = settings.massEditMode;
-  const [toys, setToys] = useState<Toy[]>([]);
+  const [systems, setSystems] = useState<System[]>([]);
   const [definitions, setDefinitions] = useState<CustomField[]>([]);
   const [spec, setSpec] = useState<FilterSpecification | null>(null);
   const [loading, setLoading] = useState(true);
@@ -182,37 +181,35 @@ export default function ToysManager() {
     () => buildFieldList(spec, definitions),
     [spec, definitions],
   );
-  // Whether the create-toy dialog is open, and whether its POST is in flight.
+  // Whether the create-system dialog is open, and whether its POST is in flight.
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
-  // The cell being inline-edited (row id + which column), or null when idle.
-  const [editing, setEditing] = useState<{ id: number; field: EditField } | null>(
-    null,
-  );
+  // The row whose Name cell is being inline-edited, or null when idle.
+  const [editingId, setEditingId] = useState<number | null>(null);
 
-  // Load the initial (unfiltered) toys, their field definitions, and the filter
-  // spec together on mount. setState lives in the promise callbacks (not the
-  // effect body); `active` drops a stale response if the component unmounts
+  // Load the initial (unfiltered) systems, their field definitions, and the
+  // filter spec together on mount. setState lives in the promise callbacks (not
+  // the effect body); `active` drops a stale response if the component unmounts
   // before the requests resolve.
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
     Promise.all([
-      searchToysClient([], controller.signal),
-      fetchToyFields(controller.signal),
+      searchSystemsClient([], controller.signal),
+      fetchSystemFields(controller.signal),
       fetchFilterSpec(controller.signal),
     ])
-      .then(([loadedToys, loadedDefs, loadedSpec]) => {
+      .then(([loadedSystems, loadedDefs, loadedSpec]) => {
         if (!active) return;
-        setToys(loadedToys);
+        setSystems(loadedSystems);
         setDefinitions(loadedDefs);
         setSpec(loadedSpec);
         setLoading(false);
       })
       .catch((error) => {
         if (!active || controller.signal.aborted) return;
-        console.error("Load toys failed", error);
-        setToys([]);
+        console.error("Load systems failed", error);
+        setSystems([]);
         setDefinitions([]);
         setLoading(false);
         showSnackbar({ message: loadErrorMessage(error), variant: "error" });
@@ -238,15 +235,15 @@ export default function ToysManager() {
     }
     const controller = new AbortController();
     const seq = ++searchSeq.current;
-    const dto = toFilterRequest("toy", filters);
+    const dto = toFilterRequest("system", filters);
     const timer = setTimeout(() => {
-      searchToysClient(dto, controller.signal)
+      searchSystemsClient(dto, controller.signal)
         .then((rows) => {
-          if (seq === searchSeq.current) setToys(rows);
+          if (seq === searchSeq.current) setSystems(rows);
         })
         .catch((error) => {
           if (controller.signal.aborted) return;
-          console.error("Search toys failed", error);
+          console.error("Search systems failed", error);
           showSnackbar({ message: loadErrorMessage(error), variant: "error" });
         });
     }, 250);
@@ -256,35 +253,26 @@ export default function ToysManager() {
     };
   }, [filters, showSnackbar]);
 
-  const startEdit = useCallback((toy: Toy, field: EditField) => {
-    setEditing({ id: toy.id, field });
-  }, []);
-
-  const cancelEdit = useCallback(() => setEditing(null), []);
-
-  // Commit an inline edit. Blank or unchanged values just exit edit mode.
-  // Otherwise the change is applied optimistically and rolled back on failure.
-  // The PUT resends the whole toy (name + set + values are all required by the
-  // backend), swapping in only the edited field.
-  const commitEdit = useCallback(
-    async (toy: Toy, field: EditField, raw: string) => {
-      setEditing(null);
-      const next = raw.trim();
-      if (next === "" || next === toy[field]) return;
+  // Apply `next` optimistically and PUT the whole system (name + generation +
+  // handheld + values are all required by the backend), rolling the list back
+  // on failure. Every inline commit below funnels through here.
+  const persist = useCallback(
+    async (next: System) => {
       // Capture the pre-edit list inside the functional update so this callback
-      // doesn't need `toys` as a dependency.
-      let prev: Toy[] = [];
-      setToys((ts) => {
-        prev = ts;
-        return ts.map((t) => (t.id === toy.id ? { ...t, [field]: next } : t));
+      // doesn't need `systems` as a dependency.
+      let prev: System[] = [];
+      setSystems((ss) => {
+        prev = ss;
+        return ss.map((s) => (s.id === next.id ? next : s));
       });
       try {
-        const input: UpdateToyInput = {
-          name: field === "name" ? next : toy.name,
-          set: field === "set" ? next : toy.set,
-          customFieldValues: toy.customFieldValues,
+        const input: UpdateSystemInput = {
+          name: next.name,
+          generation: next.generation,
+          handheld: next.handheld,
+          customFieldValues: next.customFieldValues,
         };
-        const res = await fetch(`/api/toys/${toy.id}`, {
+        const res = await fetch(`/api/systems/${next.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(input),
@@ -295,15 +283,15 @@ export default function ToysManager() {
           } | null;
           throw new Error(body?.message ?? "Request failed");
         }
-        showToast({ message: "Toy updated.", variant: "success" });
+        showToast({ message: "System updated.", variant: "success" });
       } catch (error) {
-        console.error("Update toy failed", error);
-        setToys(prev);
+        console.error("Update system failed", error);
+        setSystems(prev);
         showSnackbar({
           message:
             error instanceof Error
-              ? `Couldn't update the toy: ${error.message}`
-              : "Couldn't update the toy. Please try again.",
+              ? `Couldn't update the system: ${error.message}`
+              : "Couldn't update the system. Please try again.",
           variant: "error",
         });
       }
@@ -311,14 +299,46 @@ export default function ToysManager() {
     [showToast, showSnackbar],
   );
 
-  // Commit a custom-field value edited inline in the grid (mass-edit mode).
-  // Mirrors commitEdit: merge the value into the toy's customFieldValues, apply
-  // optimistically, PUT the whole toy, and roll back on failure.
+  // Commit an inline Name edit. Name is required, so blank (or unchanged)
+  // values just exit edit mode.
+  const commitName = useCallback(
+    (system: System, raw: string) => {
+      setEditingId(null);
+      const name = raw.trim();
+      if (name === "" || name === system.name) return;
+      void persist({ ...system, name });
+    },
+    [persist],
+  );
+
+  // Generation is a required integer; the number editor commits "" when
+  // cleared, which (like an unchanged value) is a no-op revert.
+  const commitGeneration = useCallback(
+    (system: System, raw: string) => {
+      if (raw === "") return;
+      const generation = Number(raw);
+      if (Number.isNaN(generation) || generation === system.generation) return;
+      void persist({ ...system, generation });
+    },
+    [persist],
+  );
+
+  const commitHandheld = useCallback(
+    (system: System, raw: string) => {
+      const handheld = raw === "true";
+      if (handheld === system.handheld) return;
+      void persist({ ...system, handheld });
+    },
+    [persist],
+  );
+
+  // Commit a custom-field value edited inline in the grid (mass-edit mode):
+  // merge the value into the system's customFieldValues and persist.
   const commitFieldValue = useCallback(
-    async (toy: Toy, def: CustomField, value: string) => {
+    (system: System, def: CustomField, value: string) => {
       const current =
-        toy.customFieldValues.find((v) => v.customFieldId === def.id)?.value ??
-        "";
+        system.customFieldValues.find((v) => v.customFieldId === def.id)
+          ?.value ?? "";
       if (value === current) return;
       const entry: CustomFieldValueType = {
         customFieldId: def.id,
@@ -326,78 +346,44 @@ export default function ToysManager() {
         customFieldType: def.type,
         value,
       };
-      const exists = toy.customFieldValues.some(
+      const exists = system.customFieldValues.some(
         (v) => v.customFieldId === def.id,
       );
       const customFieldValues = exists
-        ? toy.customFieldValues.map((v) =>
+        ? system.customFieldValues.map((v) =>
             v.customFieldId === def.id ? entry : v,
           )
-        : [...toy.customFieldValues, entry];
-      let prev: Toy[] = [];
-      setToys((ts) => {
-        prev = ts;
-        return ts.map((t) =>
-          t.id === toy.id ? { ...t, customFieldValues } : t,
-        );
-      });
-      try {
-        const input: UpdateToyInput = {
-          name: toy.name,
-          set: toy.set,
-          customFieldValues,
-        };
-        const res = await fetch(`/api/toys/${toy.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(input),
-        });
-        if (!res.ok) {
-          const body = (await res.json().catch(() => null)) as {
-            message?: string;
-          } | null;
-          throw new Error(body?.message ?? "Request failed");
-        }
-        showToast({ message: "Toy updated.", variant: "success" });
-      } catch (error) {
-        console.error("Update toy failed", error);
-        setToys(prev);
-        showSnackbar({
-          message:
-            error instanceof Error
-              ? `Couldn't update the toy: ${error.message}`
-              : "Couldn't update the toy. Please try again.",
-          variant: "error",
-        });
-      }
+        : [...system.customFieldValues, entry];
+      void persist({ ...system, customFieldValues });
     },
-    [showToast, showSnackbar],
+    [persist],
   );
 
-  // Create a toy from the dialog: POST it and prepend the saved toy (with its
-  // backend-assigned id) to the list. Returns whether it succeeded; the dialog
-  // decides what to do next (close, or reset for another entry in mass-input
-  // mode). On failure it stays open so the user can retry without re-entering.
+  // Create a system from the dialog: POST it and prepend the saved system (with
+  // its backend-assigned id) to the list. Returns whether it succeeded; the
+  // dialog decides what to do next (close, or reset for another entry in
+  // mass-input mode). On failure it stays open so the user can retry without
+  // re-entering.
   const handleCreate = useCallback(
-    async (input: UpdateToyInput): Promise<boolean> => {
+    async (input: UpdateSystemInput): Promise<boolean> => {
       setSaving(true);
       try {
-        const res = await fetch("/api/toys", {
+        const res = await fetch("/api/systems", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(input),
         });
-        const created = await readJson<Toy>(res);
-        setToys((ts) => [created, ...ts]);
-        showToast({ message: "Toy created.", variant: "success" });
+        const created = await readJson<System>(res);
+        setSystems((ss) => [created, ...ss]);
+        showToast({ message: "System created.", variant: "success" });
         return true;
       } catch (error) {
-        console.error("Create toy failed", error);
+        console.error("Create system failed", error);
         showSnackbar({
           message:
             error instanceof Error
-              ? `Couldn't create the toy: ${error.message}`
-              : "Couldn't create the toy. Please try again.",
+              ? `Couldn't create the system: ${error.message}`
+              : "Couldn't create the system. Please try again.",
           variant: "error",
         });
         return false;
@@ -408,23 +394,12 @@ export default function ToysManager() {
     [showToast, showSnackbar],
   );
 
-  // Name and Set are always first; the rest of the columns are the toy custom
-  // fields, in their defined order. Each cell maps the toy's values by field id.
-  // In mass-edit mode, Name and Set become inline-editable.
-  const columns = useMemo<ColumnDef<Toy>[]>(() => {
-    function renderEditable(toy: Toy, field: EditField) {
-      return (
-        <EditableToyCell
-          toy={toy}
-          field={field}
-          editing={editing?.id === toy.id && editing.field === field}
-          onStart={() => startEdit(toy, field)}
-          onCommit={(value) => commitEdit(toy, field, value)}
-          onCancel={cancelEdit}
-        />
-      );
-    }
-    const base: ColumnDef<Toy>[] = [
+  // Name, Generation, and Handheld are always first; the rest of the columns
+  // are the system custom fields, in their defined order. In mass-edit mode the
+  // Name cell becomes click-to-edit and Generation/Handheld get the same inline
+  // editors as number/boolean custom fields.
+  const columns = useMemo<ColumnDef<System>[]>(() => {
+    const base: ColumnDef<System>[] = [
       {
         key: "name",
         label: "Name",
@@ -432,20 +407,64 @@ export default function ToysManager() {
         frozen: true,
         seam: true,
         render: massEditMode
-          ? (toy) => renderEditable(toy, "name")
-          : (toy) => toy.name,
+          ? (system) => (
+              <EditableNameCell
+                system={system}
+                editing={editingId === system.id}
+                onStart={() => setEditingId(system.id)}
+                onCommit={(value) => commitName(system, value)}
+                onCancel={() => setEditingId(null)}
+              />
+            )
+          : (system) => system.name,
       },
       {
-        key: "set",
-        label: "Set",
-        width: 200,
+        key: "generation",
+        label: "Generation",
+        width: MIN_COL,
         render: massEditMode
-          ? (toy) => renderEditable(toy, "set")
-          : (toy) => toy.set,
+          ? (system) => (
+              <FieldEditor
+                field={{
+                  name: "Generation",
+                  kind: "number",
+                  value: String(system.generation),
+                }}
+                onCommit={(v) => commitGeneration(system, v)}
+              />
+            )
+          : (system) => (
+              <CustomFieldValue
+                type="number"
+                value={String(system.generation)}
+              />
+            ),
+      },
+      {
+        key: "handheld",
+        label: "Handheld",
+        width: MIN_COL,
+        render: massEditMode
+          ? (system) => (
+              <FieldEditor
+                field={{
+                  name: "Handheld",
+                  kind: "boolean",
+                  value: system.handheld ? "true" : "false",
+                }}
+                onCommit={(v) => commitHandheld(system, v)}
+              />
+            )
+          : (system) => (
+              <CustomFieldValue
+                type="boolean"
+                value={system.handheld ? "true" : "false"}
+              />
+            ),
       },
     ];
     // In mass-edit mode, every custom-field cell becomes the full interactive
-    // editor (the same controls as the toy detail page) — committing an edit
+    // editor (the same controls as the system detail page) — committing an edit
     // persists the change. Otherwise every type shows its read-only display.
     const editableInline: CustomFieldType[] = [
       "text",
@@ -455,8 +474,8 @@ export default function ToysManager() {
       "radio_button",
       "progress_bar",
     ];
-    function renderFieldCell(toy: Toy, def: CustomField) {
-      const value = toy.customFieldValues.find(
+    function renderFieldCell(system: System, def: CustomField) {
+      const value = system.customFieldValues.find(
         (cv) => cv.customFieldId === def.id,
       )?.value;
       if (massEditMode && editableInline.includes(def.type)) {
@@ -468,7 +487,7 @@ export default function ToysManager() {
               value: normalizeFieldValue(def.type, value, def.options),
               options: [...def.options].sort((a, b) => a.order - b.order),
             }}
-            onCommit={(v) => commitFieldValue(toy, def, v)}
+            onCommit={(v) => commitFieldValue(system, def, v)}
           />
         );
       }
@@ -478,21 +497,20 @@ export default function ToysManager() {
     }
     // Number and Yes/No values are narrow, so those columns default to the
     // minimum width to save space; the rest start wider.
-    const dynamic: ColumnDef<Toy>[] = definitions.map((def) => ({
+    const dynamic: ColumnDef<System>[] = definitions.map((def) => ({
       key: `cf-${def.id}`,
       label: def.name,
-      width:
-        def.type === "number" || def.type === "boolean" ? MIN_COL : 180,
-      render: (toy) => renderFieldCell(toy, def),
+      width: def.type === "number" || def.type === "boolean" ? MIN_COL : 180,
+      render: (system) => renderFieldCell(system, def),
     }));
     return [...base, ...dynamic];
   }, [
     definitions,
     massEditMode,
-    editing,
-    startEdit,
-    cancelEdit,
-    commitEdit,
+    editingId,
+    commitName,
+    commitGeneration,
+    commitHandheld,
     commitFieldValue,
   ]);
 
@@ -502,7 +520,7 @@ export default function ToysManager() {
     <div className={styles.page}>
       <div className={styles.head}>
         <div className={styles.titleWrap}>
-          <h2 className={styles.entName}><b>{toys.length}</b> {toys.length === 1 ? "Toy" : "Toys"}</h2>
+          <h2 className={styles.entName}><b>{systems.length}</b> {systems.length === 1 ? "System" : "Systems"}</h2>
           {massEditMode && (
             <div className={styles.crumb}>
               <span>Mass edit mode is on. (adjust in options)</span>
@@ -510,14 +528,14 @@ export default function ToysManager() {
           )}
         </div>
         <FilterBar
-          entityKey="toy"
+          entityKey="system"
           fields={fieldDefs}
           filters={filters}
           onChange={setFilters}
           searchValue={query}
           onSearchChange={setQuery}
-          searchPlaceholder="Search toys…"
-          searchAriaLabel="Search toys"
+          searchPlaceholder="Search systems…"
+          searchAriaLabel="Search systems"
         />
         <div className={styles.actions}>
           <Button className={styles.newBtn} onClick={() => setCreating(true)}>
@@ -528,28 +546,34 @@ export default function ToysManager() {
 
       <DataTable
         columns={columns}
-        rows={toys}
-        getRowKey={(toy) => toy.id}
+        rows={systems}
+        getRowKey={(system) => system.id}
         loading={loading}
-        loadingMessage="Loading toys…"
-        emptyMessage={hasFilters ? "No toys match your filters." : "No toys yet."}
+        loadingMessage="Loading systems…"
+        emptyMessage={
+          hasFilters ? "No systems match your filters." : "No systems yet."
+        }
         onDelete={() => {}}
-        deleteLabel={(toy) => `Delete ${toy.name}`}
+        deleteLabel={(system) => `Delete ${system.name}`}
         // The leading details column only appears in mass edit mode; otherwise
-        // the whole row navigates to the toy's detail page. Both routes are the
-        // same — they just differ in affordance per mode.
+        // the whole row navigates to the system's detail page. Both routes are
+        // the same — they just differ in affordance per mode.
         onOpenDetails={
-          massEditMode ? (toy) => router.push(`/toys/${toy.id}`) : undefined
+          massEditMode
+            ? (system) => router.push(`/systems/${system.id}`)
+            : undefined
         }
-        detailsLabel={(toy) => `View ${toy.name}`}
+        detailsLabel={(system) => `View ${system.name}`}
         onRowClick={
-          massEditMode ? undefined : (toy) => router.push(`/toys/${toy.id}`)
+          massEditMode
+            ? undefined
+            : (system) => router.push(`/systems/${system.id}`)
         }
-        rowClickLabel={(toy) => `View ${toy.name}`}
+        rowClickLabel={(system) => `View ${system.name}`}
       />
 
       {creating && (
-        <ToyCreateModal
+        <SystemCreateModal
           definitions={definitions}
           saving={saving}
           onCreate={handleCreate}
