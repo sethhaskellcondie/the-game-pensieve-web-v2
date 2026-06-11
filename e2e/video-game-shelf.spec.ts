@@ -394,6 +394,47 @@ test("creates a box through the New dialog with a new game and an existing game"
   });
 });
 
+test("deletes a box from the grid after the Are-you-sure confirmation", async ({
+  page,
+}) => {
+  let deletedUrl: string | null = null;
+  await page.route("**/api/video-game-boxes/*", (route) => {
+    if (route.request().method() !== "DELETE") return route.fallback();
+    deletedUrl = route.request().url();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ status: "ok" }),
+    });
+  });
+
+  await page.goto("/video-games?view=shelf");
+  await expect(
+    page.getByText("Chrono Trigger", { exact: true }),
+  ).toBeVisible();
+
+  // The trash opens the confirmation; dismissing it deletes nothing.
+  await page.getByRole("button", { name: "Delete Chrono Trigger" }).click();
+  const menu = page.getByRole("menu", { name: "Delete Chrono Trigger?" });
+  await expect(menu.getByText("Are you sure?")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  expect(deletedUrl).toBeNull();
+  await expect(
+    page.getByText("Chrono Trigger", { exact: true }),
+  ).toBeVisible();
+
+  // Confirming removes the row and toasts.
+  await page.getByRole("button", { name: "Delete Chrono Trigger" }).click();
+  await menu.getByRole("menuitem", { name: "Delete" }).click();
+
+  await expect(page.getByText("Video game box deleted.")).toBeVisible();
+  await expect(page.getByText("Chrono Trigger", { exact: true })).toHaveCount(
+    0,
+  );
+  expect(String(deletedUrl)).toContain("/api/video-game-boxes/33");
+});
+
 test("Escape closes the stacked game dialog but not the box dialog", async ({
   page,
 }) => {

@@ -163,6 +163,9 @@ function routedFetch(url: string, init?: RequestInit) {
   if (/\/api\/video-game-boxes\/\d+$/.test(url) && method === "PUT") {
     return Promise.resolve(jsonResponse({ status: "ok", data: {} }));
   }
+  if (/\/api\/video-game-boxes\/\d+$/.test(url) && method === "DELETE") {
+    return Promise.resolve(jsonResponse({ status: "ok" }));
+  }
   if (url.includes("/api/filters/videoGameBox")) {
     return Promise.resolve(jsonResponse({ status: "ok", data: filterSpec }));
   }
@@ -276,16 +279,72 @@ describe("VideoGameBoxesManager", () => {
     expect(within(chronoRow).getAllByRole("img", { name: "No" })).toHaveLength(2);
   });
 
-  it("offers a New button but no per-row delete controls", async () => {
+  it("offers a New button and per-row delete controls", async () => {
     renderManager();
     await screen.findByText("Super Mario All-Stars");
 
     expect(screen.getByRole("button", { name: "New" })).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /^Delete / }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: "Delete Super Mario All-Stars" }),
+    ).toBeInTheDocument();
     // The filter bar is still there.
     expect(screen.getByRole("button", { name: "Add filter" })).toBeInTheDocument();
+  });
+
+  it("deletes a box after the Are-you-sure confirmation and removes its row", async () => {
+    renderManager();
+    await screen.findByText("Super Mario All-Stars");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Delete Super Mario All-Stars" }),
+    );
+
+    // Nothing is sent until the menu's Delete confirms.
+    const menu = screen.getByRole("menu", {
+      name: "Delete Super Mario All-Stars?",
+    });
+    expect(within(menu).getByText("Are you sure?")).toBeInTheDocument();
+    expect(
+      mockFetch.mock.calls.some(([, init]) => init?.method === "DELETE"),
+    ).toBe(false);
+
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Delete" }));
+
+    await waitFor(() =>
+      expect(
+        screen.queryByText("Super Mario All-Stars"),
+      ).not.toBeInTheDocument(),
+    );
+    const del = mockFetch.mock.calls.find(
+      ([, init]) => init?.method === "DELETE",
+    );
+    expect(String(del![0])).toMatch(/\/api\/video-game-boxes\/31$/);
+    expect(screen.getByText("Video game box deleted.")).toBeInTheDocument();
+  });
+
+  it("keeps the row and shows an error when the delete fails", async () => {
+    renderManager();
+    await screen.findByText("Super Mario All-Stars");
+
+    mockFetch.mockImplementation((url: string, init?: RequestInit) => {
+      if (init?.method === "DELETE") {
+        return Promise.resolve(
+          jsonResponse(
+            { status: "error", message: "boom" },
+            { ok: false, status: 502 },
+          ),
+        );
+      }
+      return routedFetch(url, init);
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Delete Super Mario All-Stars" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+
+    await screen.findByText(/Couldn't delete the video game box/);
+    expect(screen.getByText("Super Mario All-Stars")).toBeInTheDocument();
   });
 
   it("creates a box through the New dialog, POSTing the games payload and prepending the row", async () => {

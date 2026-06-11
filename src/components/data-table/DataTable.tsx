@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ChevronRightIcon, TrashIcon } from "@/components/custom-fields/icons";
 import styles from "./DataTable.module.css";
 
@@ -27,6 +27,10 @@ export type DataTableProps<Row> = {
   onDelete?: (row: Row) => void;
   // aria-label for a row's delete button.
   deleteLabel?: (row: Row) => string;
+  // When set, the trash button doesn't fire onDelete directly: it opens a
+  // small "Are you sure?" menu (the same confirmation the box detail page
+  // uses) and only the menu's Delete does.
+  confirmDelete?: boolean;
   // Omit to render no leading "open details" column at all. When present, a
   // frozen first column with a small chevron button is added.
   onOpenDetails?: (row: Row) => void;
@@ -94,6 +98,7 @@ export default function DataTable<Row>({
   loadingMessage,
   onDelete,
   deleteLabel,
+  confirmDelete,
   onOpenDetails,
   detailsLabel,
   onRowClick,
@@ -102,6 +107,35 @@ export default function DataTable<Row>({
   const [widths, setWidths] = useState<Record<string, number>>(() =>
     Object.fromEntries(columns.map((c) => [c.key, c.width])),
   );
+  // confirmDelete state: which row's "Are you sure?" menu is open, and where.
+  // The menu is position:fixed (anchored from the trash button's rect) so the
+  // table's scroll container can't clip it; like the dropdown editors, any
+  // scroll closes it rather than chasing the anchor.
+  const [confirming, setConfirming] = useState<{
+    key: string | number;
+    top: number;
+    right: number;
+  } | null>(null);
+
+  // Any click elsewhere (the menu and its trigger stop propagation), Escape,
+  // scroll, or resize dismisses the confirmation menu.
+  useEffect(() => {
+    if (!confirming) return;
+    const close = () => setConfirming(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("click", close);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [confirming]);
 
   // Drag a header's right edge to resize that column (spreadsheet feel). Each
   // column may set its own resize floor.
@@ -243,13 +277,57 @@ export default function DataTable<Row>({
                       type="button"
                       className={styles.del}
                       aria-label={deleteLabel?.(row) ?? "Delete"}
+                      aria-haspopup={confirmDelete ? "menu" : undefined}
+                      aria-expanded={
+                        confirmDelete
+                          ? confirming?.key === getRowKey(row)
+                          : undefined
+                      }
                       onClick={(e) => {
                         e.stopPropagation();
-                        onDelete(row);
+                        if (!confirmDelete) {
+                          onDelete(row);
+                          return;
+                        }
+                        const key = getRowKey(row);
+                        if (confirming?.key === key) {
+                          setConfirming(null);
+                          return;
+                        }
+                        const r = e.currentTarget.getBoundingClientRect();
+                        setConfirming({
+                          key,
+                          top: r.bottom + 7,
+                          right: window.innerWidth - r.right,
+                        });
                       }}
                     >
                       <TrashIcon />
                     </button>
+                    {confirmDelete && confirming?.key === getRowKey(row) && (
+                      <div
+                        role="menu"
+                        aria-label={`${deleteLabel?.(row) ?? "Delete"}?`}
+                        className={styles.confirm}
+                        style={{ top: confirming.top, right: confirming.right }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className={styles.confirmText}>
+                          Are you sure?
+                        </span>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className={styles.confirmDelete}
+                          onClick={() => {
+                            setConfirming(null);
+                            onDelete(row);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </td>
                 )}
                 <td className={styles.filler} />

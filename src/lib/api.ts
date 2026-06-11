@@ -538,6 +538,12 @@ export function createVideoGameBox(
   return apiPost<VideoGameBox>("/videoGameBoxes", { videoGameBox: input });
 }
 
+// Deleting a box also deletes any of its games that live in no other box
+// (games exist only through boxes).
+export function deleteVideoGameBox(id: number): Promise<void> {
+  return apiDelete(`/videoGameBoxes/${id}`);
+}
+
 // Fetch a single video game box by id. Returns null on 404 so the detail page
 // can render its own not-found state instead of throwing.
 export function getVideoGameBoxById(
