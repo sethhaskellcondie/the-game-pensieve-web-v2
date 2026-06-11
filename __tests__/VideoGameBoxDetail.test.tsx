@@ -36,13 +36,29 @@ const definitions: CustomField[] = [
   { id: 2, name: "Sealed", type: "boolean", entityKey: "videoGameBox", order: 1, options: [] },
 ];
 
+// The videoGame entity's definitions drive the read-only game chart.
+const gameDefinitions: CustomField[] = [
+  { id: 11, name: "Finished", type: "boolean", entityKey: "videoGame", order: 0, options: [] },
+  { id: 12, name: "Hours Played", type: "number", entityKey: "videoGame", order: 1, options: [] },
+];
+
 const box: VideoGameBox = {
   id: 9,
   key: "videoGameBox",
   title: "Super Mario All-Stars",
   system: systems[1],
   videoGames: [
-    { id: 71, title: "Super Mario Bros.", customFieldValues: [], createdAt: "", updatedAt: "", deletedAt: null },
+    {
+      id: 71,
+      title: "Super Mario Bros.",
+      customFieldValues: [
+        { customFieldId: 11, customFieldName: "Finished", customFieldType: "boolean", value: "true" },
+        { customFieldId: 12, customFieldName: "Hours Played", customFieldType: "number", value: "14" },
+      ],
+      createdAt: "",
+      updatedAt: "",
+      deletedAt: null,
+    },
     { id: 72, title: "Super Mario Bros. 3", customFieldValues: [], createdAt: "", updatedAt: "", deletedAt: null },
   ],
   isPhysical: true,
@@ -74,6 +90,7 @@ function renderDetail(override?: VideoGameBox) {
         <VideoGameBoxDetail
           box={override ?? box}
           definitions={definitions}
+          gameDefinitions={gameDefinitions}
           systems={systems}
         />
       </UiSettingsProvider>
@@ -141,16 +158,90 @@ describe("VideoGameBoxDetail", () => {
     ).toHaveAttribute("href", "/video-games/72");
   });
 
-  it("renders Collection as a read-only badge, not an editor", () => {
+  it("does not render the derived Collection value at all", () => {
     renderDetail();
 
-    expect(screen.getByText("Collection")).toBeInTheDocument();
-    // No toggle button — the value is a static Yes badge (the editable
-    // booleans render as buttons; the static badge is an img-role span).
+    // Collection is backend-derived and uneditable, so the Fields card omits
+    // it entirely — no label, no editor.
+    expect(screen.queryByText("Collection")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /Collection/ }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Yes" })).toBeInTheDocument();
+  });
+
+  it("renders each game's custom-field values read-only in the games chart", () => {
+    renderDetail();
+
+    const list = screen.getByRole("list", { name: "Video games" });
+    const items = within(list).getAllByRole("listitem");
+    expect(items).toHaveLength(2);
+
+    // Each row shows the box's system chip and one cell per videoGame field.
+    const [mario, mario3] = items;
+    expect(within(mario).getByText("SNES")).toBeInTheDocument();
+    expect(within(mario).getByText("Finished")).toBeInTheDocument();
+    expect(within(mario).getByRole("img", { name: "Yes" })).toBeInTheDocument();
+    expect(within(mario).getByText("Hours Played")).toBeInTheDocument();
+    expect(within(mario).getByText("14")).toBeInTheDocument();
+
+    // A game without a stored value falls back to the muted dash.
+    expect(within(mario3).getAllByText("—")).toHaveLength(2);
+
+    // Read-only: the only buttons are the per-game remove-from-box controls.
+    const buttons = within(list).getAllByRole("button");
+    expect(buttons.map((b) => b.getAttribute("aria-label"))).toEqual([
+      "Delete Super Mario Bros.",
+      "Delete Super Mario Bros. 3",
+    ]);
+  });
+
+  it("offers no delete button when the box holds a single game", () => {
+    renderDetail({ ...box, videoGames: [box.videoGames[0]] });
+
+    // The last game can't be removed from a box.
+    expect(
+      screen.queryByRole("button", { name: /^Delete / }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("deletes a game after confirming, PUTting the box without its id", async () => {
+    renderDetail();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Delete Super Mario Bros." }),
+    );
+
+    // The confirmation menu asks before anything is sent.
+    const menu = screen.getByRole("menu", { name: "Delete Super Mario Bros.?" });
+    expect(within(menu).getByText("Are you sure?")).toBeInTheDocument();
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Delete" }));
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+    expect(lastPutBody()).toMatchObject({ existingVideoGameIds: [72] });
+    // Optimistic: the row is gone and the menu closed.
+    expect(
+      screen.queryByRole("link", { name: "Super Mario Bros." }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("dismisses the confirmation menu on an outside click without deleting", () => {
+    renderDetail();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Delete Super Mario Bros." }),
+    );
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+
+    fireEvent.click(document.body);
+
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("link", { name: "Super Mario Bros." }),
+    ).toBeInTheDocument();
   });
 
   it("shows an empty message when the box has no games", () => {

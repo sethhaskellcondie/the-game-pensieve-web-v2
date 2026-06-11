@@ -1,0 +1,182 @@
+/* Box-detail-only chrome: the gap between the Fields and Video Games cards,
+   and the slim read-only game chart (modeled on
+   localFiles/Slim Video Game Display.png) — one row per game with the title,
+   a system chip, and a grid of its custom-field values. Field value
+   primitives come from CustomFieldValue. */
+
+.gamesCard {
+  margin-top: 22px;
+}
+
+.gameList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* details | delete. position:relative anchors the title's stretched-link
+   overlay, which makes the whole row navigate to the game. */
+.game {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 20px;
+  padding: 18px 22px;
+  border-bottom: 1px solid #eef1f6;
+}
+
+.game:last-of-type {
+  border-bottom: none;
+}
+
+.game:hover {
+  background: #f6faff;
+}
+
+/* ---- title + system chip ---- */
+.gameHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.gameTitle {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink-navy);
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Stretch the title link over the whole row (the delete control re-raises
+   itself above this overlay). */
+.gameTitle::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.game:hover .gameTitle {
+  color: var(--primary-600);
+  text-decoration: underline;
+}
+
+.systemChip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border: 1px solid #d3e1f8;
+  border-radius: 6px;
+  background: #e7eefc;
+  color: var(--primary-600);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.systemChip svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ---- per-game field grid ---- */
+.fieldGrid {
+  margin-top: 13px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px 22px;
+}
+
+.fieldLabel {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #aeb6c2;
+  white-space: nowrap;
+}
+
+.fieldValue {
+  margin-top: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-navy);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- remove-from-box control ---- */
+/* Sits above the row's stretched link so the button (and its confirmation
+   menu) receive the clicks. */
+.delwrap {
+  position: relative;
+  z-index: 1;
+}
+
+.trash {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--field-red-border);
+  background: var(--field-red-bg);
+  color: var(--field-red-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.13s ease, background 0.13s ease;
+}
+
+.trash:hover,
+.trash[aria-expanded="true"] {
+  border-color: var(--field-red-text);
+  background: #f8d7d3;
+}
+
+/* Small confirmation menu anchored under the trash button. */
+.confirm {
+  position: absolute;
+  top: calc(100% + 7px);
+  right: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
+  white-space: nowrap;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 16px 36px -14px rgba(var(--ink-navy-rgb), 0.35);
+}
+
+.confirmText {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-navy);
+}
+
+.confirmDelete {
+  padding: 6px 13px;
+  border: 1px solid var(--field-red-text);
+  border-radius: 8px;
+  background: var(--field-red-text);
+  color: var(--white-pure);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.13s ease;
+}
+
+.confirmDelete:hover {
+  background: #a93226;
+}

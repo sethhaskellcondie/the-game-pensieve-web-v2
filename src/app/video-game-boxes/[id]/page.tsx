@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 };
 
 // The single-box edit screen. Fetches the box, its custom-field definitions,
+// the videoGame definitions (which drive the read-only game chart's columns),
 // and the systems list (the System dropdown's options) server-side, then hands
 // them to the client VideoGameBoxDetail for inline editing.
 export default async function VideoGameBoxDetailsPage({
@@ -20,16 +21,23 @@ export default async function VideoGameBoxDetailsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [box, definitions, systems] = await Promise.all([
+  const [box, definitions, gameDefinitions, systems] = await Promise.all([
     getVideoGameBoxById(Number(id)),
     listCustomFieldsByEntity("videoGameBox"),
+    listCustomFieldsByEntity("videoGame"),
     searchSystems([]),
   ]);
 
   if (!box) notFound();
 
-  const ordered = [...definitions].sort((a, b) => a.order - b.order);
+  const byOrder = (a: { order: number }, b: { order: number }) =>
+    a.order - b.order;
   return (
-    <VideoGameBoxDetail box={box} definitions={ordered} systems={systems} />
+    <VideoGameBoxDetail
+      box={box}
+      definitions={[...definitions].sort(byOrder)}
+      gameDefinitions={[...gameDefinitions].sort(byOrder)}
+      systems={systems}
+    />
   );
 }

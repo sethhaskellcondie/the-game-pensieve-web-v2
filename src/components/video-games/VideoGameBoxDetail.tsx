@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type {
   CustomField,
@@ -13,9 +13,8 @@ import type {
 } from "@/lib/api";
 import Header from "@/components/Header";
 import Button from "@/components/Button";
-import BooleanBadge from "@/components/BooleanBadge";
-import { VideoGameBoxIcon } from "@/components/icons";
-import { ChevronLeftIcon } from "@/components/custom-fields/icons";
+import { SystemsIcon, VideoGameBoxIcon } from "@/components/icons";
+import { ChevronLeftIcon, TrashIcon } from "@/components/custom-fields/icons";
 import {
   FIELD_TYPE_META,
   KindGlyph,
@@ -23,11 +22,13 @@ import {
   StandardFieldGlyph,
 } from "@/components/custom-fields/registry";
 import { useToast } from "@/components/ToastProvider";
+// Aliased: CustomFieldValue (the type) is already imported from the API types.
+import CustomFieldValueDisplay from "@/components/toys/CustomFieldValue";
 import FieldEditor, {
   normalizeFieldValue,
 } from "@/components/toys/toyFieldEditors";
 import styles from "@/components/toys/ToyDetail.module.css";
-import localStyles from "./VideoGameDetail.module.css";
+import localStyles from "./VideoGameBoxDetail.module.css";
 
 // One rendered field — the same Row shape VideoGameDetail uses, so a single
 // row renderer drives the standard rows and the custom fields alike.
@@ -44,14 +45,37 @@ type Row = {
 export default function VideoGameBoxDetail({
   box: initialBox,
   definitions,
+  gameDefinitions,
   systems,
 }: {
   box: VideoGameBox;
   definitions: CustomField[];
+  // The videoGame entity's custom-field definitions — they drive the columns
+  // of the read-only game chart (and provide the options needed to render
+  // dropdown/radio/progress values).
+  gameDefinitions: CustomField[];
   systems: System[];
 }) {
   const { showToast, showSnackbar } = useToast();
   const [box, setBox] = useState<VideoGameBox>(initialBox);
+  // The game whose delete confirmation menu is open, if any.
+  const [confirmingGameId, setConfirmingGameId] = useState<number | null>(null);
+
+  // Any click elsewhere (the menu and its trigger stop propagation) or Escape
+  // dismisses the confirmation menu.
+  useEffect(() => {
+    if (confirmingGameId === null) return;
+    const close = () => setConfirmingGameId(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("click", close);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [confirmingGameId]);
 
   // Optimistically apply `next`, then persist the whole box — the backend's
   // VideoGameBoxRequest requires every field, so the box's current game ids
@@ -142,6 +166,18 @@ export default function VideoGameBoxDetail({
     void persist({ ...box, customFieldValues });
   };
 
+  // Removing a game from the box drops its id from the PUT's
+  // existingVideoGameIds (the backend deletes games that no longer belong to
+  // any box). The last game can't be removed — a box must hold at least one —
+  // so the trash button only renders when the box has more than one game.
+  const removeGame = (id: number) => {
+    setConfirmingGameId(null);
+    void persist({
+      ...box,
+      videoGames: box.videoGames.filter((g) => g.id !== id),
+    });
+  };
+
   // The System row borrows the dropdown editor, with the systems list as its
   // options (committed by name, mapped back to a systemId on persist).
   const systemOptions: CustomFieldOption[] = systems.map((s, i) => ({
@@ -153,9 +189,9 @@ export default function VideoGameBoxDetail({
   }));
 
   // Title + System + Physical first, then the custom fields in their defined
-  // order. Collection is rendered separately below — it's backend-derived
-  // (a box becomes a collection by holding multiple games), so it gets a
-  // read-only badge instead of an editor.
+  // order. Collection is deliberately absent — it's backend-derived (a box
+  // becomes a collection by holding multiple games), so it can't be edited
+  // and doesn't belong among the editors.
   const rows: Row[] = [
     { key: "title", name: "Title", kind: "text", value: box.title, standard: true, onCommit: commitTitle },
     { key: "system", name: "System", kind: "dropdown", value: box.system?.name ?? "", options: systemOptions, standard: true, onCommit: commitSystem },
@@ -240,34 +276,15 @@ export default function VideoGameBoxDetail({
                 </div>
               );
             })}
-
-            {/* Collection is derived by the backend from the box's game count,
-                so it shows a static badge rather than an editor. */}
-            <div className={styles.row}>
-              <div className={styles.rowlabel}>
-                <span
-                  className={styles.glyph}
-                  style={{
-                    background: STANDARD_FIELD_META.bg,
-                    color: STANDARD_FIELD_META.fg,
-                  }}
-                >
-                  <StandardFieldGlyph size={15} />
-                </span>
-                <span className={styles.lblwrap}>
-                  <div className={styles.lbl}>Collection</div>
-                  <div className={styles.lblkind}>Derived</div>
-                </span>
-              </div>
-              <div className={styles.rowval}>
-                <BooleanBadge value={box.isCollection} />
-              </div>
-            </div>
           </div>
 
-          {/* The games inside this box, each linking to its detail page. The
-              membership itself is read-only here for now. */}
-          <div className={styles.card}>
+          {/* The games inside this box as a slim read-only chart: title, the
+              box's system chip, and one cell per videoGame custom field. The
+              whole row links to the game's detail page (the title is the
+              anchor, stretched over the row via CSS); the trash button sits
+              above the overlay. Games are edited on their own detail pages,
+              not here. */}
+          <div className={`${styles.card} ${localStyles.gamesCard}`}>
             <div className={styles.caphdr}>
               <span className={styles.caphdrTitle}>Video Games</span>
               <span className={styles.caphdrCount}>
@@ -279,15 +296,84 @@ export default function VideoGameBoxDetail({
                 <span className={styles.vText}>No games yet.</span>
               </div>
             ) : (
-              <ul aria-label="Video games" className={localStyles.boxList}>
+              <ul aria-label="Video games" className={localStyles.gameList}>
                 {games.map((game) => (
-                  <li className={styles.row} key={game.id}>
-                    <Link
-                      href={`/video-games/${game.id}`}
-                      className={styles.vText}
-                    >
-                      {game.title}
-                    </Link>
+                  <li className={localStyles.game} key={game.id}>
+                    <div>
+                      <div className={localStyles.gameHead}>
+                        <Link
+                          href={`/video-games/${game.id}`}
+                          className={localStyles.gameTitle}
+                        >
+                          {game.title}
+                        </Link>
+                        <span className={localStyles.systemChip}>
+                          <SystemsIcon aria-hidden="true" />
+                          {box.system?.name}
+                        </span>
+                      </div>
+
+                      <div className={localStyles.fieldGrid}>
+                        {gameDefinitions.map((def) => (
+                          <div key={def.id}>
+                            <div className={localStyles.fieldLabel}>
+                              {def.name}
+                            </div>
+                            <div className={localStyles.fieldValue}>
+                              <CustomFieldValueDisplay
+                                type={def.type}
+                                value={
+                                  game.customFieldValues.find(
+                                    (v) => v.customFieldId === def.id,
+                                  )?.value
+                                }
+                                options={def.options}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {games.length > 1 && (
+                      <div className={localStyles.delwrap}>
+                        <button
+                          type="button"
+                          className={localStyles.trash}
+                          aria-label={`Delete ${game.title}`}
+                          aria-haspopup="menu"
+                          aria-expanded={confirmingGameId === game.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmingGameId((cur) =>
+                              cur === game.id ? null : game.id,
+                            );
+                          }}
+                        >
+                          <TrashIcon />
+                        </button>
+                        {confirmingGameId === game.id && (
+                          <div
+                            role="menu"
+                            aria-label={`Delete ${game.title}?`}
+                            className={localStyles.confirm}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span className={localStyles.confirmText}>
+                              Are you sure?
+                            </span>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className={localStyles.confirmDelete}
+                              onClick={() => removeGame(game.id)}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>

@@ -287,8 +287,8 @@ test("the box detail page shows the Fields and Video Games cards and links back 
   await expect(page.getByRole("button", { name: "Edit Title" })).toBeVisible();
   await expect(page.getByRole("button", { name: "System" })).toBeVisible();
   await expect(page.getByRole("button", { name: /^Physical: / })).toBeVisible();
-  // Collection is derived, so it renders as a static badge, not a toggle.
-  await expect(page.getByText("Collection", { exact: true })).toBeVisible();
+  // Collection is derived and uneditable, so the Fields card omits it.
+  await expect(page.getByText("Collection", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^Collection/ })).toHaveCount(0);
   // Scoped to main: the sidebar also has a "Video Games" link.
   await expect(
