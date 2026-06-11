@@ -375,6 +375,13 @@
   gap: 8px;
 }
 
+/* In the detail/create card (a field row, not a grid cell) there's room to wrap,
+   so the radio/progress options flow onto multiple lines instead of clipping at
+   the card's edge. */
+.rowval .vRadios {
+  flex-wrap: wrap;
+}
+
 .vRadio {
   display: inline-flex;
   align-items: center;

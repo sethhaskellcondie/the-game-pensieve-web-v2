@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { updateUiSettings } from "@/lib/uiSettings";
+import { loadUiSettings, updateUiSettings } from "@/lib/uiSettings";
 import type { UiSettings } from "@/lib/uiSettings.types";
+
+// Returns the current settings. loadUiSettings never throws (it falls back to
+// defaults), so this always answers with a usable settings object.
+export async function GET() {
+  const settings = await loadUiSettings();
+  return NextResponse.json(settings);
+}
 
 export async function POST(request: NextRequest) {
   try {

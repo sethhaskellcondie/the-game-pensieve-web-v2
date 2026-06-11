@@ -304,11 +304,12 @@ export default function ToysManager() {
     [showToast, showSnackbar],
   );
 
-  // Create a toy from the dialog: POST it, then prepend the saved toy (with its
-  // backend-assigned id) to the list and close the dialog. On failure the dialog
-  // stays open so the user can retry without re-entering their input.
+  // Create a toy from the dialog: POST it and prepend the saved toy (with its
+  // backend-assigned id) to the list. Returns whether it succeeded; the dialog
+  // decides what to do next (close, or reset for another entry in mass-input
+  // mode). On failure it stays open so the user can retry without re-entering.
   const handleCreate = useCallback(
-    async (input: UpdateToyInput) => {
+    async (input: UpdateToyInput): Promise<boolean> => {
       setSaving(true);
       try {
         const res = await fetch("/api/toys", {
@@ -318,8 +319,8 @@ export default function ToysManager() {
         });
         const created = await readJson<Toy>(res);
         setToys((ts) => [created, ...ts]);
-        setCreating(false);
         showToast({ message: "Toy created.", variant: "success" });
+        return true;
       } catch (error) {
         console.error("Create toy failed", error);
         showSnackbar({
@@ -329,6 +330,7 @@ export default function ToysManager() {
               : "Couldn't create the toy. Please try again.",
           variant: "error",
         });
+        return false;
       } finally {
         setSaving(false);
       }

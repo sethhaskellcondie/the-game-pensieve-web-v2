@@ -86,12 +86,11 @@
   color: var(--cannon-red);
 }
 
-/* Buttons sit in the bottom left (per the request), so the footer left-aligns
-   rather than stretching the buttons full width. */
+/* Buttons sit in the bottom right, sized to content rather than stretched. */
 .foot {
   display: flex;
   gap: 10px;
-  justify-content: flex-start;
+  justify-content: flex-end;
   margin-top: 20px;
 }
 

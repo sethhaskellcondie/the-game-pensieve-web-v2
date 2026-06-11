@@ -76,7 +76,20 @@ async function stubToys(page: Page) {
   );
 }
 
+// The mass-edit/mass-input modes change how the grid and create dialog render,
+// and they're loaded server-side in the layout — so page.route can't stub them.
+// These specs all assume the normal (non-mass) UI, so pin both off (the default);
+// the mass-mode behaviors are covered deterministically by the ToysManager and
+// ToyCreateModal unit tests. Other settings are read back and preserved.
+async function pinNormalMode(page: Page) {
+  const current = await (await page.request.get("/api/ui-settings")).json();
+  await page.request.post("/api/ui-settings", {
+    data: { ...current, massInputMode: false, massEditMode: false },
+  });
+}
+
 test.beforeEach(async ({ page }) => {
+  await pinNormalMode(page);
   await stubToys(page);
 });
 
@@ -275,6 +288,47 @@ test("auto-opens a dropdown field's menu on focus", async ({ page }) => {
   await expect(
     dialog.getByRole("listbox", { name: "Condition" }),
   ).toBeVisible();
+});
+
+test("radio/progress options wrap within the create dialog", async ({ page }) => {
+  await page.route("**/api/custom-fields/entity/toy", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        status: "ok",
+        data: [
+          {
+            id: 30,
+            name: "Condition",
+            type: "radio_button",
+            entityKey: "toy",
+            order: 0,
+            options: [
+              { id: 1, customFieldId: 30, name: "Brand New In Box", isDefault: true, order: 0 },
+              { id: 2, customFieldId: 30, name: "Lightly Played", isDefault: false, order: 1 },
+              { id: 3, customFieldId: 30, name: "Moderately Worn", isDefault: false, order: 2 },
+              { id: 4, customFieldId: 30, name: "Heavily Damaged", isDefault: false, order: 3 },
+              { id: 5, customFieldId: 30, name: "For Parts Only", isDefault: false, order: 4 },
+            ],
+          },
+        ],
+      }),
+    }),
+  );
+
+  await page.goto("/toys");
+  await page.getByRole("button", { name: "New" }).click();
+  const dialog = page.getByRole("dialog", { name: "Create Toy" });
+
+  // The option chips are allowed to wrap onto multiple lines in the card rather
+  // than clipping at its edge.
+  const group = dialog.getByRole("radiogroup", { name: "Condition" });
+  await expect(group).toBeVisible();
+  const flexWrap = await group.evaluate(
+    (el) => getComputedStyle(el).flexWrap,
+  );
+  expect(flexWrap).toBe("wrap");
 });
 
 test("closes the New dialog without creating on Cancel", async ({ page }) => {

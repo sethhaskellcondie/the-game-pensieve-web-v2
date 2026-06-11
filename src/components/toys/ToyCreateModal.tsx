@@ -15,6 +15,7 @@ import {
   StandardFieldGlyph,
 } from "@/components/custom-fields/registry";
 import { XIcon } from "@/components/custom-fields/icons";
+import { useUiSettings } from "@/components/UiSettingsProvider";
 import FieldEditor from "./toyFieldEditors";
 import rowStyles from "./ToyDetail.module.css";
 import styles from "./ToyCreateModal.module.css";
@@ -51,7 +52,9 @@ function getFocusable(root: HTMLElement | null): HTMLElement[] {
 type ToyCreateModalProps = {
   definitions: CustomField[];
   saving: boolean;
-  onCreate: (input: UpdateToyInput) => void;
+  // Persists the toy and resolves to whether it succeeded, so the dialog can
+  // close (normal) or reset for another entry (mass-input mode) accordingly.
+  onCreate: (input: UpdateToyInput) => Promise<boolean>;
   onClose: () => void;
 };
 
@@ -61,24 +64,47 @@ export default function ToyCreateModal({
   onCreate,
   onClose,
 }: ToyCreateModalProps) {
-  const [name, setName] = useState("");
-  const [set, setSet] = useState("");
-  // Custom-field values keyed by customFieldId. Option fields start on their
-  // configured default; everything else starts empty.
-  const [values, setValues] = useState<Record<number, string>>(() => {
+  // Mass-input mode turns the dialog into a rapid data-entry loop: the button
+  // becomes "Create And Add Another", each save clears the form and refocuses
+  // Name, and the dialog only closes via the X (no Escape, backdrop, or Cancel).
+  const { settings } = useUiSettings();
+  const massInputMode = settings.massInputMode;
+
+  // Option fields start on their configured default; everything else empty.
+  // Shared by the initial state and the post-save reset.
+  function makeInitialValues(): Record<number, string> {
     const initial: Record<number, string> = {};
     for (const def of definitions) initial[def.id] = defaultValue(def);
     return initial;
-  });
+  }
+
+  const [name, setName] = useState("");
+  const [set, setSet] = useState("");
+  const [values, setValues] = useState<Record<number, string>>(makeInitialValues);
+  // Bumped after each mass-input save to drive the "refocus Name" effect.
+  const [entryNonce, setEntryNonce] = useState(0);
   const modalRef = useRef<HTMLDivElement>(null);
+  const nameCellRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // In mass-input mode the dialog only exits via a deliberate click (X or
+    // Cancel), so the accidental-prone Escape shortcut is inert.
+    if (massInputMode) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, [onClose, massInputMode]);
+
+  // After a mass-input save, focus the (now blank) Name field — focusing its
+  // editor opens it ready to type. Skipped on first mount, which focuses the X.
+  useEffect(() => {
+    if (entryNonce === 0) return;
+    nameCellRef.current
+      ?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
+      ?.focus();
+  }, [entryNonce]);
 
   // Move focus into the dialog on open so a keyboard user starts inside it, and
   // return it to whatever opened the dialog (the New button) when it closes.
@@ -143,7 +169,7 @@ export default function ToyCreateModal({
     }),
   ];
 
-  const submit = () => {
+  const submit = async () => {
     if (!canCreate) return;
     // Only fields with a non-empty value become CustomFieldValue entries, in the
     // same shape ToyDetail/ToysManager send.
@@ -155,11 +181,30 @@ export default function ToyCreateModal({
         customFieldType: def.type,
         value: values[def.id],
       }));
-    onCreate({ name: name.trim(), set: set.trim(), customFieldValues });
+    const ok = await onCreate({
+      name: name.trim(),
+      set: set.trim(),
+      customFieldValues,
+    });
+    // Keep the form (and the user's input) on failure so they can retry.
+    if (!ok) return;
+    if (massInputMode) {
+      // Clear the form for the next entry; the entryNonce effect refocuses Name.
+      setName("");
+      setSet("");
+      setValues(makeInitialValues());
+      setEntryNonce((n) => n + 1);
+    } else {
+      onClose();
+    }
   };
 
   return (
-    <div className={styles.backdrop} onMouseDown={onClose}>
+    <div
+      className={styles.backdrop}
+      // Mass-input mode disables accidental backdrop-to-close; exit via X/Cancel.
+      onMouseDown={massInputMode ? undefined : onClose}
+    >
       <div
         ref={modalRef}
         className={styles.modal}
@@ -206,7 +251,10 @@ export default function ToyCreateModal({
                     <div className={rowStyles.lblkind}>{meta.label}</div>
                   </span>
                 </div>
-                <div className={rowStyles.rowval}>
+                <div
+                  className={rowStyles.rowval}
+                  ref={row.key === "name" ? nameCellRef : undefined}
+                >
                   <FieldEditor
                     field={{
                       name: row.name,
@@ -233,7 +281,11 @@ export default function ToyCreateModal({
             disabled={!canCreate}
             onClick={submit}
           >
-            {saving ? "Creating…" : "Create"}
+            {saving
+              ? "Creating…"
+              : massInputMode
+                ? "Create And Add Another"
+                : "Create"}
           </button>
         </div>
       </div>
