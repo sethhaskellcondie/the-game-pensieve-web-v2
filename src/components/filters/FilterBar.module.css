@@ -1,12 +1,34 @@
-/* The filter bar sits below the page toolbar: a quick-search box, the applied
-   filter chips, and the add control, wrapping onto multiple lines as needed. */
+/* The filter bar lives in the page header row, between the toy count and the
+   New button. Applied-filter chips come first (filling the space after the
+   count); the search box and filter button are pushed to the right. */
 
 .bar {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* The chips region: takes the space between the count and the controls, and
+   wraps its chips onto extra lines without displacing the controls. Uses a 0
+   flex-basis so its width is the available space (not its content), keeping the
+   per-row chip count stable as more chips are added. */
+.chips {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  margin-bottom: 16px;
+}
+
+/* Search box + filter button, pinned to the right edge of the bar. */
+.controls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 /* Search box: a rounded input with a leading magnifier (matches the previous

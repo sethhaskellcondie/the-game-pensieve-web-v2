@@ -5,6 +5,8 @@ import { PlusIcon } from "@/components/custom-fields/icons";
 import { FilterIcon, SearchIcon } from "@/components/toys/icons";
 import FilterChip from "./FilterChip";
 import FilterEditor from "./FilterEditor";
+import { searchField } from "./fieldList";
+import { newFilterId } from "./ids";
 import type { ActiveFilter, EntityKey, FilterFieldDef } from "./types";
 import styles from "./FilterBar.module.css";
 
@@ -57,70 +59,103 @@ export default function FilterBar({
     onChange(filters.filter((f) => f.id !== id));
   };
 
+  // Enter in the search box turns the typed text into a "name contains" chip and
+  // clears the box, so a quick search becomes an explicit, editable filter.
+  const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return;
+    const text = searchValue.trim();
+    const sf = searchField(fields);
+    if (text === "" || !sf) return;
+    e.preventDefault();
+    onChange([
+      ...filters,
+      {
+        id: newFilterId(),
+        field: sf.field,
+        label: sf.label,
+        kind: "text",
+        operator: "contains",
+        operand: text,
+      },
+    ]);
+    onSearchChange("");
+  };
+
   const hasFields = fields.length > 0;
 
   return (
     <div className={styles.bar}>
-      <div className={styles.search}>
-        <SearchIcon className={styles.searchIcon} aria-hidden="true" />
-        <input
-          type="search"
-          className={styles.searchInput}
-          placeholder={searchPlaceholder}
-          aria-label={searchAriaLabel}
-          value={searchValue}
-          onChange={(e) => onSearchChange(e.target.value)}
-        />
+      {/* Chips fill the space after the toy count, wrapping among themselves
+          without pushing the search/filter controls off their line. */}
+      <div className={styles.chips}>
+        {filters.map((filter) => (
+          <span className={styles.anchor} key={filter.id}>
+            <FilterChip
+              filter={filter}
+              fieldSource={sourceOf(filter.field)}
+              onEdit={() => setEdit({ mode: "edit", filter })}
+              onRemove={() => remove(filter.id)}
+            />
+            {edit.mode === "edit" && edit.filter.id === filter.id && (
+              <FilterEditor
+                fields={fields}
+                initial={edit.filter}
+                onApply={applyEdit}
+                onCancel={() => setEdit({ mode: "closed" })}
+              />
+            )}
+          </span>
+        ))}
       </div>
 
-      {filters.map((filter) => (
-        <span className={styles.anchor} key={filter.id}>
-          <FilterChip
-            filter={filter}
-            fieldSource={sourceOf(filter.field)}
-            onEdit={() => setEdit({ mode: "edit", filter })}
-            onRemove={() => remove(filter.id)}
+      {/* Search + filter button are pinned to the right (before the New button). */}
+      <div className={styles.controls}>
+        <div className={styles.search}>
+          <SearchIcon className={styles.searchIcon} aria-hidden="true" />
+          <input
+            type="search"
+            className={styles.searchInput}
+            placeholder={searchPlaceholder}
+            aria-label={searchAriaLabel}
+            value={searchValue}
+            onChange={(e) => onSearchChange(e.target.value)}
+            onKeyDown={onSearchKeyDown}
           />
-          {edit.mode === "edit" && edit.filter.id === filter.id && (
+        </div>
+
+        <span className={styles.anchor}>
+          <button
+            type="button"
+            className={styles.addBtn}
+            disabled={!hasFields}
+            aria-label="Add filter"
+            aria-expanded={edit.mode === "add"}
+            onClick={() =>
+              setEdit((e) =>
+                e.mode === "add" ? { mode: "closed" } : { mode: "add" },
+              )
+            }
+          >
+            {filters.length === 0 ? (
+              <>
+                <FilterIcon /> Filter
+              </>
+            ) : (
+              <>
+                <PlusIcon /> Add filter
+              </>
+            )}
+          </button>
+          {edit.mode === "add" && (
             <FilterEditor
               fields={fields}
-              initial={edit.filter}
-              onApply={applyEdit}
+              align="right"
+              onApply={applyAdd}
               onCancel={() => setEdit({ mode: "closed" })}
             />
           )}
         </span>
-      ))}
-
-      <span className={styles.anchor}>
-        <button
-          type="button"
-          className={styles.addBtn}
-          disabled={!hasFields}
-          aria-label="Add filter"
-          aria-expanded={edit.mode === "add"}
-          onClick={() =>
-            setEdit((e) => (e.mode === "add" ? { mode: "closed" } : { mode: "add" }))
-          }
-        >
-          {filters.length === 0 ? (
-            <>
-              <FilterIcon /> Filter
-            </>
-          ) : (
-            <>
-              <PlusIcon /> Add filter
-            </>
-          )}
-        </button>
-        {edit.mode === "add" && (
-          <FilterEditor
-            fields={fields}
-            onApply={applyAdd}
-            onCancel={() => setEdit({ mode: "closed" })}
-          />
-        )}
-      </span>
+      </div>
     </div>
   );
 }

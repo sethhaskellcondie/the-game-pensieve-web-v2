@@ -21,7 +21,7 @@ import { useUiSettings } from "@/components/UiSettingsProvider";
 import { PlusIcon } from "@/components/custom-fields/icons";
 import FilterBar from "@/components/filters/FilterBar";
 import { buildFieldList } from "@/components/filters/fieldList";
-import { effectiveFilters, toFilterRequest } from "@/components/filters/serialize";
+import { toFilterRequest } from "@/components/filters/serialize";
 import type { ActiveFilter } from "@/components/filters/types";
 import CustomFieldValue from "./CustomFieldValue";
 import FieldEditor, { normalizeFieldValue } from "./toyFieldEditors";
@@ -223,18 +223,12 @@ export default function ToysManager() {
     };
   }, [showSnackbar]);
 
-  // Keep the latest field list in a ref so the search effect can read it without
-  // re-running when it loads (it changes exactly once, after mount).
-  const fieldDefsRef = useRef(fieldDefs);
-  useEffect(() => {
-    fieldDefsRef.current = fieldDefs;
-  }, [fieldDefs]);
-
-  // Re-run the server search whenever the chips or search text change. Debounced
-  // so rapid typing/edits coalesce, abortable so an in-flight request is
-  // cancelled, and seq-guarded so only the newest response is committed
-  // (last-write-wins). The initial load is handled by the mount effect, so the
-  // first run here (before any user change) is skipped.
+  // Re-run the server search whenever the filter chips change. Debounced so
+  // rapid edits coalesce, abortable so an in-flight request is cancelled, and
+  // seq-guarded so only the newest response is committed (last-write-wins). The
+  // initial load is handled by the mount effect, so the first run here (before
+  // any user change) is skipped. The search box doesn't filter live — it adds a
+  // name-contains chip on Enter, which flows through here.
   const didSearch = useRef(false);
   const searchSeq = useRef(0);
   useEffect(() => {
@@ -244,10 +238,7 @@ export default function ToysManager() {
     }
     const controller = new AbortController();
     const seq = ++searchSeq.current;
-    const dto = toFilterRequest(
-      "toy",
-      effectiveFilters(query, filters, fieldDefsRef.current),
-    );
+    const dto = toFilterRequest("toy", filters);
     const timer = setTimeout(() => {
       searchToysClient(dto, controller.signal)
         .then((rows) => {
@@ -263,7 +254,7 @@ export default function ToysManager() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [query, filters, showSnackbar]);
+  }, [filters, showSnackbar]);
 
   const startEdit = useCallback((toy: Toy, field: EditField) => {
     setEditing({ id: toy.id, field });
@@ -505,7 +496,7 @@ export default function ToysManager() {
     commitFieldValue,
   ]);
 
-  const hasQuery = query.trim().length > 0 || filters.length > 0;
+  const hasFilters = filters.length > 0;
 
   return (
     <div className={styles.page}>
@@ -518,6 +509,16 @@ export default function ToysManager() {
             </div>
           )}
         </div>
+        <FilterBar
+          entityKey="toy"
+          fields={fieldDefs}
+          filters={filters}
+          onChange={setFilters}
+          searchValue={query}
+          onSearchChange={setQuery}
+          searchPlaceholder="Search toys…"
+          searchAriaLabel="Search toys"
+        />
         <div className={styles.actions}>
           <Button className={styles.newBtn} onClick={() => setCreating(true)}>
             <PlusIcon /> New
@@ -525,24 +526,13 @@ export default function ToysManager() {
         </div>
       </div>
 
-      <FilterBar
-        entityKey="toy"
-        fields={fieldDefs}
-        filters={filters}
-        onChange={setFilters}
-        searchValue={query}
-        onSearchChange={setQuery}
-        searchPlaceholder="Search toys…"
-        searchAriaLabel="Search toys"
-      />
-
       <DataTable
         columns={columns}
         rows={toys}
         getRowKey={(toy) => toy.id}
         loading={loading}
         loadingMessage="Loading toys…"
-        emptyMessage={hasQuery ? "No toys match your filters." : "No toys yet."}
+        emptyMessage={hasFilters ? "No toys match your filters." : "No toys yet."}
         onDelete={() => {}}
         deleteLabel={(toy) => `Delete ${toy.name}`}
         // The leading details column only appears in mass edit mode; otherwise

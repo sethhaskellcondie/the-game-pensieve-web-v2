@@ -5,17 +5,9 @@ import { operatorLabel } from "./operators";
 import Listbox from "./Listbox";
 import FieldGlyph from "./FieldGlyph";
 import FilterValueInput from "./FilterValueInput";
+import { newFilterId } from "./ids";
 import type { ActiveFilter, FilterFieldDef, FilterOperator } from "./types";
 import styles from "./FilterEditor.module.css";
-
-// A locally-unique id for a new filter. Prefers crypto.randomUUID (browsers and
-// modern Node/jsdom), falling back to a timestamp+random string.
-function newId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `f-${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-}
 
 // The default operand for a freshly-picked field so a chip is never created
 // empty: booleans start "true", option fields start on their default (or first)
@@ -36,11 +28,15 @@ function defaultOperand(field: FilterFieldDef): string {
 export default function FilterEditor({
   fields,
   initial,
+  align = "left",
   onApply,
   onCancel,
 }: {
   fields: FilterFieldDef[];
   initial?: ActiveFilter;
+  // Which edge of the anchor the popover aligns to. The add button sits on the
+  // right of the bar, so its editor opens right-aligned to stay on screen.
+  align?: "left" | "right";
   onApply: (filter: ActiveFilter) => void;
   onCancel: () => void;
 }) {
@@ -98,7 +94,7 @@ export default function FilterEditor({
   const apply = () => {
     if (!field || !canApply) return;
     onApply({
-      id: initial?.id ?? newId(),
+      id: initial?.id ?? newFilterId(),
       field: field.field,
       label: field.label,
       kind: field.kind,
@@ -121,7 +117,7 @@ export default function FilterEditor({
   return (
     <div
       ref={panelRef}
-      className={styles.popover}
+      className={`${styles.popover}${align === "right" ? ` ${styles.alignRight}` : ""}`}
       role="dialog"
       aria-label={initial ? "Edit filter" : "Add filter"}
     >

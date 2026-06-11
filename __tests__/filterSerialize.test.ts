@@ -1,22 +1,5 @@
-import {
-  SEARCH_FILTER_ID,
-  effectiveFilters,
-  toFilterRequest,
-} from "@/components/filters/serialize";
-import { buildFieldList } from "@/components/filters/fieldList";
+import { toFilterRequest } from "@/components/filters/serialize";
 import type { ActiveFilter } from "@/components/filters/types";
-import type { FilterSpecification } from "@/lib/api";
-
-const spec: FilterSpecification = {
-  type: "toy",
-  fields: { name: "text", set: "text", created_at: "time" },
-  filters: {
-    name: ["contains"],
-    set: ["equals"],
-    created_at: ["since", "before"],
-  },
-};
-const fields = buildFieldList(spec, []);
 
 function filter(partial: Partial<ActiveFilter>): ActiveFilter {
   return {
@@ -58,38 +41,5 @@ describe("toFilterRequest", () => {
   it("trims operands", () => {
     const dto = toFilterRequest("toy", [filter({ operand: "  Mario  " })]);
     expect(dto[0].operand).toBe("Mario");
-  });
-});
-
-describe("effectiveFilters", () => {
-  it("returns the chips unchanged when the query is empty", () => {
-    const chips = [filter({})];
-    expect(effectiveFilters("   ", chips, fields)).toBe(chips);
-  });
-
-  it("appends a name-contains filter for the search text", () => {
-    const result = effectiveFilters("mario", [], fields);
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({
-      id: SEARCH_FILTER_ID,
-      field: "name",
-      operator: "contains",
-      operand: "mario",
-    });
-  });
-
-  it("suppresses the search filter when an explicit name chip exists", () => {
-    const nameChip = filter({ field: "name", operand: "R2" });
-    const result = effectiveFilters("mario", [nameChip], fields);
-    expect(result).toEqual([nameChip]);
-  });
-
-  it("returns chips unchanged when there is no searchable text field", () => {
-    const noText = buildFieldList(
-      { type: "toy", fields: { created_at: "time" }, filters: { created_at: ["since"] } },
-      [],
-    );
-    const chips = [filter({})];
-    expect(effectiveFilters("mario", chips, noText)).toBe(chips);
   });
 });

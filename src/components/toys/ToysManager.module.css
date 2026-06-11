@@ -11,8 +11,8 @@
 
 .head {
   display: flex;
-  align-items: flex-end;
-  gap: 18px;
+  align-items: center;
+  gap: 14px;
   margin-bottom: 18px;
 }
 
@@ -96,7 +96,7 @@
 }
 
 .actions {
-  margin-left: auto;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 10px;

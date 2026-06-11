@@ -175,11 +175,17 @@ test("renders boolean values as Yes/No markers", async ({ page }) => {
   await expect(page.getByRole("img", { name: "No" })).toBeVisible();
 });
 
-test("filters the rows via the search box", async ({ page }) => {
+test("filters the rows via the search box on Enter", async ({ page }) => {
   await page.goto("/toys");
   await expect(page.getByText("R2-D2", { exact: true })).toBeVisible();
 
-  await page.getByRole("searchbox", { name: "Search toys" }).fill("pika");
+  const box = page.getByRole("searchbox", { name: "Search toys" });
+  await box.fill("pika");
+  await box.press("Enter");
+
+  // The text becomes a name-contains chip and the box clears.
+  await expect(page.getByRole("button", { name: "Edit Name filter" })).toBeVisible();
+  await expect(box).toHaveValue("");
 
   await expect(page.getByText("Pikachu", { exact: true })).toBeVisible();
   await expect(page.getByText("R2-D2", { exact: true })).toHaveCount(0);

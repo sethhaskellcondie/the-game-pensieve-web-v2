@@ -6,6 +6,16 @@
   top: calc(100% + 8px);
   left: 0;
   z-index: 65;
+}
+
+/* Right-aligned variant: grows leftward from the anchor's right edge so the
+   wide editor stays on screen when its trigger is near the right. */
+.alignRight {
+  left: auto;
+  right: 0;
+}
+
+.popover {
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 12px;

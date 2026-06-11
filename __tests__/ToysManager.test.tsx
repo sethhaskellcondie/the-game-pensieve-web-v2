@@ -209,15 +209,23 @@ describe("ToysManager", () => {
     expect(screen.getByRole("img", { name: "No" })).toBeInTheDocument();
   });
 
-  it("filters the rows and count via a server search as you type", async () => {
+  it("commits a name-contains chip on Enter, clears the box, and re-runs the search", async () => {
     renderManager();
     await screen.findByText("R2-D2");
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Search toys" }), {
-      target: { value: "pika" },
-    });
+    const box = screen.getByRole("searchbox", {
+      name: "Search toys",
+    }) as HTMLInputElement;
+    fireEvent.change(box, { target: { value: "pika" } });
+    fireEvent.keyDown(box, { key: "Enter" });
 
-    // The search is debounced + server-side, so the rows update asynchronously.
+    // A chip appears and the box is cleared.
+    expect(
+      screen.getByRole("button", { name: "Edit Name filter" }),
+    ).toBeInTheDocument();
+    expect(box.value).toBe("");
+
+    // The chip drives a debounced server search down to the match.
     await waitFor(() =>
       expect(screen.queryByText("R2-D2")).not.toBeInTheDocument(),
     );
@@ -226,7 +234,6 @@ describe("ToysManager", () => {
       screen.getByRole("heading", { level: 2, name: "1 Toy" }),
     ).toBeInTheDocument();
 
-    // The folded search filter went to the search endpoint as a name-contains.
     const search = mockFetch.mock.calls.find(
       ([url, init]) =>
         url.includes("/api/toys/search") && init?.method === "POST",
@@ -238,9 +245,9 @@ describe("ToysManager", () => {
     renderManager();
     await screen.findByText("R2-D2");
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Search toys" }), {
-      target: { value: "zzz" },
-    });
+    const box = screen.getByRole("searchbox", { name: "Search toys" });
+    fireEvent.change(box, { target: { value: "zzz" } });
+    fireEvent.keyDown(box, { key: "Enter" });
 
     expect(
       await screen.findByText("No toys match your filters."),

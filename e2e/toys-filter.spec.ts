@@ -294,12 +294,18 @@ test("editing a filter re-runs the search", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 2, name: "1 Toy" })).toBeVisible();
 });
 
-test("the search box folds into a server-side name filter", async ({ page }) => {
+test("the search box commits a name-contains chip on Enter and clears", async ({
+  page,
+}) => {
   await page.goto("/toys");
   await expect(page.getByText("R2-D2", { exact: true })).toBeVisible();
 
-  await page.getByRole("searchbox", { name: "Search toys" }).fill("pika");
+  const box = page.getByRole("searchbox", { name: "Search toys" });
+  await box.fill("pika");
+  await box.press("Enter");
 
+  await expect(page.getByRole("button", { name: "Edit Name filter" })).toBeVisible();
+  await expect(box).toHaveValue("");
   await expect(page.getByText("Pikachu", { exact: true })).toBeVisible();
   await expect(page.getByText("R2-D2", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 2, name: "1 Toy" })).toBeVisible();

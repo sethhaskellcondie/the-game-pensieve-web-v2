@@ -89,6 +89,55 @@ describe("FilterBar", () => {
     expect(onSearchChange).toHaveBeenCalledWith("pika");
   });
 
+  it("turns the search text into a name-contains chip and clears the box on Enter", () => {
+    const onChange = jest.fn();
+    const onSearchChange = jest.fn();
+    render(
+      <FilterBar
+        entityKey="toy"
+        fields={fields}
+        filters={[]}
+        onChange={onChange}
+        searchValue="mario"
+        onSearchChange={onSearchChange}
+        searchAriaLabel="Search toys"
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("searchbox", { name: "Search toys" }), {
+      key: "Enter",
+    });
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const next = onChange.mock.calls[0][0] as ActiveFilter[];
+    expect(next).toHaveLength(1);
+    expect(next[0]).toMatchObject({
+      field: "name",
+      operator: "contains",
+      operand: "mario",
+    });
+    expect(onSearchChange).toHaveBeenCalledWith("");
+  });
+
+  it("ignores Enter when the search box is empty", () => {
+    const onChange = jest.fn();
+    render(
+      <FilterBar
+        entityKey="toy"
+        fields={fields}
+        filters={[]}
+        onChange={onChange}
+        searchValue="   "
+        onSearchChange={jest.fn()}
+        searchAriaLabel="Search toys"
+      />,
+    );
+    fireEvent.keyDown(screen.getByRole("searchbox", { name: "Search toys" }), {
+      key: "Enter",
+    });
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("adds a filter through the editor", () => {
     const { onChange } = setup();
 
