@@ -497,6 +497,14 @@ export function searchVideoGameBoxes(
   });
 }
 
+// One game to create through a box write — mirrors VideoGameRequest (games
+// have no standalone create endpoint; they are born inside a box).
+export type NewVideoGameInput = {
+  title: string;
+  systemId: number;
+  customFieldValues: CustomFieldValue[];
+};
+
 // The update payload mirrors VideoGameBoxRequest: every field is required, so
 // an edit of one field must resend the rest. existingVideoGameIds carries the
 // box's current game ids and newVideoGames stays empty when only editing box
@@ -505,7 +513,7 @@ export type UpdateVideoGameBoxInput = {
   title: string;
   systemId: number;
   existingVideoGameIds: number[];
-  newVideoGames: { title: string; customFieldValues: CustomFieldValue[] }[];
+  newVideoGames: NewVideoGameInput[];
   isPhysical: boolean;
   customFieldValues: CustomFieldValue[];
 };

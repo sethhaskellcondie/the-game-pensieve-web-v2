@@ -290,6 +290,12 @@ test("the box detail page shows the Fields and Video Games cards and links back 
   // Collection is derived and uneditable, so the Fields card omits it.
   await expect(page.getByText("Collection", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^Collection/ })).toHaveCount(0);
+
+  // Games are created from the card header; the dialog flow itself is covered
+  // by the VideoGameBoxDetail/VideoGameCreateModal unit tests.
+  await expect(
+    page.getByRole("button", { name: "New Video Game" }),
+  ).toBeVisible();
   // Scoped to main: the sidebar also has a "Video Games" link.
   await expect(
     page.getByRole("main").getByText("Video Games", { exact: true }),

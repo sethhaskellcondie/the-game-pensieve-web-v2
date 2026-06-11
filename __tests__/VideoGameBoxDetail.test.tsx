@@ -244,6 +244,61 @@ describe("VideoGameBoxDetail", () => {
     ).toBeInTheDocument();
   });
 
+  it("creates a game in the box through the New Video Game dialog", async () => {
+    // The PUT response carries the box with the backend-assigned new game,
+    // which the page adopts as its state.
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        status: "ok",
+        data: {
+          ...box,
+          videoGames: [
+            ...box.videoGames,
+            { id: 73, title: "Super Mario World", customFieldValues: [], createdAt: "", updatedAt: "", deletedAt: null },
+          ],
+        },
+      }),
+      text: async () => "{}",
+    } as unknown as Response);
+    renderDetail();
+
+    fireEvent.click(screen.getByRole("button", { name: "New Video Game" }));
+    const dialog = screen.getByRole("dialog", { name: "Create Video Game" });
+
+    // The System row starts on the box's system.
+    expect(
+      within(dialog).getByRole("button", { name: "System" }),
+    ).toHaveTextContent("SNES");
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Edit Title" }));
+    const input = within(dialog).getByRole("textbox", { name: "Title" });
+    fireEvent.change(input, { target: { value: "Super Mario World" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+    expect(lastPutBody()).toMatchObject({
+      title: "Super Mario All-Stars",
+      systemId: 2,
+      existingVideoGameIds: [71, 72],
+      newVideoGames: [
+        { title: "Super Mario World", systemId: 2, customFieldValues: [] },
+      ],
+    });
+
+    // The dialog closes and the new game appears in the chart.
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Create Video Game" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(
+      screen.getByRole("link", { name: "Super Mario World" }),
+    ).toBeInTheDocument();
+  });
+
   it("shows an empty message when the box has no games", () => {
     renderDetail({ ...box, videoGames: [] });
 

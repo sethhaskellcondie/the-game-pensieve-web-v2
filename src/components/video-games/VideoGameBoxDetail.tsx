@@ -7,6 +7,7 @@ import type {
   CustomFieldOption,
   CustomFieldType,
   CustomFieldValue,
+  NewVideoGameInput,
   System,
   UpdateVideoGameBoxInput,
   VideoGameBox,
@@ -14,7 +15,12 @@ import type {
 import Header from "@/components/Header";
 import Button from "@/components/Button";
 import { SystemsIcon, VideoGameBoxIcon } from "@/components/icons";
-import { ChevronLeftIcon, TrashIcon } from "@/components/custom-fields/icons";
+import {
+  ChevronLeftIcon,
+  PlusIcon,
+  TrashIcon,
+} from "@/components/custom-fields/icons";
+import VideoGameCreateModal from "./VideoGameCreateModal";
 import {
   FIELD_TYPE_META,
   KindGlyph,
@@ -60,6 +66,9 @@ export default function VideoGameBoxDetail({
   const [box, setBox] = useState<VideoGameBox>(initialBox);
   // The game whose delete confirmation menu is open, if any.
   const [confirmingGameId, setConfirmingGameId] = useState<number | null>(null);
+  // Create-game dialog state: open flag + in-flight guard for its save button.
+  const [creating, setCreating] = useState(false);
+  const [savingCreate, setSavingCreate] = useState(false);
 
   // Any click elsewhere (the menu and its trigger stop propagation) or Escape
   // dismisses the confirmation menu.
@@ -178,6 +187,54 @@ export default function VideoGameBoxDetail({
     });
   };
 
+  // Create a game inside this box: PUT the box with the new game riding in
+  // newVideoGames (games have no standalone create endpoint). Not optimistic —
+  // the row needs the backend-assigned game id, so the box state is replaced
+  // with the response. Returns whether it succeeded; the dialog decides what
+  // to do next (close, or reset for another entry in mass-input mode).
+  const handleCreateGame = async (
+    input: NewVideoGameInput,
+  ): Promise<boolean> => {
+    setSavingCreate(true);
+    try {
+      const body: UpdateVideoGameBoxInput = {
+        title: box.title,
+        systemId: box.system.id,
+        existingVideoGameIds: box.videoGames.map((g) => g.id),
+        newVideoGames: [input],
+        isPhysical: box.isPhysical,
+        customFieldValues: box.customFieldValues,
+      };
+      const res = await fetch(`/api/video-game-boxes/${box.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const payload = (await res.json().catch(() => null)) as {
+        data?: VideoGameBox;
+        message?: string;
+      } | null;
+      if (!res.ok || !payload?.data) {
+        throw new Error(payload?.message ?? "Request failed");
+      }
+      setBox(payload.data);
+      showToast({ message: "Video game created.", variant: "success" });
+      return true;
+    } catch (error) {
+      console.error("Create video game failed", error);
+      showSnackbar({
+        message:
+          error instanceof Error
+            ? `Couldn't create the video game: ${error.message}`
+            : "Couldn't create the video game. Please try again.",
+        variant: "error",
+      });
+      return false;
+    } finally {
+      setSavingCreate(false);
+    }
+  };
+
   // The System row borrows the dropdown editor, with the systems list as its
   // options (committed by name, mapped back to a systemId on persist).
   const systemOptions: CustomFieldOption[] = systems.map((s, i) => ({
@@ -287,7 +344,14 @@ export default function VideoGameBoxDetail({
           <div className={`${styles.card} ${localStyles.gamesCard}`}>
             <div className={styles.caphdr}>
               <span className={styles.caphdrTitle}>Video Games</span>
-              <span className={styles.caphdrCount}>
+              <button
+                type="button"
+                className={localStyles.newBtn}
+                onClick={() => setCreating(true)}
+              >
+                <PlusIcon aria-hidden="true" /> New Video Game
+              </button>
+              <span className={`${styles.caphdrCount} ${localStyles.count}`}>
                 <b>{games.length}</b> {games.length === 1 ? "game" : "games"}
               </span>
             </div>
@@ -381,6 +445,17 @@ export default function VideoGameBoxDetail({
           </div>
         </div>
       </main>
+
+      {creating && (
+        <VideoGameCreateModal
+          definitions={gameDefinitions}
+          systems={systems}
+          defaultSystemId={box.system?.id}
+          saving={savingCreate}
+          onCreate={handleCreateGame}
+          onClose={() => setCreating(false)}
+        />
+      )}
     </>
   );
 }
