@@ -343,6 +343,10 @@ export function createToy(input: CreateToyInput): Promise<Toy> {
   return apiPost<Toy>("/toys", { toy: input });
 }
 
+export function deleteToy(id: number): Promise<void> {
+  return apiDelete(`/toys/${id}`);
+}
+
 // Fetch a single toy by id. Returns null on 404 so the detail page can render
 // its own not-found state instead of throwing.
 export function getToyById(id: number): Promise<Toy | null> {
@@ -397,6 +401,10 @@ export type CreateSystemInput = UpdateSystemInput;
 
 export function createSystem(input: CreateSystemInput): Promise<System> {
   return apiPost<System>("/systems", { system: input });
+}
+
+export function deleteSystem(id: number): Promise<void> {
+  return apiDelete(`/systems/${id}`);
 }
 
 // Fetch a single system by id. Returns null on 404 so the detail page can

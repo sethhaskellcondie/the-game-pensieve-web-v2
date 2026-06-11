@@ -129,6 +129,9 @@ function routedFetch(url: string, init?: RequestInit) {
   if (/\/api\/systems\/\d+$/.test(url) && method === "PUT") {
     return Promise.resolve(jsonResponse({ status: "ok", data: {} }));
   }
+  if (/\/api\/systems\/\d+$/.test(url) && method === "DELETE") {
+    return Promise.resolve(jsonResponse({ status: "ok" }));
+  }
   if (url.includes("/api/filters/system")) {
     return Promise.resolve(jsonResponse({ status: "ok", data: filterSpec }));
   }
@@ -545,5 +548,53 @@ describe("SystemsManager", () => {
       );
       expect(cf.value).toBe("PAL");
     });
+  });
+
+  it("deletes a system after the Are-you-sure confirmation and removes its row", async () => {
+    renderManager();
+    await screen.findByText("NES");
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete NES" }));
+
+    // Nothing is sent until the menu's Delete confirms.
+    const menu = screen.getByRole("menu", { name: "Delete NES?" });
+    expect(within(menu).getByText("Are you sure?")).toBeInTheDocument();
+    expect(
+      mockFetch.mock.calls.some(([, init]) => init?.method === "DELETE"),
+    ).toBe(false);
+
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Delete" }));
+
+    await waitFor(() =>
+      expect(screen.queryByText("NES")).not.toBeInTheDocument(),
+    );
+    const del = mockFetch.mock.calls.find(
+      ([, init]) => init?.method === "DELETE",
+    );
+    expect(String(del![0])).toMatch(/\/api\/systems\/1$/);
+    expect(screen.getByText("System deleted.")).toBeInTheDocument();
+  });
+
+  it("keeps the row and shows an error when the delete fails", async () => {
+    renderManager();
+    await screen.findByText("NES");
+
+    mockFetch.mockImplementation((url: string, init?: RequestInit) => {
+      if (init?.method === "DELETE") {
+        return Promise.resolve(
+          jsonResponse(
+            { status: "error", message: "boom" },
+            { ok: false, status: 502 },
+          ),
+        );
+      }
+      return routedFetch(url, init);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete NES" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+
+    await screen.findByText(/Couldn't delete the system/);
+    expect(screen.getByText("NES")).toBeInTheDocument();
   });
 });

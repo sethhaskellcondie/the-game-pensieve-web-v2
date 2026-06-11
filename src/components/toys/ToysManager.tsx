@@ -408,6 +408,36 @@ export default function ToysManager() {
     [showToast, showSnackbar],
   );
 
+  // Delete a toy (the grid's trash asks "Are you sure?" first). The row only
+  // leaves the grid once the backend confirms.
+  const handleDelete = useCallback(
+    async (toy: Toy): Promise<void> => {
+      try {
+        const res = await fetch(`/api/toys/${toy.id}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as {
+            message?: string;
+          } | null;
+          throw new Error(body?.message ?? "Request failed");
+        }
+        setToys((ts) => ts.filter((t) => t.id !== toy.id));
+        showToast({ message: "Toy deleted.", variant: "success" });
+      } catch (error) {
+        console.error("Delete toy failed", error);
+        showSnackbar({
+          message:
+            error instanceof Error
+              ? `Couldn't delete the toy: ${error.message}`
+              : "Couldn't delete the toy. Please try again.",
+          variant: "error",
+        });
+      }
+    },
+    [showToast, showSnackbar],
+  );
+
   // Name and Set are always first; the rest of the columns are the toy custom
   // fields, in their defined order. Each cell maps the toy's values by field id.
   // In mass-edit mode, Name and Set become inline-editable.
@@ -533,8 +563,9 @@ export default function ToysManager() {
         loading={loading}
         loadingMessage="Loading toys…"
         emptyMessage={hasFilters ? "No toys match your filters." : "No toys yet."}
-        onDelete={() => {}}
+        onDelete={(toy) => void handleDelete(toy)}
         deleteLabel={(toy) => `Delete ${toy.name}`}
+        confirmDelete
         // The leading details column only appears in mass edit mode; otherwise
         // the whole row navigates to the toy's detail page. Both routes are the
         // same — they just differ in affordance per mode.

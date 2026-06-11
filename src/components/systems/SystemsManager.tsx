@@ -394,6 +394,37 @@ export default function SystemsManager() {
     [showToast, showSnackbar],
   );
 
+  // Delete a system (the grid's trash asks "Are you sure?" first). The row
+  // only leaves the grid once the backend confirms; a system still referenced
+  // by games/boxes surfaces the backend's rejection in the snackbar.
+  const handleDelete = useCallback(
+    async (system: System): Promise<void> => {
+      try {
+        const res = await fetch(`/api/systems/${system.id}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as {
+            message?: string;
+          } | null;
+          throw new Error(body?.message ?? "Request failed");
+        }
+        setSystems((ss) => ss.filter((s) => s.id !== system.id));
+        showToast({ message: "System deleted.", variant: "success" });
+      } catch (error) {
+        console.error("Delete system failed", error);
+        showSnackbar({
+          message:
+            error instanceof Error
+              ? `Couldn't delete the system: ${error.message}`
+              : "Couldn't delete the system. Please try again.",
+          variant: "error",
+        });
+      }
+    },
+    [showToast, showSnackbar],
+  );
+
   // Name, Generation, and Handheld are always first; the rest of the columns
   // are the system custom fields, in their defined order. In mass-edit mode the
   // Name cell becomes click-to-edit and Generation/Handheld get the same inline
@@ -553,8 +584,9 @@ export default function SystemsManager() {
         emptyMessage={
           hasFilters ? "No systems match your filters." : "No systems yet."
         }
-        onDelete={() => {}}
+        onDelete={(system) => void handleDelete(system)}
         deleteLabel={(system) => `Delete ${system.name}`}
+        confirmDelete
         // The leading details column only appears in mass edit mode; otherwise
         // the whole row navigates to the system's detail page. Both routes are
         // the same — they just differ in affordance per mode.

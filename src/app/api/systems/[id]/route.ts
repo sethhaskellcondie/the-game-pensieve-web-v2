@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { updateSystem, type UpdateSystemInput } from "@/lib/api";
+import {
+  deleteSystem,
+  updateSystem,
+  type UpdateSystemInput,
+} from "@/lib/api";
 
 export async function PUT(
   request: Request,
@@ -13,6 +17,21 @@ export async function PUT(
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to update system";
+    return NextResponse.json({ status: "error", message }, { status: 502 });
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  try {
+    await deleteSystem(Number(id));
+    return NextResponse.json({ status: "ok" });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to delete system";
     return NextResponse.json({ status: "error", message }, { status: 502 });
   }
 }

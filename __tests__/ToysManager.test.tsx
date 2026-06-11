@@ -147,6 +147,9 @@ function routedFetch(url: string, init?: RequestInit) {
   if (/\/api\/toys\/\d+$/.test(url) && method === "PUT") {
     return Promise.resolve(jsonResponse({ status: "ok", data: {} }));
   }
+  if (/\/api\/toys\/\d+$/.test(url) && method === "DELETE") {
+    return Promise.resolve(jsonResponse({ status: "ok" }));
+  }
   if (url.includes("/api/filters/toy")) {
     return Promise.resolve(jsonResponse({ status: "ok", data: filterSpec }));
   }
@@ -547,5 +550,53 @@ describe("ToysManager", () => {
       );
       expect(cf.value).toBe("Special Edition");
     });
+  });
+
+  it("deletes a toy after the Are-you-sure confirmation and removes its row", async () => {
+    renderManager();
+    await screen.findByText("R2-D2");
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete R2-D2" }));
+
+    // Nothing is sent until the menu's Delete confirms.
+    const menu = screen.getByRole("menu", { name: "Delete R2-D2?" });
+    expect(within(menu).getByText("Are you sure?")).toBeInTheDocument();
+    expect(
+      mockFetch.mock.calls.some(([, init]) => init?.method === "DELETE"),
+    ).toBe(false);
+
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Delete" }));
+
+    await waitFor(() =>
+      expect(screen.queryByText("R2-D2")).not.toBeInTheDocument(),
+    );
+    const del = mockFetch.mock.calls.find(
+      ([, init]) => init?.method === "DELETE",
+    );
+    expect(String(del![0])).toMatch(/\/api\/toys\/1$/);
+    expect(screen.getByText("Toy deleted.")).toBeInTheDocument();
+  });
+
+  it("keeps the row and shows an error when the delete fails", async () => {
+    renderManager();
+    await screen.findByText("R2-D2");
+
+    mockFetch.mockImplementation((url: string, init?: RequestInit) => {
+      if (init?.method === "DELETE") {
+        return Promise.resolve(
+          jsonResponse(
+            { status: "error", message: "boom" },
+            { ok: false, status: 502 },
+          ),
+        );
+      }
+      return routedFetch(url, init);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete R2-D2" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+
+    await screen.findByText(/Couldn't delete the toy/);
+    expect(screen.getByText("R2-D2")).toBeInTheDocument();
   });
 });

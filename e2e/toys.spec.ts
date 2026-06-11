@@ -203,6 +203,43 @@ test("exposes the New, Filter, and per-row delete controls", async ({ page }) =>
   await expect(row.getByRole("button", { name: "Delete R2-D2" })).toBeVisible();
 });
 
+test("deletes a toy from the grid after the Are-you-sure confirmation", async ({
+  page,
+}) => {
+  // Registered after the beforeEach catch-all so it wins for the DELETE.
+  let deletedUrl: string | null = null;
+  await page.route("**/api/toys/*", (route) => {
+    if (route.request().method() !== "DELETE") return route.fallback();
+    deletedUrl = route.request().url();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ status: "ok" }),
+    });
+  });
+
+  await page.goto("/toys");
+  const row = page.getByRole("row").filter({ hasText: "R2-D2" });
+  await row.hover();
+  await row.getByRole("button", { name: "Delete R2-D2" }).click();
+
+  // Dismissing the menu deletes nothing.
+  const menu = page.getByRole("menu", { name: "Delete R2-D2?" });
+  await expect(menu.getByText("Are you sure?")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  expect(deletedUrl).toBeNull();
+
+  // Confirming removes the row and toasts.
+  await row.hover();
+  await row.getByRole("button", { name: "Delete R2-D2" }).click();
+  await menu.getByRole("menuitem", { name: "Delete" }).click();
+
+  await expect(page.getByText("Toy deleted.")).toBeVisible();
+  await expect(page.getByText("R2-D2", { exact: true })).toHaveCount(0);
+  expect(String(deletedUrl)).toContain("/api/toys/1");
+});
+
 test("creates a toy through the New dialog and shows it in the list", async ({
   page,
 }) => {
