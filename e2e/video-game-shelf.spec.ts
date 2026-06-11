@@ -165,6 +165,33 @@ async function stubShelf(page: Page) {
   );
 }
 
+// Existing games the create dialog's picker can offer, mirroring the live
+// /videoGames search shape (system + videoGameBoxes ride along).
+const PICKER_GAMES = [
+  {
+    id: 61,
+    key: "videoGame",
+    title: "Mega Man 2",
+    system: SYSTEMS[0],
+    videoGameBoxes: [],
+    customFieldValues: [],
+    createdAt: "",
+    updatedAt: "",
+    deletedAt: null,
+  },
+  {
+    id: 62,
+    key: "videoGame",
+    title: "Mega Man 3",
+    system: SYSTEMS[0],
+    videoGameBoxes: [{ id: 31, title: "Super Mario Bros." }],
+    customFieldValues: [],
+    createdAt: "",
+    updatedAt: "",
+    deletedAt: null,
+  },
+];
+
 // The mass modes and the default video-games view are loaded server-side, so
 // page.route can't stub them. Pin the modes off and the default view to list
 // (the bare /video-games assertions below assume it) — the same values every
@@ -270,6 +297,123 @@ test("filters the shelf via the search box on Enter", async ({ page }) => {
   await expect(
     page.getByRole("heading", { level: 2, name: "1 Video Game Box" }),
   ).toBeVisible();
+});
+
+test("creates a box through the New dialog with a new game and an existing game", async ({
+  page,
+}) => {
+  // More specific than stubShelf's catch-alls, and registered later, so these
+  // win: the picker's game search returns real rows, and the create POST is
+  // captured (the exact glob skips /search and /:id).
+  await page.route("**/api/video-games/search", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ status: "ok", data: PICKER_GAMES }),
+    }),
+  );
+  let postBody: Record<string, unknown> | null = null;
+  await page.route("**/api/video-game-boxes", (route) => {
+    postBody = route.request().postDataJSON() as Record<string, unknown>;
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        status: "ok",
+        data: {
+          id: 99,
+          key: "videoGameBox",
+          title: postBody.title,
+          system: SYSTEMS[0],
+          videoGames: [{ id: 901, title: "Mega Man" }],
+          isPhysical: postBody.isPhysical,
+          isCollection: true,
+          customFieldValues: [],
+          createdAt: "",
+          updatedAt: "",
+          deletedAt: null,
+        },
+      }),
+    });
+  });
+
+  await page.goto("/video-games?view=shelf");
+  await page.getByRole("button", { name: "New" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Create Video Game Box" });
+  const create = dialog.getByRole("button", { name: "Create", exact: true });
+
+  // Title + System alone don't satisfy the dialog — a box needs ≥1 game.
+  await dialog.getByRole("button", { name: "Edit Title" }).click();
+  await dialog.getByRole("textbox", { name: "Title" }).fill("Mega Man Collection");
+  await dialog.getByRole("textbox", { name: "Title" }).press("Enter");
+  await dialog.getByRole("button", { name: "System" }).click();
+  await page.getByRole("option", { name: "NES", exact: true }).click();
+  await expect(dialog.getByText("Add at least one game.")).toBeVisible();
+  await expect(create).toBeDisabled();
+
+  // Queue a brand-new game through the stacked dialog. exact: the box
+  // dialog's name contains this one's as a prefix.
+  await dialog.getByRole("button", { name: "Add New Game" }).click();
+  const gameDialog = page.getByRole("dialog", {
+    name: "Create Video Game",
+    exact: true,
+  });
+  await gameDialog.getByRole("button", { name: "Edit Title" }).click();
+  await gameDialog.getByRole("textbox", { name: "Title" }).fill("Mega Man");
+  await gameDialog.getByRole("textbox", { name: "Title" }).press("Enter");
+  await gameDialog.getByRole("button", { name: "Create", exact: true }).click();
+  await expect(gameDialog).toBeHidden();
+
+  // Attach an existing game via the picker; the one already shelved says so.
+  const picker = dialog.getByRole("searchbox", { name: "Add an existing game" });
+  await picker.fill("mega man");
+  const results = dialog.getByRole("list", { name: "Matching games" });
+  await expect(results.getByText("in Super Mario Bros.")).toBeVisible();
+  await results.getByRole("button", { name: /^Mega Man 2/ }).click();
+
+  const queued = dialog.getByRole("list", { name: "Games in this box" });
+  await expect(queued.getByText("Mega Man", { exact: true })).toBeVisible();
+  await expect(queued.getByText("Mega Man 2", { exact: true })).toBeVisible();
+
+  await expect(create).toBeEnabled();
+  await create.click();
+
+  // The dialog closes, the toast confirms, and the new box tops the grid.
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("Video game box created.")).toBeVisible();
+  await expect(
+    page.getByText("Mega Man Collection", { exact: true }),
+  ).toBeVisible();
+  expect(postBody).toMatchObject({
+    title: "Mega Man Collection",
+    systemId: 1,
+    existingVideoGameIds: [61],
+    newVideoGames: [{ title: "Mega Man", systemId: 1, customFieldValues: [] }],
+    isPhysical: false,
+  });
+});
+
+test("Escape closes the stacked game dialog but not the box dialog", async ({
+  page,
+}) => {
+  await page.goto("/video-games?view=shelf");
+  await page.getByRole("button", { name: "New" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Create Video Game Box" });
+  await dialog.getByRole("button", { name: "Add New Game" }).click();
+  const gameDialog = page.getByRole("dialog", {
+    name: "Create Video Game",
+    exact: true,
+  });
+  await expect(gameDialog).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(gameDialog).toBeHidden();
+  await expect(dialog).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
 });
 
 // The box detail page fetches its box server-side (Playwright's page.route

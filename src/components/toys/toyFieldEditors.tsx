@@ -172,6 +172,10 @@ function DropdownEditor({ field, onCommit, openOnFocus }: EditorProps) {
   );
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  // With openOnFocus, a mouse press delivers focus (which opens the menu) and
+  // then a click on the same interaction — without this latch the click's
+  // toggle would immediately close what the focus just opened.
+  const justOpenedByFocus = useRef(false);
 
   const openMenu = () => {
     const r = triggerRef.current?.getBoundingClientRect();
@@ -226,8 +230,22 @@ function DropdownEditor({ field, onCommit, openOnFocus }: EditorProps) {
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={field.name}
-        onFocus={openOnFocus && !open ? openMenu : undefined}
-        onClick={() => (open ? setOpen(false) : openMenu())}
+        onFocus={
+          openOnFocus && !open
+            ? () => {
+                justOpenedByFocus.current = true;
+                openMenu();
+              }
+            : undefined
+        }
+        onClick={() => {
+          if (justOpenedByFocus.current) {
+            justOpenedByFocus.current = false;
+            return;
+          }
+          if (open) setOpen(false);
+          else openMenu();
+        }}
       >
         <span className={styles.dropValue}>
           {field.value === "" ? (

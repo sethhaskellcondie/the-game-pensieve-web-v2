@@ -169,6 +169,39 @@ function routedFetch(url: string, init?: RequestInit) {
   if (url.includes("/entity/videoGameBox")) {
     return Promise.resolve(jsonResponse({ status: "ok", data: boxFields }));
   }
+  // Checked after videoGameBox — "/entity/videoGame" is a substring of it.
+  // The create dialog's stacked game form needs these; none are defined here.
+  if (url.includes("/entity/videoGame")) {
+    return Promise.resolve(jsonResponse({ status: "ok", data: [] }));
+  }
+  // The create dialog's existing-game picker.
+  if (url.includes("/api/video-games/search")) {
+    return Promise.resolve(jsonResponse({ status: "ok", data: [] }));
+  }
+  // Box creation: echo a box back so the manager can prepend it.
+  if (url.endsWith("/api/video-game-boxes") && method === "POST") {
+    const body = JSON.parse(init?.body as string);
+    return Promise.resolve(
+      jsonResponse({
+        status: "ok",
+        data: {
+          ...boxes[0],
+          id: 999,
+          title: body.title,
+          videoGames: body.newVideoGames.map(
+            (g: { title: string }, i: number) => ({
+              id: 900 + i,
+              title: g.title,
+              customFieldValues: [],
+              createdAt: "",
+              updatedAt: "",
+              deletedAt: null,
+            }),
+          ),
+        },
+      }),
+    );
+  }
   // Server search: apply the request's filters to the box list.
   if (url.includes("/api/video-game-boxes/search")) {
     const body = init?.body ? JSON.parse(init.body as string) : { filters: [] };
@@ -243,16 +276,125 @@ describe("VideoGameBoxesManager", () => {
     expect(within(chronoRow).getAllByRole("img", { name: "No" })).toHaveLength(2);
   });
 
-  it("offers no New button and no per-row delete controls", async () => {
+  it("offers a New button but no per-row delete controls", async () => {
     renderManager();
     await screen.findByText("Super Mario All-Stars");
 
-    expect(screen.queryByRole("button", { name: "New" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "New" })).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /^Delete / }),
     ).not.toBeInTheDocument();
     // The filter bar is still there.
     expect(screen.getByRole("button", { name: "Add filter" })).toBeInTheDocument();
+  });
+
+  it("creates a box through the New dialog, POSTing the games payload and prepending the row", async () => {
+    renderManager();
+    await screen.findByText("Super Mario All-Stars");
+
+    fireEvent.click(screen.getByRole("button", { name: "New" }));
+    const dialog = screen.getByRole("dialog", {
+      name: "Create Video Game Box",
+    });
+
+    // Title + System via the dialog's editors.
+    fireEvent.click(within(dialog).getByRole("button", { name: "Edit Title" }));
+    const input = within(dialog).getByRole("textbox", { name: "Title" });
+    fireEvent.change(input, { target: { value: "Mega Man Collection" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "System" }));
+    fireEvent.click(within(dialog).getByRole("option", { name: "NES" }));
+
+    // Queue one new game through the stacked dialog.
+    fireEvent.click(screen.getByRole("button", { name: "Add New Game" }));
+    const gameDialog = screen.getByRole("dialog", {
+      name: "Create Video Game",
+    });
+    fireEvent.click(
+      within(gameDialog).getByRole("button", { name: "Edit Title" }),
+    );
+    const gameTitle = within(gameDialog).getByRole("textbox", {
+      name: "Title",
+    });
+    fireEvent.change(gameTitle, { target: { value: "Mega Man 2" } });
+    fireEvent.keyDown(gameTitle, { key: "Enter" });
+    fireEvent.click(within(gameDialog).getByRole("button", { name: "Create" }));
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create" }));
+
+    // The POST carries the box fields and the queued game.
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Create Video Game Box" }),
+      ).not.toBeInTheDocument(),
+    );
+    const post = mockFetch.mock.calls.find(
+      ([url, init]) =>
+        String(url).endsWith("/api/video-game-boxes") &&
+        init?.method === "POST",
+    );
+    expect(post).toBeTruthy();
+    expect(JSON.parse(post![1].body as string)).toMatchObject({
+      title: "Mega Man Collection",
+      systemId: 1,
+      existingVideoGameIds: [],
+      newVideoGames: [
+        { title: "Mega Man 2", systemId: 1, customFieldValues: [] },
+      ],
+      isPhysical: false,
+    });
+
+    // The created box (echoed by the route mock) lands at the top of the grid.
+    const rows = screen.getAllByRole("row");
+    expect(within(rows[1]).getByText("Mega Man Collection")).toBeInTheDocument();
+  });
+
+  it("keeps the create dialog open and shows an error when the POST fails", async () => {
+    renderManager();
+    await screen.findByText("Super Mario All-Stars");
+
+    fireEvent.click(screen.getByRole("button", { name: "New" }));
+    const dialog = screen.getByRole("dialog", {
+      name: "Create Video Game Box",
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Edit Title" }));
+    const input = within(dialog).getByRole("textbox", { name: "Title" });
+    fireEvent.change(input, { target: { value: "Mega Man Collection" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "System" }));
+    fireEvent.click(within(dialog).getByRole("option", { name: "NES" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add New Game" }));
+    const gameDialog = screen.getByRole("dialog", {
+      name: "Create Video Game",
+    });
+    fireEvent.click(
+      within(gameDialog).getByRole("button", { name: "Edit Title" }),
+    );
+    const gameTitle = within(gameDialog).getByRole("textbox", {
+      name: "Title",
+    });
+    fireEvent.change(gameTitle, { target: { value: "Mega Man 2" } });
+    fireEvent.keyDown(gameTitle, { key: "Enter" });
+    fireEvent.click(within(gameDialog).getByRole("button", { name: "Create" }));
+
+    // Make the POST fail.
+    mockFetch.mockImplementation((url: string, init?: RequestInit) => {
+      if (String(url).endsWith("/api/video-game-boxes") && init?.method === "POST") {
+        return Promise.resolve(
+          jsonResponse({ status: "error", message: "boom" }, { ok: false, status: 502 }),
+        );
+      }
+      return routedFetch(url, init);
+    });
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create" }));
+
+    await screen.findByText(/Couldn't create the video game box/);
+    // Still open, input preserved for a retry.
+    expect(
+      screen.getByRole("dialog", { name: "Create Video Game Box" }),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText("Mega Man 2")).toBeInTheDocument();
   });
 
   it("commits a title-contains chip on Enter and re-runs the search with the videoGameBox key", async () => {

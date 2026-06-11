@@ -527,6 +527,17 @@ export function updateVideoGameBox(
   });
 }
 
+// VideoGameBoxRequest is the same shape on POST and PUT, so the create payload
+// reuses UpdateVideoGameBoxInput (games ride along in existingVideoGameIds /
+// newVideoGames).
+export type CreateVideoGameBoxInput = UpdateVideoGameBoxInput;
+
+export function createVideoGameBox(
+  input: CreateVideoGameBoxInput,
+): Promise<VideoGameBox> {
+  return apiPost<VideoGameBox>("/videoGameBoxes", { videoGameBox: input });
+}
+
 // Fetch a single video game box by id. Returns null on 404 so the detail page
 // can render its own not-found state instead of throwing.
 export function getVideoGameBoxById(

@@ -12,10 +12,12 @@ import type {
   UpdateVideoGameBoxInput,
   VideoGameBox,
 } from "@/lib/api";
+import Button from "@/components/Button";
 import DataTable, {
   MIN_COL,
   type ColumnDef,
 } from "@/components/data-table/DataTable";
+import { PlusIcon } from "@/components/custom-fields/icons";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import FilterBar from "@/components/filters/FilterBar";
@@ -27,9 +29,11 @@ import FieldEditor, {
   normalizeFieldValue,
 } from "@/components/toys/toyFieldEditors";
 import styles from "@/components/toys/ToysManager.module.css";
+import VideoGameBoxCreateModal from "./VideoGameBoxCreateModal";
 import {
   fetchEntityFields,
   fetchFilterSpec,
+  readJson,
   searchSystemsClient,
   searchVideoGameBoxesClient,
 } from "./searchClient";
@@ -131,8 +135,14 @@ export default function VideoGameBoxesManager() {
   const [boxes, setBoxes] = useState<VideoGameBox[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
   const [definitions, setDefinitions] = useState<CustomField[]>([]);
+  // The videoGame entity's custom fields — the create dialog's stacked
+  // add-a-game form needs them.
+  const [gameDefinitions, setGameDefinitions] = useState<CustomField[]>([]);
   const [spec, setSpec] = useState<FilterSpecification | null>(null);
   const [loading, setLoading] = useState(true);
+  // Create-box dialog state: open flag + in-flight guard for its save button.
+  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
   // The quick-search text (folded into a title-contains filter) and the explicit
   // filter chips. Both feed the server-side search.
   const [query, setQuery] = useState("");
@@ -185,21 +195,26 @@ export default function VideoGameBoxesManager() {
       searchVideoGameBoxesClient([], controller.signal),
       searchSystemsClient(controller.signal),
       fetchEntityFields("videoGameBox", controller.signal),
+      fetchEntityFields("videoGame", controller.signal),
       fetchFilterSpec("videoGameBox", controller.signal),
     ])
-      .then(([loadedBoxes, loadedSystems, loadedDefs, loadedSpec]) => {
-        if (!active) return;
-        setBoxes(loadedBoxes);
-        setSystems(loadedSystems);
-        setDefinitions(loadedDefs);
-        setSpec(loadedSpec);
-        setLoading(false);
-      })
+      .then(
+        ([loadedBoxes, loadedSystems, loadedDefs, loadedGameDefs, loadedSpec]) => {
+          if (!active) return;
+          setBoxes(loadedBoxes);
+          setSystems(loadedSystems);
+          setDefinitions(loadedDefs);
+          setGameDefinitions(loadedGameDefs);
+          setSpec(loadedSpec);
+          setLoading(false);
+        },
+      )
       .catch((error) => {
         if (!active || controller.signal.aborted) return;
         console.error("Load video game boxes failed", error);
         setBoxes([]);
         setDefinitions([]);
+        setGameDefinitions([]);
         setLoading(false);
         showSnackbar({ message: loadErrorMessage(error), variant: "error" });
       });
@@ -493,6 +508,40 @@ export default function VideoGameBoxesManager() {
     commitFieldValue,
   ]);
 
+  // Create a box from the dialog: POST it and prepend the saved box (with its
+  // backend-assigned id) to the list. Returns whether it succeeded; the dialog
+  // decides what to do next (close, or reset for another entry in mass-input
+  // mode). On failure it stays open so the user can retry without re-entering.
+  const handleCreate = useCallback(
+    async (input: UpdateVideoGameBoxInput): Promise<boolean> => {
+      setSaving(true);
+      try {
+        const res = await fetch("/api/video-game-boxes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input),
+        });
+        const created = await readJson<VideoGameBox>(res);
+        setBoxes((bs) => [created, ...bs]);
+        showToast({ message: "Video game box created.", variant: "success" });
+        return true;
+      } catch (error) {
+        console.error("Create video game box failed", error);
+        showSnackbar({
+          message:
+            error instanceof Error
+              ? `Couldn't create the video game box: ${error.message}`
+              : "Couldn't create the video game box. Please try again.",
+          variant: "error",
+        });
+        return false;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [showToast, showSnackbar],
+  );
+
   const hasFilters = filters.length > 0;
 
   return (
@@ -516,7 +565,11 @@ export default function VideoGameBoxesManager() {
           searchPlaceholder="Search video game boxes…"
           searchAriaLabel="Search video game boxes"
         />
-        {/* No New button yet: box creation stays on the backlog. */}
+        <div className={styles.actions}>
+          <Button className={styles.newBtn} onClick={() => setCreating(true)}>
+            <PlusIcon /> New
+          </Button>
+        </div>
       </div>
 
       <DataTable
@@ -531,8 +584,7 @@ export default function VideoGameBoxesManager() {
             : "No video game boxes yet."
         }
         // No onDelete yet: box deletion (which also removes its games) is a
-        // bigger decision than a row control, so it stays on the detail-page
-        // backlog alongside creation.
+        // bigger decision than a row control, so it stays on the backlog.
         // The leading details column only appears in mass edit mode; otherwise
         // the whole row navigates to the box's detail page. Both routes are
         // the same — they just differ in affordance per mode.
@@ -549,6 +601,17 @@ export default function VideoGameBoxesManager() {
         }
         rowClickLabel={(box) => `View ${box.title}`}
       />
+
+      {creating && (
+        <VideoGameBoxCreateModal
+          definitions={definitions}
+          gameDefinitions={gameDefinitions}
+          systems={systems}
+          saving={saving}
+          onCreate={handleCreate}
+          onClose={() => setCreating(false)}
+        />
+      )}
     </div>
   );
 }
