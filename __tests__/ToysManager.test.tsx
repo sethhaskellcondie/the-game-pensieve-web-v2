@@ -302,7 +302,7 @@ describe("ToysManager", () => {
     await screen.findByText("R2-D2");
 
     expect(
-      screen.queryByText("Mass edit mode is on. (adjust in options)"),
+      screen.queryByText("Mass edit mode is on."),
     ).not.toBeInTheDocument();
     // Name/Set stay plain text, not inline-edit trigger buttons.
     expect(
@@ -315,7 +315,7 @@ describe("ToysManager", () => {
     await screen.findByText("R2-D2");
 
     expect(
-      screen.getByText("Mass edit mode is on. (adjust in options)"),
+      screen.getByText("Mass edit mode is on."),
     ).toBeInTheDocument();
   });
 

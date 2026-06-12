@@ -183,6 +183,18 @@ async function stub(page: Page) {
   await page.route("**/api/filters/system", (route) =>
     json(route, { status: "ok", data: FILTER_SPEC }),
   );
+  // No stored default sorts, so these specs exercise the plain (unseeded)
+  // sort flow regardless of what the shared backend's metadata holds.
+  await page.route("**/api/default-sort-options", (route) =>
+    json(route, {
+      toy: [],
+      system: [],
+      videoGame: [],
+      videoGameBox: [],
+      boardGame: [],
+      boardGameBox: [],
+    }),
+  );
   await page.route("**/api/custom-fields/entity/system", (route) =>
     json(route, { status: "ok", data: FIELDS }),
   );

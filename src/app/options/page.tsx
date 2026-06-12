@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Header from "@/components/Header";
 import UiSettings from "@/components/UiSettings";
+import DefaultSortSettings from "@/components/DefaultSortSettings";
 import ApiHeartbeat from "@/components/ApiHeartbeat";
 import BackupImport from "@/components/BackupImport";
 import { OptionsIcon } from "@/components/icons";
@@ -21,6 +22,7 @@ export default function OptionsPage() {
 
       <main className={styles.content}>
         <UiSettings />
+        <DefaultSortSettings />
         <ApiHeartbeat />
         <BackupImport />
       </main>

@@ -1,0 +1,41 @@
+.hint {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* The trigger is just the seedling icon in its green; the light green chip on
+   hover reads as clickable on both dark and light backgrounds. Hosts whose
+   background swallows the default green can recolor the icon by setting
+   --beginner-hint-color on their className. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--beginner-hint-color, var(--field-green));
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+.button:hover {
+  background: var(--field-green-bg);
+  color: var(--field-green-strong);
+}
+
+.button svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Text color is inherited so each host context (dark sidebar, light page)
+   keeps the hint readable. */
+.text {
+  margin: 0;
+  font-size: var(--text-caption);
+  line-height: 1.5;
+}

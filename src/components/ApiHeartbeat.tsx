@@ -46,7 +46,7 @@ export default function ApiHeartbeat() {
   return (
     <SettingsSection
       title="API Tools"
-      description="Check the connection to external data services."
+      description=""
     >
       <div className={styles.row}>
         <span className={styles.icon}>

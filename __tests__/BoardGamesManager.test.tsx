@@ -310,7 +310,7 @@ describe("BoardGamesManager", () => {
     await screen.findByText("Set-A-Watch");
 
     expect(
-      screen.queryByText("Mass edit mode is on. (adjust in options)"),
+      screen.queryByText("Mass edit mode is on."),
     ).not.toBeInTheDocument();
     // Title stays plain text, not an inline-edit trigger button.
     expect(
@@ -323,7 +323,7 @@ describe("BoardGamesManager", () => {
     await screen.findByText("Set-A-Watch");
 
     expect(
-      screen.getByText("Mass edit mode is on. (adjust in options)"),
+      screen.getByText("Mass edit mode is on."),
     ).toBeInTheDocument();
   });
 

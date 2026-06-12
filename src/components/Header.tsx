@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import BeginnerHint from "./BeginnerHint";
 import { useUiSettings } from "./UiSettingsProvider";
 import styles from "./Header.module.css";
 
@@ -9,6 +10,9 @@ type HeaderProps = {
   title: string;
   titleAccent?: string;
   tagline: string;
+  // Page-specific guidance shown as a BeginnerHint in the hero row (only
+  // while beginner mode is on).
+  beginnerHint?: string;
   children?: ReactNode; //optional child component also included in the header
 };
 
@@ -17,6 +21,7 @@ export default function Header({
   title,
   titleAccent,
   tagline,
+  beginnerHint,
   children,
 }: HeaderProps) {
   // The animated grid/wash/glow background can be parked on a static frame via
@@ -39,6 +44,9 @@ export default function Header({
             </h1>
             <div className={styles.tag}>{tagline}</div>
           </div>
+          {beginnerHint ? (
+            <BeginnerHint className={styles.headerHint} text={beginnerHint} />
+          ) : null}
         </div>
         {children}
       </div>

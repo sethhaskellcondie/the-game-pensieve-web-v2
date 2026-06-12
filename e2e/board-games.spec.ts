@@ -163,6 +163,18 @@ async function stubBoardGames(page: Page) {
   await page.route("**/api/board-game-boxes**", (route) =>
     json(route, { status: "ok", data: [] }),
   );
+  // No stored default sorts, so row-order assertions see the backend's
+  // natural order regardless of what the shared backend's metadata holds.
+  await page.route("**/api/default-sort-options", (route) =>
+    json(route, {
+      toy: [],
+      system: [],
+      videoGame: [],
+      videoGameBox: [],
+      boardGame: [],
+      boardGameBox: [],
+    }),
+  );
   await page.route("**/api/filters/**", (route) =>
     json(route, { status: "ok", data: FILTER_SPEC }),
   );

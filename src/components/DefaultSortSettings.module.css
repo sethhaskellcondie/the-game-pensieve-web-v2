@@ -1,0 +1,42 @@
+/* The per-entity Sort trigger, passed into the reused SortControl. Borrows the
+   filter-bar toolbar button look (border, radius, weight) but takes the same
+   fixed width as the other Options action buttons so the card's right column
+   lines up. */
+.sortBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 220px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--ink-navy);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: 0.12s;
+}
+
+.sortBtn:hover:not(:disabled) {
+  background: var(--paper);
+  border-color: #cad3e0;
+}
+
+.sortBtn:active:not(:disabled) {
+  background: #eef1f6;
+}
+
+.sortBtn:disabled {
+  color: var(--gray-500);
+  cursor: not-allowed;
+}
+
+.sortBtn:focus-visible {
+  outline: 2px solid var(--primary-600);
+  outline-offset: 2px;
+}

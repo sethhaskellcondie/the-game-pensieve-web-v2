@@ -20,6 +20,11 @@ import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import { PlusIcon } from "@/components/custom-fields/icons";
 import FilterBar from "@/components/filters/FilterBar";
+import {
+  fetchDefaultSortOptions,
+  resolveDefaultSorts,
+  sortsOrDefault,
+} from "@/components/filters/defaultSorts";
 import { buildFieldList, supportsSorting } from "@/components/filters/fieldList";
 import { toFilterRequest, toSortRequest } from "@/components/filters/serialize";
 import type { ActiveFilter, ActiveSort } from "@/components/filters/types";
@@ -176,7 +181,14 @@ export default function SystemsManager() {
   // filter chips, and the ordered sort levels. All feed the server-side search.
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<ActiveFilter[]>([]);
+  // The sort levels the user entered on this page (the Sort button's state).
+  // Starts empty even when a default sort is stored — the default never shows
+  // here; it is folded into the search request only while this is empty.
   const [sorts, setSorts] = useState<ActiveSort[]>([]);
+  // The stored default sort, resolved against the field list at mount. Every
+  // search without page sorts (initial load, and after "Clear sorting") sends
+  // these instead; any page sort wins outright.
+  const [defaultSorts, setDefaultSorts] = useState<ActiveSort[]>([]);
   // The unified field list (standard spec fields + custom fields) the filter bar
   // offers. Recomputed only when the spec or definitions change.
   const fieldDefs = useMemo(
@@ -191,24 +203,47 @@ export default function SystemsManager() {
   const [saving, setSaving] = useState(false);
   // The row whose Name cell is being inline-edited, or null when idle.
   const [editingId, setEditingId] = useState<number | null>(null);
+  // The last search payload sent (and a sequence counter for last-write-wins),
+  // shared by the mount load and the search effect below so neither repeats
+  // the other's query.
+  const lastDto = useRef("[]");
+  const searchSeq = useRef(0);
 
-  // Load the initial (unfiltered) systems, their field definitions, and the
-  // filter spec together on mount. setState lives in the promise callbacks (not
-  // the effect body); `active` drops a stale response if the component unmounts
-  // before the requests resolve.
+  // Load the field definitions, the filter spec, and the stored default sort
+  // options together on mount, then run the initial search with the resolved
+  // defaults so the first page of results already honors them. The defaults
+  // stay out of the Sort button's state — they only ever ride along in the
+  // request while the page has no sorts of its own. setState lives in the
+  // promise callbacks (not the effect body); `active` drops a stale response
+  // if the component unmounts before the requests resolve.
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
     Promise.all([
-      searchSystemsClient([], controller.signal),
       fetchSystemFields(controller.signal),
       fetchFilterSpec(controller.signal),
+      fetchDefaultSortOptions(controller.signal),
     ])
-      .then(([loadedSystems, loadedDefs, loadedSpec]) => {
+      .then(async ([loadedDefs, loadedSpec, defaultSortOptions]) => {
+        // Resolve the stored levels against the live field list (dropping any
+        // field that no longer exists), and only when the spec advertises
+        // sorting at all. lastDto is primed with the seeded payload so the
+        // search effect below doesn't re-run the same query when the seeded
+        // sorts land in state.
+        const seeded = supportsSorting(loadedSpec)
+          ? resolveDefaultSorts(
+              defaultSortOptions.system,
+              buildFieldList(loadedSpec, loadedDefs),
+            )
+          : [];
+        const dto = toSortRequest("system", seeded);
+        lastDto.current = JSON.stringify(dto);
+        const loadedSystems = await searchSystemsClient(dto, controller.signal);
         if (!active) return;
         setSystems(loadedSystems);
         setDefinitions(loadedDefs);
         setSpec(loadedSpec);
+        setDefaultSorts(seeded);
         setLoading(false);
       })
       .catch((error) => {
@@ -226,18 +261,18 @@ export default function SystemsManager() {
   }, [showSnackbar]);
 
   // Re-run the server search whenever the filter chips or sort levels change.
+  // The sort filters sent are the page's own levels, or the stored defaults
+  // while the page has none (so "Clear sorting" returns to the default sort).
   // Debounced so rapid edits coalesce, abortable so an in-flight request is
   // cancelled, and seq-guarded so only the newest response is committed
   // (last-write-wins). A run whose payload matches the last one sent is
   // skipped — that covers the initial mount (the mount effect already loaded).
   // The search box doesn't filter live — it adds a name-contains chip on
   // Enter, which flows through here.
-  const lastDto = useRef("[]");
-  const searchSeq = useRef(0);
   useEffect(() => {
     const dto = [
       ...toFilterRequest("system", filters),
-      ...toSortRequest("system", sorts),
+      ...toSortRequest("system", sortsOrDefault(sorts, defaultSorts)),
     ];
     const dtoJson = JSON.stringify(dto);
     if (dtoJson === lastDto.current) return;
@@ -259,7 +294,7 @@ export default function SystemsManager() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [filters, sorts, showSnackbar]);
+  }, [filters, sorts, defaultSorts, showSnackbar]);
 
   // Apply `next` optimistically and PUT the whole system (name + generation +
   // handheld + values are all required by the backend), rolling the list back
@@ -571,7 +606,7 @@ export default function SystemsManager() {
           <h2 className={styles.entName}><b>{systems.length}</b> {systems.length === 1 ? "System" : "Systems"}</h2>
           {massEditMode && (
             <div className={styles.crumb}>
-              <span>Mass edit mode is on. (adjust in options)</span>
+              <span>Mass edit mode is on.</span>
             </div>
           )}
         </div>

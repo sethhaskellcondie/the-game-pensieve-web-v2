@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import BeginnerHint from "./BeginnerHint";
 import styles from "./Sidebar.module.css";
 import {
   VideoGamesIcon,
@@ -72,6 +73,11 @@ export default function Sidebar() {
           Options
         </Link>
       </nav>
+
+      <BeginnerHint
+        className={styles.beginnerHint}
+        text="Beginner mode is on, click on this symbol to learn more about the best ways to use the pensieve, turn beginner mode off on the options page."
+      />
 
       <div className={styles.sideFoot}>A Seth Condie Project</div>
     </aside>

@@ -5,7 +5,7 @@ import Button from "./Button";
 import SettingsSection from "./SettingsSection";
 import StandardFieldsModal from "./StandardFieldsModal";
 import Toggle from "./Toggle";
-import { BoardGamesIcon, VideoGamesIcon } from "./icons";
+import { BeginnerModeIcon, BoardGamesIcon, VideoGamesIcon } from "./icons";
 import { useUiSettings } from "./UiSettingsProvider";
 import type { CollectionView, UiSettings } from "@/lib/uiSettings.types";
 import styles from "./UiSettings.module.css";
@@ -60,14 +60,7 @@ const SETTINGS: SettingMeta[] = [
     key: "beginnerMode",
     title: "Beginner Mode",
     description: "Show extra guidance while you learn how to use the Pensieve.",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        {/* A young seedling: stem with two leaves. */}
-        <path d="M12 21v-8" />
-        <path d="M12 13C12 9 9.5 6.5 4 6c.5 5.5 3 8 8 7Z" />
-        <path d="M12 11c0-3.5 2-5.5 8-6-.5 5-2.5 7-8 6Z" />
-      </svg>
-    ),
+    icon: <BeginnerModeIcon />,
   },
   {
     key: "massInputMode",
@@ -189,7 +182,7 @@ export default function UiSettings() {
         <div className={styles.text}>
           <span className={styles.title}>Show/Hide Standard Fields</span>
           <span className={styles.description}>
-            Choose which standard fields appear in the display grid.
+            Choose which standard fields appear in the display.
           </span>
         </div>
         <Button

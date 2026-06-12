@@ -14,12 +14,16 @@ import styles from "./SortControl.module.css";
 // remove controls. Fully controlled and live-applying — every change calls
 // `onChange` immediately and the parent re-runs its search; the popover stays
 // open (closing on outside mousedown or Escape, like the filter editor) so
-// multi-level sorts can be built in one sitting.
+// multi-level sorts can be built in one sitting. The popover is
+// position:fixed, anchored to the trigger's rect, so it escapes any
+// clipping/scrolling ancestor (the Options card's overflow:hidden would
+// otherwise swallow it) — the same approach as Listbox.
 export default function SortControl({
   fields,
   sorts,
   onChange,
   buttonClassName,
+  ariaLabel = "Sort",
 }: {
   fields: FilterFieldDef[];
   sorts: ActiveSort[];
@@ -27,13 +31,43 @@ export default function SortControl({
   // The toolbar button style, passed by FilterBar so the Sort and Filter
   // buttons stay visually identical.
   buttonClassName?: string;
+  // Accessible name for the button (and the popover, suffixed with
+  // "options"). Override it when several SortControls share a page — e.g. the
+  // Options page's per-entity default sorts — so each stays distinguishable.
+  ariaLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
+  // Viewport coordinates for the fixed popover, captured from the trigger's
+  // rect when it opens: below the button and right-aligned to it.
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const wrapRef = useRef<HTMLSpanElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const place = () => {
+    const r = buttonRef.current?.getBoundingClientRect();
+    setPos(
+      r
+        ? { top: r.bottom + 8, right: window.innerWidth - r.right }
+        : { top: 8, right: 8 },
+    );
+  };
+
+  const toggle = () => {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    place();
+    setOpen(true);
+  };
 
   // Close on outside mousedown or Escape. The Listbox menus render inside the
   // wrap (even though they're position:fixed), so picking an option doesn't
-  // count as an outside click; an open Listbox swallows Escape itself.
+  // count as an outside click; an open Listbox swallows Escape itself. On
+  // scroll or resize the fixed popover is re-anchored to the trigger rather
+  // than closed — a scroll event can land just after opening (e.g. the
+  // browser scrolling the button into view), which would otherwise dismiss
+  // the popover the instant it appears.
   useEffect(() => {
     if (!open) return;
     const onDocMouseDown = (e: MouseEvent) => {
@@ -46,9 +80,13 @@ export default function SortControl({
     };
     document.addEventListener("mousedown", onDocMouseDown);
     document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
     return () => {
       document.removeEventListener("mousedown", onDocMouseDown);
       document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
     };
   }, [open]);
 
@@ -110,20 +148,26 @@ export default function SortControl({
   return (
     <span className={styles.anchor} ref={wrapRef}>
       <button
+        ref={buttonRef}
         type="button"
         className={buttonClassName}
         disabled={fields.length === 0}
-        aria-label="Sort"
+        aria-label={ariaLabel}
         aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggle}
       >
         <SortIcon /> Sort
         {sorts.length > 0 && (
           <span className={styles.count}>{sorts.length}</span>
         )}
       </button>
-      {open && (
-        <div className={styles.popover} role="dialog" aria-label="Sort options">
+      {open && pos && (
+        <div
+          className={styles.popover}
+          role="dialog"
+          aria-label={`${ariaLabel} options`}
+          style={{ top: pos.top, right: pos.right }}
+        >
           {sorts.length === 0 ? (
             <p className={styles.empty}>
               Not sorted — results keep their default order.

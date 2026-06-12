@@ -21,6 +21,11 @@ import { PlusIcon } from "@/components/custom-fields/icons";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import FilterBar from "@/components/filters/FilterBar";
+import {
+  fetchDefaultSortOptions,
+  resolveDefaultSorts,
+  sortsOrDefault,
+} from "@/components/filters/defaultSorts";
 import { buildFieldList, supportsSorting } from "@/components/filters/fieldList";
 import { toFilterRequest, toSortRequest } from "@/components/filters/serialize";
 import type { ActiveFilter, ActiveSort } from "@/components/filters/types";
@@ -148,9 +153,16 @@ export default function VideoGameBoxesManager() {
   // filter chips. Both feed the server-side search.
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<ActiveFilter[]>([]);
-  // The ordered sort levels behind the Sort button; the button renders only
-  // when the spec advertises sorting (its "all_fields" capability marker).
+  // The sort levels the user entered on this page (the Sort button's state).
+  // Starts empty even when a default sort is stored — the default never shows
+  // here; it is folded into the search request only while this is empty. The
+  // button renders only when the spec advertises sorting (its "all_fields"
+  // capability marker).
   const [sorts, setSorts] = useState<ActiveSort[]>([]);
+  // The stored default sort, resolved against the field list at mount. Every
+  // search without page sorts (initial load, and after "Clear sorting") sends
+  // these instead; any page sort wins outright.
+  const [defaultSorts, setDefaultSorts] = useState<ActiveSort[]>([]);
   const canSort = useMemo(() => supportsSorting(spec), [spec]);
   // The row whose Title cell is being inline-edited, or null when idle.
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -189,28 +201,62 @@ export default function VideoGameBoxesManager() {
     [systems],
   );
 
-  // Load the initial (unfiltered) boxes, the systems for the dropdowns, the
-  // field definitions, and the filter spec together on mount. setState lives in
-  // the promise callbacks (not the effect body); `active` drops a stale
-  // response if the component unmounts before the requests resolve.
+  // The last search payload sent (and a sequence counter for last-write-wins),
+  // shared by the mount load and the search effect below so neither repeats
+  // the other's query.
+  const lastDto = useRef("[]");
+  const searchSeq = useRef(0);
+
+  // Load the systems for the dropdowns, the field definitions, the filter
+  // spec, and the stored default sort options together on mount, then run the
+  // initial search with the resolved defaults so the first page of results
+  // already honors them. The defaults stay out of the Sort button's state —
+  // they only ever ride along in the request while the page has no sorts of
+  // its own. setState lives in the promise callbacks (not the effect body);
+  // `active` drops a stale response if the component unmounts before the
+  // requests resolve.
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
     Promise.all([
-      searchVideoGameBoxesClient([], controller.signal),
       searchSystemsClient(controller.signal),
       fetchEntityFields("videoGameBox", controller.signal),
       fetchEntityFields("videoGame", controller.signal),
       fetchFilterSpec("videoGameBox", controller.signal),
+      fetchDefaultSortOptions(controller.signal),
     ])
       .then(
-        ([loadedBoxes, loadedSystems, loadedDefs, loadedGameDefs, loadedSpec]) => {
+        async ([
+          loadedSystems,
+          loadedDefs,
+          loadedGameDefs,
+          loadedSpec,
+          defaultSortOptions,
+        ]) => {
+          // Resolve the stored levels against the live field list (dropping
+          // any field that no longer exists), and only when the spec
+          // advertises sorting at all. lastDto is primed with the seeded
+          // payload so the search effect below doesn't immediately re-run the
+          // same query.
+          const seeded = supportsSorting(loadedSpec)
+            ? resolveDefaultSorts(
+                defaultSortOptions.videoGameBox,
+                buildFieldList(loadedSpec, loadedDefs),
+              )
+            : [];
+          const dto = toSortRequest("videoGameBox", seeded);
+          lastDto.current = JSON.stringify(dto);
+          const loadedBoxes = await searchVideoGameBoxesClient(
+            dto,
+            controller.signal,
+          );
           if (!active) return;
           setBoxes(loadedBoxes);
           setSystems(loadedSystems);
           setDefinitions(loadedDefs);
           setGameDefinitions(loadedGameDefs);
           setSpec(loadedSpec);
+          setDefaultSorts(seeded);
           setLoading(false);
         },
       )
@@ -230,18 +276,18 @@ export default function VideoGameBoxesManager() {
   }, [showSnackbar]);
 
   // Re-run the server search whenever the filter chips or sort levels change.
+  // The sort filters sent are the page's own levels, or the stored defaults
+  // while the page has none (so "Clear sorting" returns to the default sort).
   // Debounced so rapid edits coalesce, abortable so an in-flight request is
   // cancelled, and seq-guarded so only the newest response is committed
   // (last-write-wins). A run whose payload matches the last one sent is
   // skipped — that covers the initial mount (the mount effect already loaded).
   // The search box doesn't filter live — it adds a title-contains chip on
   // Enter, which flows through here.
-  const lastDto = useRef("[]");
-  const searchSeq = useRef(0);
   useEffect(() => {
     const dto = [
       ...toFilterRequest("videoGameBox", filters),
-      ...toSortRequest("videoGameBox", sorts),
+      ...toSortRequest("videoGameBox", sortsOrDefault(sorts, defaultSorts)),
     ];
     const dtoJson = JSON.stringify(dto);
     if (dtoJson === lastDto.current) return;
@@ -263,7 +309,7 @@ export default function VideoGameBoxesManager() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [filters, sorts, showSnackbar]);
+  }, [filters, sorts, defaultSorts, showSnackbar]);
 
   // Apply `next` optimistically and PUT the whole box — the backend's
   // VideoGameBoxRequest requires every field, so the box's current game ids
@@ -599,7 +645,7 @@ export default function VideoGameBoxesManager() {
           <h2 className={styles.entName}><b>{boxes.length}</b> {boxes.length === 1 ? "Video Game Box" : "Video Game Boxes"}</h2>
           {massEditMode && (
             <div className={styles.crumb}>
-              <span>Mass edit mode is on. (adjust in options)</span>
+              <span>Mass edit mode is on.</span>
             </div>
           )}
         </div>

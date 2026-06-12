@@ -275,7 +275,7 @@ export default function BackupImport() {
   return (
     <SettingsSection
       title="Backup & Import"
-      description="Save, restore, and seed your collection data."
+      description=""
     >
       <input
         ref={fileInputRef}

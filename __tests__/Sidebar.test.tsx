@@ -2,6 +2,8 @@ import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import { UiSettingsProvider } from "@/components/UiSettingsProvider";
+import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
 
 jest.mock("next/navigation", () => ({
   usePathname: jest.fn(),
@@ -49,6 +51,26 @@ describe("Sidebar", () => {
 
     const inactive = screen.getByRole("link", { name: "Video Games" });
     expect(inactive).not.toHaveAttribute("aria-current");
+  });
+
+  it("shows the beginner hint when beginner mode is on", () => {
+    render(
+      <UiSettingsProvider
+        initial={{ ...DEFAULT_UI_SETTINGS, beginnerMode: true }}
+      >
+        <Sidebar />
+      </UiSettingsProvider>,
+    );
+    expect(
+      screen.getByRole("button", { name: "Beginner hint" }),
+    ).toBeInTheDocument();
+  });
+
+  it("omits the beginner hint when beginner mode is off", () => {
+    render(<Sidebar />);
+    expect(
+      screen.queryByRole("button", { name: "Beginner hint" }),
+    ).not.toBeInTheDocument();
   });
 
   it("marks no nav link active when the path matches none of them", () => {

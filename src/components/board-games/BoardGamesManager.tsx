@@ -17,6 +17,11 @@ import DataTable, {
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import FilterBar from "@/components/filters/FilterBar";
+import {
+  fetchDefaultSortOptions,
+  resolveDefaultSorts,
+  sortsOrDefault,
+} from "@/components/filters/defaultSorts";
 import { buildFieldList, supportsSorting } from "@/components/filters/fieldList";
 import { toFilterRequest, toSortRequest } from "@/components/filters/serialize";
 import type { ActiveFilter, ActiveSort } from "@/components/filters/types";
@@ -132,9 +137,16 @@ export default function BoardGamesManager() {
   // filter chips. Both feed the server-side search.
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<ActiveFilter[]>([]);
-  // The ordered sort levels behind the Sort button; the button renders only
-  // when the spec advertises sorting (its "all_fields" capability marker).
+  // The sort levels the user entered on this page (the Sort button's state).
+  // Starts empty even when a default sort is stored — the default never shows
+  // here; it is folded into the search request only while this is empty. The
+  // button renders only when the spec advertises sorting (its "all_fields"
+  // capability marker).
   const [sorts, setSorts] = useState<ActiveSort[]>([]);
+  // The stored default sort, resolved against the field list at mount. Every
+  // search without page sorts (initial load, and after "Clear sorting") sends
+  // these instead; any page sort wins outright.
+  const [defaultSorts, setDefaultSorts] = useState<ActiveSort[]>([]);
   const canSort = useMemo(() => supportsSorting(spec), [spec]);
   // The row whose Title cell is being inline-edited, or null when idle.
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -146,23 +158,46 @@ export default function BoardGamesManager() {
     [spec, definitions],
   );
 
-  // Load the initial (unfiltered) games, the field definitions, and the filter
-  // spec together on mount. setState lives in the promise callbacks (not the
-  // effect body); `active` drops a stale response if the component unmounts
-  // before the requests resolve.
+  // The last search payload sent (and a sequence counter for last-write-wins),
+  // shared by the mount load and the search effect below so neither repeats
+  // the other's query.
+  const lastDto = useRef("[]");
+  const searchSeq = useRef(0);
+
+  // Load the field definitions, the filter spec, and the stored default sort
+  // options together on mount, then run the initial search with the resolved
+  // defaults so the first page of results already honors them. The defaults
+  // stay out of the Sort button's state — they only ever ride along in the
+  // request while the page has no sorts of its own. setState lives in the
+  // promise callbacks (not the effect body); `active` drops a stale response
+  // if the component unmounts before the requests resolve.
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
     Promise.all([
-      searchBoardGamesClient([], controller.signal),
       fetchEntityFields("boardGame", controller.signal),
       fetchFilterSpec("boardGame", controller.signal),
+      fetchDefaultSortOptions(controller.signal),
     ])
-      .then(([loadedGames, loadedDefs, loadedSpec]) => {
+      .then(async ([loadedDefs, loadedSpec, defaultSortOptions]) => {
+        // Resolve the stored levels against the live field list (dropping any
+        // field that no longer exists), and only when the spec advertises
+        // sorting at all. lastDto is primed with the seeded payload so the
+        // search effect below doesn't immediately re-run the same query.
+        const seeded = supportsSorting(loadedSpec)
+          ? resolveDefaultSorts(
+              defaultSortOptions.boardGame,
+              buildFieldList(loadedSpec, loadedDefs),
+            )
+          : [];
+        const dto = toSortRequest("boardGame", seeded);
+        lastDto.current = JSON.stringify(dto);
+        const loadedGames = await searchBoardGamesClient(dto, controller.signal);
         if (!active) return;
         setGames(loadedGames);
         setDefinitions(loadedDefs);
         setSpec(loadedSpec);
+        setDefaultSorts(seeded);
         setLoading(false);
       })
       .catch((error) => {
@@ -180,18 +215,18 @@ export default function BoardGamesManager() {
   }, [showSnackbar]);
 
   // Re-run the server search whenever the filter chips or sort levels change.
+  // The sort filters sent are the page's own levels, or the stored defaults
+  // while the page has none (so "Clear sorting" returns to the default sort).
   // Debounced so rapid edits coalesce, abortable so an in-flight request is
   // cancelled, and seq-guarded so only the newest response is committed
   // (last-write-wins). A run whose payload matches the last one sent is
   // skipped — that covers the initial mount (the mount effect already loaded).
   // The search box doesn't filter live — it adds a title-contains chip on
   // Enter, which flows through here.
-  const lastDto = useRef("[]");
-  const searchSeq = useRef(0);
   useEffect(() => {
     const dto = [
       ...toFilterRequest("boardGame", filters),
-      ...toSortRequest("boardGame", sorts),
+      ...toSortRequest("boardGame", sortsOrDefault(sorts, defaultSorts)),
     ];
     const dtoJson = JSON.stringify(dto);
     if (dtoJson === lastDto.current) return;
@@ -213,7 +248,7 @@ export default function BoardGamesManager() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [filters, sorts, showSnackbar]);
+  }, [filters, sorts, defaultSorts, showSnackbar]);
 
   // Apply `next` optimistically and PUT the whole game (title + values are
   // both required by the backend), rolling the list back on failure. Every
@@ -401,7 +436,7 @@ export default function BoardGamesManager() {
           <h2 className={styles.entName}><b>{games.length}</b> {games.length === 1 ? "Board Game" : "Board Games"}</h2>
           {massEditMode && (
             <div className={styles.crumb}>
-              <span>Mass edit mode is on. (adjust in options)</span>
+              <span>Mass edit mode is on.</span>
             </div>
           )}
         </div>

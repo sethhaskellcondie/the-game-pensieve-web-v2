@@ -20,6 +20,11 @@ import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import { PlusIcon } from "@/components/custom-fields/icons";
 import FilterBar from "@/components/filters/FilterBar";
+import {
+  fetchDefaultSortOptions,
+  resolveDefaultSorts,
+  sortsOrDefault,
+} from "@/components/filters/defaultSorts";
 import { buildFieldList, supportsSorting } from "@/components/filters/fieldList";
 import { toFilterRequest, toSortRequest } from "@/components/filters/serialize";
 import type { ActiveFilter, ActiveSort } from "@/components/filters/types";
@@ -177,9 +182,16 @@ export default function ToysManager() {
   // filter chips. Both feed the server-side search.
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<ActiveFilter[]>([]);
-  // The ordered sort levels behind the Sort button; the button renders only
-  // when the spec advertises sorting (its "all_fields" capability marker).
+  // The sort levels the user entered on this page (the Sort button's state).
+  // Starts empty even when a default sort is stored — the default never shows
+  // here; it is folded into the search request only while this is empty. The
+  // button renders only when the spec advertises sorting (its "all_fields"
+  // capability marker).
   const [sorts, setSorts] = useState<ActiveSort[]>([]);
+  // The stored default sort, resolved against the field list at mount. Every
+  // search without page sorts (initial load, and after "Clear sorting") sends
+  // these instead; any page sort wins outright.
+  const [defaultSorts, setDefaultSorts] = useState<ActiveSort[]>([]);
   const canSort = useMemo(() => supportsSorting(spec), [spec]);
   // The unified field list (standard spec fields + custom fields) the filter bar
   // offers. Recomputed only when the spec or definitions change.
@@ -195,23 +207,46 @@ export default function ToysManager() {
     null,
   );
 
-  // Load the initial (unfiltered) toys, their field definitions, and the filter
-  // spec together on mount. setState lives in the promise callbacks (not the
-  // effect body); `active` drops a stale response if the component unmounts
-  // before the requests resolve.
+  // The last search payload sent (and a sequence counter for last-write-wins),
+  // shared by the mount load and the search effect below so neither repeats
+  // the other's query.
+  const lastDto = useRef("[]");
+  const searchSeq = useRef(0);
+
+  // Load the field definitions, the filter spec, and the stored default sort
+  // options together on mount, then run the initial search with the resolved
+  // defaults so the first page of results already honors them. The defaults
+  // stay out of the Sort button's state — they only ever ride along in the
+  // request while the page has no sorts of its own. setState lives in the
+  // promise callbacks (not the effect body); `active` drops a stale response
+  // if the component unmounts before the requests resolve.
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
     Promise.all([
-      searchToysClient([], controller.signal),
       fetchToyFields(controller.signal),
       fetchFilterSpec(controller.signal),
+      fetchDefaultSortOptions(controller.signal),
     ])
-      .then(([loadedToys, loadedDefs, loadedSpec]) => {
+      .then(async ([loadedDefs, loadedSpec, defaultSortOptions]) => {
+        // Resolve the stored levels against the live field list (dropping any
+        // field that no longer exists), and only when the spec advertises
+        // sorting at all. lastDto is primed with the seeded payload so the
+        // search effect below doesn't immediately re-run the same query.
+        const seeded = supportsSorting(loadedSpec)
+          ? resolveDefaultSorts(
+              defaultSortOptions.toy,
+              buildFieldList(loadedSpec, loadedDefs),
+            )
+          : [];
+        const dto = toSortRequest("toy", seeded);
+        lastDto.current = JSON.stringify(dto);
+        const loadedToys = await searchToysClient(dto, controller.signal);
         if (!active) return;
         setToys(loadedToys);
         setDefinitions(loadedDefs);
         setSpec(loadedSpec);
+        setDefaultSorts(seeded);
         setLoading(false);
       })
       .catch((error) => {
@@ -229,18 +264,18 @@ export default function ToysManager() {
   }, [showSnackbar]);
 
   // Re-run the server search whenever the filter chips or sort levels change.
+  // The sort filters sent are the page's own levels, or the stored defaults
+  // while the page has none (so "Clear sorting" returns to the default sort).
   // Debounced so rapid edits coalesce, abortable so an in-flight request is
   // cancelled, and seq-guarded so only the newest response is committed
   // (last-write-wins). A run whose payload matches the last one sent is
   // skipped — that covers the initial mount (the mount effect already loaded).
   // The search box doesn't filter live — it adds a name-contains chip on
   // Enter, which flows through here.
-  const lastDto = useRef("[]");
-  const searchSeq = useRef(0);
   useEffect(() => {
     const dto = [
       ...toFilterRequest("toy", filters),
-      ...toSortRequest("toy", sorts),
+      ...toSortRequest("toy", sortsOrDefault(sorts, defaultSorts)),
     ];
     const dtoJson = JSON.stringify(dto);
     if (dtoJson === lastDto.current) return;
@@ -262,7 +297,7 @@ export default function ToysManager() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [filters, sorts, showSnackbar]);
+  }, [filters, sorts, defaultSorts, showSnackbar]);
 
   const startEdit = useCallback((toy: Toy, field: EditField) => {
     setEditing({ id: toy.id, field });
@@ -552,7 +587,7 @@ export default function ToysManager() {
           <h2 className={styles.entName}><b>{toys.length}</b> {toys.length === 1 ? "Toy" : "Toys"}</h2>
           {massEditMode && (
             <div className={styles.crumb}>
-              <span>Mass edit mode is on. (adjust in options)</span>
+              <span>Mass edit mode is on.</span>
             </div>
           )}
         </div>

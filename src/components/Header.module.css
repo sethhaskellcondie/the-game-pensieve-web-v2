@@ -149,6 +149,19 @@
   height: 78px;
 }
 
+/* Beginner hint pinned to the top-right of the hero row. The default seedling
+   green sinks into the navy, so the icon borrows the pale field-green; the
+   disclosed text grows downward without disturbing the title block. */
+.headerHint {
+  margin-left: auto;
+  align-self: flex-start;
+  align-items: flex-end;
+  max-width: 340px;
+  text-align: right;
+  color: rgba(var(--white-rgb), 0.82);
+  --beginner-hint-color: var(--field-green-bg);
+}
+
 .heroTitle {
   margin: 0;
   font-family: var(--font-press-start), monospace;

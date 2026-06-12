@@ -358,7 +358,7 @@ describe("VideoGamesManager", () => {
     await screen.findByText("Super Mario Bros.");
 
     expect(
-      screen.queryByText("Mass edit mode is on. (adjust in options)"),
+      screen.queryByText("Mass edit mode is on."),
     ).not.toBeInTheDocument();
     // Title stays plain text, not an inline-edit trigger button.
     expect(
@@ -371,7 +371,7 @@ describe("VideoGamesManager", () => {
     await screen.findByText("Super Mario Bros.");
 
     expect(
-      screen.getByText("Mass edit mode is on. (adjust in options)"),
+      screen.getByText("Mass edit mode is on."),
     ).toBeInTheDocument();
   });
 

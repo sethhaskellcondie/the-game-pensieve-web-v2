@@ -295,7 +295,7 @@ describe("SystemsManager", () => {
     await screen.findByText("NES");
 
     expect(
-      screen.queryByText("Mass edit mode is on. (adjust in options)"),
+      screen.queryByText("Mass edit mode is on."),
     ).not.toBeInTheDocument();
     // Name stays plain text, not an inline-edit trigger button.
     expect(
@@ -308,7 +308,7 @@ describe("SystemsManager", () => {
     await screen.findByText("NES");
 
     expect(
-      screen.getByText("Mass edit mode is on. (adjust in options)"),
+      screen.getByText("Mass edit mode is on."),
     ).toBeInTheDocument();
   });
 

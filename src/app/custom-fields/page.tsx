@@ -16,6 +16,7 @@ export default function CustomFieldsPage() {
         title="CUSTOM"
         titleAccent="FIELDS"
         tagline="Customized your collection with the data you want!"
+        beginnerHint="Custom Fields are the heart and soul of the pensieve, you setup what data points you want to track, and what they apply to. Then as the data is entered in you can then filter, sort, and rearrage the data so you can better understand your collection!"
       />
 
       <main className={styles.content}>

@@ -15,8 +15,12 @@ export type ListboxOption = {
 
 // A small custom listbox: a button trigger plus a position:fixed menu so it
 // escapes any clipping/scrolling ancestor (the same approach as the toy
-// DropdownEditor and EntitySelect). Closes on outside mousedown, Escape, scroll,
-// or resize. Controlled by `value` + `onChange`.
+// DropdownEditor and EntitySelect). The menu is viewport-aware: its height is
+// clamped to the space on its side of the trigger, and it flips above the
+// trigger when there's more room there — otherwise a trigger near the bottom
+// edge leaves the menu's tail (and its last options) unreachable off-screen.
+// Closes on outside mousedown, Escape, scroll, or resize. Controlled by
+// `value` + `onChange`.
 export default function Listbox({
   value,
   options,
@@ -35,15 +39,47 @@ export default function Listbox({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(
-    null,
-  );
+  const [pos, setPos] = useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+    width: number;
+    maxHeight: number;
+  } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
+  // The menu's natural height cap (mirrors .menu's max-height) and the gap to
+  // the trigger / breathing room kept from the viewport edge.
+  const MENU_MAX = 280;
+  const GAP = 6;
+  const MARGIN = 8;
+
   const openMenu = () => {
     const r = triggerRef.current?.getBoundingClientRect();
-    if (r) setPos({ top: r.bottom + 6, left: r.left, width: r.width });
+    if (r) {
+      const below = window.innerHeight - r.bottom - GAP - MARGIN;
+      const above = r.top - GAP - MARGIN;
+      // Open downward when the full menu fits (or down is the roomier side),
+      // clamped to the available space; otherwise flip above the trigger. The
+      // floor keeps the menu usable even in a pathologically short viewport.
+      const fit = (space: number) => Math.min(MENU_MAX, Math.max(120, space));
+      if (below >= MENU_MAX || below >= above) {
+        setPos({
+          top: r.bottom + GAP,
+          left: r.left,
+          width: r.width,
+          maxHeight: fit(below),
+        });
+      } else {
+        setPos({
+          bottom: window.innerHeight - r.top + GAP,
+          left: r.left,
+          width: r.width,
+          maxHeight: fit(above),
+        });
+      }
+    }
     setOpen(true);
   };
 
@@ -113,7 +149,13 @@ export default function Listbox({
           className={styles.menu}
           role="listbox"
           aria-label={ariaLabel}
-          style={{ top: pos.top, left: pos.left, minWidth: pos.width }}
+          style={{
+            top: pos.top,
+            bottom: pos.bottom,
+            left: pos.left,
+            minWidth: pos.width,
+            maxHeight: pos.maxHeight,
+          }}
         >
           {options.map((o) => {
             const isSelected = o.value === value;

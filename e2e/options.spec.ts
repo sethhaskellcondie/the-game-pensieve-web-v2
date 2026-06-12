@@ -1,5 +1,49 @@
 import { test, expect, type Page } from "@playwright/test";
 
+// The Default Sort Options section fires a fan-out of fetches on mount (the
+// stored defaults plus a filter spec and custom-field list per entity). Stub
+// them all so these specs stay fast and hermetic — none of the tests here
+// exercise that section, and the real requests slow the dev server enough
+// under a parallel run to flake the click-then-assert tests.
+test.beforeEach(async ({ page }) => {
+  const json = (
+    route: Parameters<Parameters<Page["route"]>[1]>[0],
+    body: unknown,
+  ) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+  await page.route("**/api/default-sort-options", (route) =>
+    json(route, {
+      toy: [],
+      system: [],
+      videoGame: [],
+      videoGameBox: [],
+      boardGame: [],
+      boardGameBox: [],
+    }),
+  );
+  await page.route("**/api/filters/**", (route) =>
+    json(route, {
+      status: "ok",
+      data: {
+        type: "filters",
+        fields: {
+          name: "text",
+          all_fields: "sort",
+          pagination_fields: "pagination",
+        },
+        filters: {},
+      },
+    }),
+  );
+  await page.route("**/api/custom-fields/entity/**", (route) =>
+    json(route, { status: "ok", data: [] }),
+  );
+});
+
 // The API Tools section is only rendered in developer mode. Stub the settings
 // write proxy and flip the toggle on (if it isn't already) so the section is
 // reliably present regardless of the backend's stored value.

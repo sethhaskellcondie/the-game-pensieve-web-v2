@@ -87,6 +87,11 @@
   text-transform: uppercase;
 }
 
+.beginnerHint {
+  padding: 12px 14px;
+  color: var(--sidebar-link);
+}
+
 .sideFoot {
   margin-top: auto;
   padding: 16px 14px 0;

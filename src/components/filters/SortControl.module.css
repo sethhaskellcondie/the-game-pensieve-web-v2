@@ -3,7 +3,6 @@
    sits near the bar's right edge. */
 
 .anchor {
-  position: relative;
   display: inline-flex;
 }
 
@@ -22,10 +21,12 @@
   font-weight: 800;
 }
 
+/* Fixed (viewport) positioning so the popover escapes clipping ancestors —
+   e.g. the Options card's overflow:hidden; top/right are set inline from the
+   trigger's rect when it opens. Stays below the Listbox menus (z-index 70) it
+   contains. */
 .popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+  position: fixed;
   z-index: 65;
   background: #fff;
   border: 1px solid var(--line);

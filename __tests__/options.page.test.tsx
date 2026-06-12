@@ -5,6 +5,19 @@ import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
 
 describe("OptionsPage", () => {
+  beforeEach(() => {
+    // The Default Sort Options section fetches its data on mount; a pending
+    // promise keeps it in its initial (disabled) state for these render tests.
+    global.fetch = jest.fn(
+      () => new Promise(() => {}),
+    ) as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    // @ts-expect-error - cleanup of the per-test fetch stub
+    delete global.fetch;
+  });
+
   it("renders the OPTIONS level-1 heading", () => {
     render(<OptionsPage />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
@@ -16,6 +29,16 @@ describe("OptionsPage", () => {
     render(<OptionsPage />);
     expect(
       screen.getByRole("heading", { level: 2, name: "UI Settings" }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders the Default Sort Options section", () => {
+    render(<OptionsPage />);
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Default Sort Options" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Default sort for Systems" }),
     ).toBeInTheDocument();
   });
 
