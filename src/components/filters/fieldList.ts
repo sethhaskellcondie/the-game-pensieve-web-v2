@@ -79,6 +79,14 @@ export function buildFieldList(
   return out;
 }
 
+// Whether the spec advertises sorting via its sort capability marker (the
+// "all_fields": "sort" entry). The marker is metadata only — sort filters send
+// the actual field name, never the marker itself (the backend rejects it).
+export function supportsSorting(spec: FilterSpecification | null): boolean {
+  if (!spec) return false;
+  return Object.values(spec.fields).some((type) => type === "sort");
+}
+
 // The field the quick-search box maps onto: the standard text field named
 // "name" (fallback "title"), else the first standard text field. Returns null
 // when there's no text field to search.

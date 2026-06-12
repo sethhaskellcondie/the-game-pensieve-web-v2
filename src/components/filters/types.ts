@@ -65,4 +65,17 @@ export type ActiveFilter = {
   operandLabel?: string;
 };
 
+// One applied sort level held in component state. Array position is the sort
+// priority (first = primary, second = tiebreaker, …) — the backend applies
+// sort filters in request order. `field`/`label` snapshot the sorted-by field
+// the same way ActiveFilter does.
+export type SortDirection = "asc" | "desc";
+
+export type ActiveSort = {
+  id: string;
+  field: string;
+  label: string;
+  direction: SortDirection;
+};
+
 export type { EntityKey };

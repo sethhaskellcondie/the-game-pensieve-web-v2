@@ -5,31 +5,59 @@ info:
     The Game Pensieve is a comprehensive collection management system for gaming items including toys, video games, board games, and gaming systems. 
     
     This API provides full CRUD operations for managing your gaming collection with support for custom fields, advanced filtering, and data backup/import functionality.
-    
+
     ## Response Format
-    All responses follow a consistent JSON API-inspired format:
+    Every **successful** response is wrapped in a consistent envelope:
     ```json
     {
       "data": <response_data>,
-      "errors": null
+      "errors": null,
+      "roundTripMs": 12
     }
     ```
+    - `data` — the payload (an object, an array, or an empty string `""` for deletes). `null` on error.
+    - `errors` — always `null` on success.
+    - `roundTripMs` — server-side processing time in milliseconds, measured from request receipt to response. Present only on successful responses produced by the controllers; it is **absent** from error responses.
+
+    ## Error Format
+    Errors do **not** include `roundTripMs`. `data` is `null` and `errors` is always an **array of strings** (one entry per problem found — a single request can report several validation errors at once):
+    ```json
+    {
+      "data": null,
+      "errors": ["title cannot be blank", "systemId must be a positive integer"]
+    }
+    ```
+    Status codes used:
+    - **400 Bad Request** — input/validation failure (blank required field, malformed entity, invalid custom field value, duplicate that violates a uniqueness rule, invalid filter).
+    - **404 Not Found** — the requested resource (or an unknown route) does not exist.
+    - **409 Conflict** — an import is already in progress (the import endpoints take a global lock).
+    - **500 Internal Server Error** — an unexpected error; the array contains a generic message followed by the underlying exception message.
+    - **200 OK with populated `errors`** — the backup/import endpoints report partial failures here: the import still returns HTTP 200, but `errors` lists the records that could not be processed. Always inspect `errors` on these endpoints even on a 200.
+
+    ## Timestamps
+    All `createdAt`, `updatedAt`, and `deletedAt` fields are serialized as **epoch milliseconds** (a JSON integer, e.g. `1757970298640`), not ISO-8601 strings. `deletedAt` is `null` for records that have not been soft-deleted. This applies uniformly to entities, custom fields, metadata, and backup exports.
 
     ## Entity Relationships
-    - **Systems** are gaming platforms (Nintendo Switch, PlayStation, etc.)
-    - **Video Game Boxes** contain one or more Video Games and belong to a System
-    - **Board Game Boxes** contain exactly one Board Game
-    - **Toys** are standalone collectibles
-    - **Custom Fields** can be attached to any entity for additional metadata
+    - **Systems** are gaming platforms (Nintendo Switch, PlayStation, NES, etc.).
+    - **Video Games** belong to a System and are contained by one or more **Video Game Boxes**. Video games are never created on their own — they are created through a Video Game Box (`newVideoGames`) or linked to one by id (`existingVideoGameIds`). There is no `POST /v1/videoGames`; only GET, PUT (update), and search exist.
+    - **Video Game Boxes** belong to a System and contain one or more Video Games. A box with more than one game has `isCollection: true`.
+    - **Board Games** are the underlying game; **Board Game Boxes** are the physical boxes that contain exactly one Board Game. Like video games, board games are never created directly — they are created through a Board Game Box (`boardGame`) or linked by id (`boardGameId`). There is no `POST /v1/boardGames`; only GET, PUT (update), and search exist.
+    - **Toys** are standalone collectibles.
+    - **Custom Fields** define typed, reusable metadata fields scoped to one entity type. Each entity carries a `customFieldValues` array holding its values.
+    - **Metadata** is arbitrary JSON stored under a unique string key, independent of the collection entities.
+
+    ## Custom Field Values
+    Every entity request and response carries a `customFieldValues` array. Each entry is `{ customFieldId, customFieldName, customFieldType, value }` where `value` is **always a string**, regardless of the field's type — `"true"`/`"false"` for booleans, `"2006"` for numbers, the option name for enum types. On creation you may send `customFieldId: 0` as a placeholder when the value is keyed by `customFieldName`; the server returns the resolved id in the response.
 
     ## Filter System
-    The API provides advanced filtering capabilities through `/function/search` endpoints:
+    The API provides advanced filtering capabilities through the `/{entity}/function/search` endpoints. Call `GET /v1/filters/{entity}` first to discover the fields and operators available for an entity. Operators by field type:
     - **Text filters**: equals, not_equals, contains, starts_with, ends_with
-    - **Number filters**: equals, not_equals, greater_than, less_than, etc.
+    - **Number filters**: equals, not_equals, greater_than, less_than, greater_than_equal_to, less_than_equal_to
     - **Boolean filters**: equals
-    - **Time filters**: since, before
-    - **System filters**: equals, not_equals (for video games and video game boxes)
-    - **Sort and Pagination**: order_by, order_by_desc, limit, offset — multiple sort filters are supported and applied in request order
+    - **Time filters**: since, before (operand is epoch milliseconds or an ISO datetime string)
+    - **System filters**: equals, not_equals (for `system_id` on video games and video game boxes)
+    - **Custom field filters**: filter on a custom field by sending its field metadata (custom fields surface as filterable fields for their entity)
+    - **Sort and Pagination**: order_by, order_by_desc, limit, offset — multiple sort filters are supported and applied in request order (first = primary sort, second = tiebreaker, ...)
   version: 1.0.0
   contact:
     name: The Game Pensieve API Support
@@ -44,22 +72,37 @@ paths:
       tags:
         - System
       summary: Health check endpoint
-      description: Simple health check that returns "thump thump"
+      description: Simple health check. Returns the string "thump thump" inside the standard response envelope.
       responses:
         '200':
           description: Service is healthy
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-                example: "thump thump"
+                type: object
+                properties:
+                  data:
+                    type: string
+                    example: "thump thump"
+                  errors:
+                    type: 'null'
+                  roundTripMs:
+                    type: integer
+                    format: int64
+              example:
+                data: "thump thump"
+                errors: null
+                roundTripMs: 0
 
   /v1/toys:
     post:
       tags:
         - Toys
       summary: Create a new toy
-      description: Create a new toy with name, set, and optional custom fields
+      description: |
+        Create a new toy. `name`, `set`, and `customFieldValues` are required (send an empty
+        `customFieldValues` array if there are no values). A toy with the same `name` and `set`
+        as an existing toy is rejected with a 400.
       requestBody:
         required: true
         content:
@@ -71,6 +114,19 @@ paths:
                   $ref: '#/components/schemas/ToyRequest'
               required:
                 - toy
+            example:
+              toy:
+                name: "Darkwing Duck"
+                set: "Misc"
+                customFieldValues:
+                  - customFieldId: 1
+                    customFieldName: "Broken"
+                    customFieldType: "boolean"
+                    value: "false"
+                  - customFieldId: 11
+                    customFieldName: "Quantity"
+                    customFieldType: "number"
+                    value: "1"
       responses:
         '201':
           description: Toy created successfully
@@ -78,12 +134,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ToyDataResponse'
+              example:
+                data:
+                  key: "toy"
+                  id: 1
+                  name: "Darkwing Duck"
+                  set: "Misc"
+                  createdAt: 1757970298640
+                  updatedAt: 1757970298640
+                  deletedAt: null
+                  customFieldValues:
+                    - customFieldId: 1
+                      customFieldName: "Broken"
+                      customFieldType: "boolean"
+                      value: "false"
+                    - customFieldId: 11
+                      customFieldName: "Quantity"
+                      customFieldType: "number"
+                      value: "1"
+                errors: null
+                roundTripMs: 9
         '400':
-          description: Invalid input data
+          description: Invalid input data (e.g. blank name, or duplicate name+set)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors:
+                  - "Name is required for a Toy"
 
   /v1/toys/{id}:
     get:
@@ -99,12 +179,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ToyDataResponse'
+              example:
+                data:
+                  key: "toy"
+                  id: 1
+                  name: "Darkwing Duck"
+                  set: "Misc"
+                  createdAt: 1757970298640
+                  updatedAt: 1757970298640
+                  deletedAt: null
+                  customFieldValues:
+                    - customFieldId: 1
+                      customFieldName: "Broken"
+                      customFieldType: "boolean"
+                      value: "true"
+                    - customFieldId: 11
+                      customFieldName: "Quantity"
+                      customFieldType: "number"
+                      value: "1"
+                    - customFieldId: 12
+                      customFieldName: "Notes"
+                      customFieldType: "text"
+                      value: "10 / 10 no notes"
+                errors: null
+                roundTripMs: 4
         '404':
           description: Toy not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors:
+                  - "Resource Not Found: toy not found in the database with id: 1"
     put:
       tags:
         - Toys
@@ -166,13 +274,26 @@ paths:
       tags:
         - Toys
       summary: Search toys with filters
-      description: Search and filter toys using various criteria
+      description: |
+        Search and filter toys. Send a `filters` array; an empty array returns all toys.
+        Combine multiple filters (they are ANDed), add `order_by`/`order_by_desc` to sort, and
+        `limit`/`offset` to paginate.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/FilterRequest'
+            example:
+              filters:
+                - key: toy
+                  field: set
+                  operator: equals
+                  operand: "Misc"
+                - key: toy
+                  field: name
+                  operator: order_by
+                  operand: ""
       responses:
         '200':
           description: Search results
@@ -187,12 +308,34 @@ paths:
                       $ref: '#/components/schemas/ToyResponse'
                   errors:
                     type: 'null'
+                  roundTripMs:
+                    type: integer
+                    format: int64
+              example:
+                data:
+                  - key: "toy"
+                    id: 1
+                    name: "Darkwing Duck"
+                    set: "Misc"
+                    createdAt: 1757970298640
+                    updatedAt: 1757970298640
+                    deletedAt: null
+                    customFieldValues:
+                      - customFieldId: 1
+                        customFieldName: "Broken"
+                        customFieldType: "boolean"
+                        value: "true"
+                errors: null
+                roundTripMs: 6
 
   /v1/systems:
     post:
       tags:
         - Systems
       summary: Create a new system
+      description: |
+        Create a gaming system/platform. `name`, `generation`, `handheld`, and `customFieldValues`
+        are required. A system name must be unique.
       requestBody:
         required: true
         content:
@@ -204,6 +347,20 @@ paths:
                   $ref: '#/components/schemas/SystemRequest'
               required:
                 - system
+            example:
+              system:
+                name: "Wii"
+                generation: 7
+                handheld: false
+                customFieldValues:
+                  - customFieldId: 2
+                    customFieldName: "Release Year"
+                    customFieldType: "number"
+                    value: "2006"
+                  - customFieldId: 3
+                    customFieldName: "Company"
+                    customFieldType: "text"
+                    value: "Nintendo"
       responses:
         '201':
           description: System created successfully
@@ -211,8 +368,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SystemDataResponse'
+              example:
+                data:
+                  key: "system"
+                  id: 2
+                  name: "Wii"
+                  generation: 7
+                  handheld: false
+                  createdAt: 1757970298680
+                  updatedAt: 1757970298680
+                  deletedAt: null
+                  customFieldValues:
+                    - customFieldId: 2
+                      customFieldName: "Release Year"
+                      customFieldType: "number"
+                      value: "2006"
+                    - customFieldId: 3
+                      customFieldName: "Company"
+                      customFieldType: "text"
+                      value: "Nintendo"
+                errors: null
+                roundTripMs: 11
         '400':
-          description: Invalid input data
+          description: Invalid input data (e.g. blank name or a duplicate system name)
           content:
             application/json:
               schema:
@@ -232,12 +410,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SystemDataResponse'
+              example:
+                data:
+                  key: "system"
+                  id: 2
+                  name: "Wii"
+                  generation: 7
+                  handheld: false
+                  createdAt: 1757970298680
+                  updatedAt: 1757970298680
+                  deletedAt: null
+                  customFieldValues:
+                    - customFieldId: 2
+                      customFieldName: "Release Year"
+                      customFieldType: "number"
+                      value: "2006"
+                    - customFieldId: 3
+                      customFieldName: "Company"
+                      customFieldType: "text"
+                      value: "Nintendo"
+                errors: null
+                roundTripMs: 4
         '404':
           description: System not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors:
+                  - "Resource Not Found: system not found in the database with id: 2"
     put:
       tags:
         - Systems
@@ -299,12 +502,29 @@ paths:
       tags:
         - Systems
       summary: Search systems with filters
+      description: |
+        Search and filter systems. Common fields include `name` (text), `generation` (number),
+        and `handheld` (boolean). Send an empty `filters` array to return all systems.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/FilterRequest'
+            example:
+              filters:
+                - key: system
+                  field: handheld
+                  operator: equals
+                  operand: "false"
+                - key: system
+                  field: generation
+                  operator: greater_than_equal_to
+                  operand: "7"
+                - key: system
+                  field: generation
+                  operator: order_by_desc
+                  operand: ""
       responses:
         '200':
           description: Search results
@@ -319,13 +539,34 @@ paths:
                       $ref: '#/components/schemas/SystemResponse'
                   errors:
                     type: 'null'
+                  roundTripMs:
+                    type: integer
+                    format: int64
+              example:
+                data:
+                  - key: "system"
+                    id: 2
+                    name: "Wii"
+                    generation: 7
+                    handheld: false
+                    createdAt: 1757970298680
+                    updatedAt: 1757970298680
+                    deletedAt: null
+                    customFieldValues: []
+                errors: null
+                roundTripMs: 5
 
   /v1/videoGameBoxes:
     post:
       tags:
         - Video Game Boxes
       summary: Create a new video game box
-      description: Create a new video game box with associated video games
+      description: |
+        Create a video game box together with the video games it contains. This is the only way to
+        create video games — there is no standalone `POST /v1/videoGames`. Provide the games either
+        as `existingVideoGameIds` (ids of games already in the database) and/or `newVideoGames`
+        (games to create inline); at least one game must be present across the two lists. A box that
+        ends up holding more than one game is returned with `isCollection: true`.
       requestBody:
         required: true
         content:
@@ -337,6 +578,25 @@ paths:
                   $ref: '#/components/schemas/VideoGameBoxRequest'
               required:
                 - videoGameBox
+            example:
+              videoGameBox:
+                title: "Kirby's Adventures"
+                systemId: 3
+                existingVideoGameIds: []
+                newVideoGames:
+                  - title: "Kirby's Adventures"
+                    systemId: 3
+                    customFieldValues:
+                      - customFieldId: 4
+                        customFieldName: "Developer"
+                        customFieldType: "text"
+                        value: "HAL Laboratory"
+                isPhysical: true
+                customFieldValues:
+                  - customFieldId: 6
+                    customFieldName: "Enhanced Port"
+                    customFieldType: "boolean"
+                    value: "false"
       responses:
         '201':
           description: Video game box created successfully
@@ -344,8 +604,56 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/VideoGameBoxDataResponse'
+              example:
+                data:
+                  key: "videoGameBox"
+                  id: 1
+                  title: "Kirby's Adventures"
+                  system:
+                    key: "system"
+                    id: 3
+                    name: "NES"
+                    generation: 3
+                    handheld: false
+                    createdAt: 1757970298685
+                    updatedAt: 1757970298685
+                    deletedAt: null
+                    customFieldValues: []
+                  videoGames:
+                    - id: 1
+                      title: "Kirby's Adventures"
+                      system:
+                        key: "system"
+                        id: 3
+                        name: "NES"
+                        generation: 3
+                        handheld: false
+                        createdAt: 1757970298685
+                        updatedAt: 1757970298685
+                        deletedAt: null
+                        customFieldValues: []
+                      createdAt: 1757970298690
+                      updatedAt: 1757970298690
+                      deletedAt: null
+                      customFieldValues:
+                        - customFieldId: 4
+                          customFieldName: "Developer"
+                          customFieldType: "text"
+                          value: "HAL Laboratory"
+                  isPhysical: true
+                  isCollection: false
+                  createdAt: 1757970298690
+                  updatedAt: 1757970298690
+                  deletedAt: null
+                  customFieldValues:
+                    - customFieldId: 6
+                      customFieldName: "Enhanced Port"
+                      customFieldType: "boolean"
+                      value: "false"
+                errors: null
+                roundTripMs: 14
         '400':
-          description: Invalid input data
+          description: Invalid input data (e.g. blank title, unknown systemId, or no games supplied)
           content:
             application/json:
               schema:
@@ -484,6 +792,10 @@ paths:
       tags:
         - Video Games
       summary: Get a video game by ID
+      description: |
+        Returns a single video game, including every box that contains it under `videoGameBoxes`.
+        Note that the nested box flags here are named `physical`/`collection` (no `is` prefix),
+        unlike the top-level VideoGameBox response which uses `isPhysical`/`isCollection`.
       parameters:
         - $ref: '#/components/parameters/EntityId'
       responses:
@@ -493,12 +805,60 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/VideoGameDataResponse'
+              example:
+                data:
+                  key: "videoGame"
+                  id: 1
+                  title: "Kirby's Adventures"
+                  system:
+                    key: "system"
+                    id: 3
+                    name: "NES"
+                    generation: 3
+                    handheld: false
+                    createdAt: 1757970298685
+                    updatedAt: 1757970298685
+                    deletedAt: null
+                    customFieldValues: []
+                  videoGameBoxes:
+                    - id: 1
+                      title: "Kirby's Adventures"
+                      system:
+                        key: "system"
+                        id: 3
+                        name: "NES"
+                        generation: 3
+                        handheld: false
+                        createdAt: 1757970298685
+                        updatedAt: 1757970298685
+                        deletedAt: null
+                        customFieldValues: []
+                      physical: true
+                      collection: false
+                      createdAt: 1757970298690
+                      updatedAt: 1757970298690
+                      deletedAt: null
+                      customFieldValues: []
+                  createdAt: 1757970298690
+                  updatedAt: 1757970298690
+                  deletedAt: null
+                  customFieldValues:
+                    - customFieldId: 4
+                      customFieldName: "Developer"
+                      customFieldType: "text"
+                      value: "HAL Laboratory"
+                errors: null
+                roundTripMs: 5
         '404':
           description: Video game not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors:
+                  - "Resource Not Found: videoGame not found in the database with id: 1"
     put:
       tags:
         - Video Games
@@ -593,7 +953,12 @@ paths:
       tags:
         - Board Game Boxes
       summary: Create a new board game box
-      description: Create a new board game box with associated board game
+      description: |
+        Create a board game box and its parent board game. Supply the board game one of two ways:
+        set `boardGameId` to link an existing board game, or leave `boardGameId` null and provide a
+        `boardGame` object to create a new one. This is the only way to create a board game — there
+        is no standalone `POST /v1/boardGames`. If the box is an expansion, set `isExpansion: true`
+        and optionally point `baseSetId` at the base set's board game box.
       requestBody:
         required: true
         content:
@@ -605,6 +970,25 @@ paths:
                   $ref: '#/components/schemas/BoardGameBoxRequest'
               required:
                 - boardGameBox
+            example:
+              boardGameBox:
+                title: "Set-A-Watch"
+                isExpansion: false
+                isStandAlone: false
+                baseSetId: null
+                boardGameId: null
+                boardGame:
+                  title: "Set-A-Watch"
+                  customFieldValues:
+                    - customFieldId: 8
+                      customFieldName: "Publisher"
+                      customFieldType: "text"
+                      value: "Rock Manor Games"
+                    - customFieldId: 9
+                      customFieldName: "Min Player Count"
+                      customFieldType: "number"
+                      value: "1"
+                customFieldValues: []
       responses:
         '201':
           description: Board game box created successfully
@@ -612,8 +996,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BoardGameBoxDataResponse'
+              example:
+                data:
+                  key: "boardGameBox"
+                  id: 1
+                  title: "Set-A-Watch"
+                  isExpansion: false
+                  isStandAlone: false
+                  baseSetId: null
+                  boardGame:
+                    id: 1
+                    title: "Set-A-Watch"
+                    createdAt: 1757970298838
+                    updatedAt: 1757970298838
+                    deletedAt: null
+                    customFieldValues:
+                      - customFieldId: 8
+                        customFieldName: "Publisher"
+                        customFieldType: "text"
+                        value: "Rock Manor Games"
+                      - customFieldId: 9
+                        customFieldName: "Min Player Count"
+                        customFieldType: "number"
+                        value: "1"
+                  createdAt: 1757970298840
+                  updatedAt: 1757970298840
+                  deletedAt: null
+                  customFieldValues: []
+                errors: null
+                roundTripMs: 12
         '400':
-          description: Invalid input data
+          description: Invalid input data (e.g. blank title, or an invalid/missing board game)
           content:
             application/json:
               schema:
@@ -726,6 +1139,9 @@ paths:
       tags:
         - Board Games
       summary: Get a board game by ID
+      description: |
+        Returns a single board game, including every box that contains it under `boardGameBoxes`
+        (the slim box representation, without the nested board game to avoid recursion).
       parameters:
         - $ref: '#/components/parameters/EntityId'
       responses:
@@ -735,12 +1151,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BoardGameDataResponse'
+              example:
+                data:
+                  key: "boardGame"
+                  id: 1
+                  title: "Set-A-Watch"
+                  boardGameBoxes:
+                    - id: 1
+                      title: "Set-A-Watch"
+                      isExpansion: false
+                      isStandAlone: false
+                      baseSetId: null
+                      createdAt: 1757970298840
+                      updatedAt: 1757970298840
+                      deletedAt: null
+                      customFieldValues: []
+                  createdAt: 1757970298838
+                  updatedAt: 1757970298838
+                  deletedAt: null
+                  customFieldValues:
+                    - customFieldId: 8
+                      customFieldName: "Publisher"
+                      customFieldType: "text"
+                      value: "Rock Manor Games"
+                errors: null
+                roundTripMs: 5
         '404':
           description: Board game not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors:
+                  - "Resource Not Found: boardGame not found in the database with id: 1"
     put:
       tags:
         - Board Games
@@ -848,26 +1293,35 @@ paths:
                   name: "Completion Status"
                   type: "dropdown"
                   entityKey: "videoGame"
+                  order: 0
                   options:
                     - id: 1
                       customFieldId: 1
                       name: "Not Started"
                       isDefault: true
+                      order: 0
                     - id: 2
                       customFieldId: 1
                       name: "In Progress"
                       isDefault: false
+                      order: 1
                     - id: 3
                       customFieldId: 1
                       name: "Completed"
                       isDefault: false
+                      order: 2
                 errors: null
+                roundTripMs: 10
         '400':
-          description: Invalid input data
+          description: Invalid input data (e.g. blank name, unknown type, or an enum type with no/invalid options)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors:
+                  - "Exactly one option must be marked as the default. Found: 0."
     get:
       tags:
         - Custom Fields
@@ -1075,7 +1529,12 @@ paths:
       tags:
         - Data Management
       summary: Create backup of all data
-      description: Export all collection data in JSON format
+      description: |
+        Export the entire collection (custom fields, toys, systems, video game boxes, board game
+        boxes, and metadata) as a single JSON document. The same document is also written to a
+        `backup.json` file in the application's working directory. The returned `data` object is in
+        the exact shape accepted by `POST /v1/function/import`, so a backup can be fed straight back
+        in. Timestamps in the export are epoch milliseconds.
       responses:
         '200':
           description: Backup data
@@ -1088,13 +1547,61 @@ paths:
                     $ref: '#/components/schemas/BackupData'
                   errors:
                     type: 'null'
+                  roundTripMs:
+                    type: integer
+                    format: int64
+              example:
+                data:
+                  customFields:
+                    - id: 1
+                      name: "Broken"
+                      type: "boolean"
+                      entityKey: "toy"
+                      order: 0
+                      options: []
+                  toys:
+                    - key: "toy"
+                      id: 1
+                      name: "Darkwing Duck"
+                      set: "Misc"
+                      createdAt: 1757970298640
+                      updatedAt: 1757970298640
+                      deletedAt: null
+                      customFieldValues:
+                        - customFieldId: 1
+                          customFieldName: "Broken"
+                          customFieldType: "boolean"
+                          value: "true"
+                  systems: []
+                  videoGameBoxes: []
+                  boardGameBoxes: []
+                  metadata:
+                    - id: 1
+                      key: "uiPreferences"
+                      value: "{\"theme\": \"dark\"}"
+                      createdAt: 1757970298640
+                      updatedAt: 1757970298640
+                      deletedAt: null
+                errors: null
+                roundTripMs: 31
 
   /v1/function/import:
     post:
       tags:
         - Data Management
       summary: Import data from request body
-      description: Import collection data from JSON in request body
+      description: |
+        Import a collection from a backup document supplied in the request body (wrapped under
+        `data`). The import is idempotent: existing records are matched by their natural keys — custom
+        fields by name+entity, toys by name+set, systems by name, video/board games by title,
+        metadata by key — rather than by the ids in the payload, so re-importing the same backup
+        creates nothing new and only increments the `existing*` counts. Parent references inside the
+        payload (e.g. a video game's system, a board game box's base set) are resolved by
+        name/title, not by the file's ids, so ids may safely differ from the live database.
+
+        Only one import may run at a time; a concurrent attempt returns **409 Conflict**. Per-record
+        failures do not fail the whole request — they are reported in `exceptionBackupImport` and the
+        envelope's `errors` array while the endpoint still returns **200**.
       requestBody:
         required: true
         content:
@@ -1106,9 +1613,35 @@ paths:
                   $ref: '#/components/schemas/BackupData'
               required:
                 - data
+            example:
+              data:
+                customFields:
+                  - id: 1
+                    name: "Broken"
+                    type: "boolean"
+                    entityKey: "toy"
+                    order: 0
+                    options: []
+                toys:
+                  - key: "toy"
+                    id: 1
+                    name: "Darkwing Duck"
+                    set: "Misc"
+                    createdAt: 1757970298640
+                    updatedAt: 1757970298640
+                    deletedAt: null
+                    customFieldValues:
+                      - customFieldId: 1
+                        customFieldName: "Broken"
+                        customFieldType: "boolean"
+                        value: "true"
+                systems: []
+                videoGameBoxes: []
+                boardGameBoxes: []
+                metadata: []
       responses:
         '200':
-          description: Import results
+          description: Import results (HTTP 200 even when some records fail — inspect errors)
           content:
             application/json:
               schema:
@@ -1117,17 +1650,53 @@ paths:
                   data:
                     $ref: '#/components/schemas/ImportResults'
                   errors:
-                    type: 'null'
+                    type: array
+                    items:
+                      type: string
+                    description: Empty array on a clean import; one string per record that failed to import
+                  roundTripMs:
+                    type: integer
+                    format: int64
+              example:
+                data:
+                  existingCustomFields: 0
+                  createdCustomFields: 1
+                  existingToys: 0
+                  createdToys: 1
+                  existingSystems: 0
+                  createdSystems: 0
+                  existingVideoGameBoxes: 0
+                  createdVideoGameBoxes: 0
+                  existingBoardGameBoxes: 0
+                  createdBoardGameBoxes: 0
+                  existingMetadata: 0
+                  createdMetadata: 0
+                errors: []
+                roundTripMs: 47
+        '409':
+          description: An import is already in progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors:
+                  - "An import is already in progress. Please wait for it to complete before starting another."
 
   /v1/function/importFromFile:
     post:
       tags:
         - Data Management
       summary: Import data from backup.json file
-      description: Import collection data from backup.json file in the application directory
+      description: |
+        Import collection data from a `backup.json` file located in the application's working
+        directory (the same file produced by `POST /v1/function/backup`). Same idempotent matching
+        and concurrency rules as `POST /v1/function/import`. Returns 200 with per-record failures in
+        `exceptionBackupImport`; returns 409 if an import is already running.
       responses:
         '200':
-          description: Import results
+          description: Import results (HTTP 200 even when some records fail — inspect errors)
           content:
             application/json:
               schema:
@@ -1136,31 +1705,37 @@ paths:
                   data:
                     $ref: '#/components/schemas/ImportResults'
                   errors:
-                    type: 'null'
+                    type: array
+                    items:
+                      type: string
+                    description: Empty array on a clean import; one string per record that failed to import
+                  roundTripMs:
+                    type: integer
+                    format: int64
+        '409':
+          description: An import is already in progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors:
+                  - "An import is already in progress. Please wait for it to complete before starting another."
 
   /v1/function/seedSampleData:
     post:
       tags:
         - Data Management
       summary: Seed database with sample data
-      description: Populate the database with sample gaming collection data
+      description: |
+        Populate the database from the bundled `sampleData.json` file. Behaves like an import:
+        idempotent, returns the same `ImportResults` tally as the import endpoints, surfaces
+        per-record failures in the envelope's `errors` array, and returns 409 if an import is
+        already in progress.
       responses:
         '200':
-          description: Sample data seeded successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-
-  /v1/function/seedMyCollection:
-    post:
-      tags:
-        - Data Management
-      summary: Seed database with personal collection data
-      description: Populate the database with the author's personal gaming collection data from myCollection.json file
-      responses:
-        '200':
-          description: Personal collection data seeded successfully
+          description: Sample data seeded successfully (import results tally)
           content:
             application/json:
               schema:
@@ -1169,14 +1744,64 @@ paths:
                   data:
                     $ref: '#/components/schemas/ImportResults'
                   errors:
-                    type: 'null'
+                    type: array
+                    items:
+                      type: string
+                    description: Empty array on a clean import; one string per record that failed to import
+                  roundTripMs:
+                    type: integer
+                    format: int64
+        '409':
+          description: An import is already in progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/function/seedMyCollection:
+    post:
+      tags:
+        - Data Management
+      summary: Seed database with personal collection data
+      description: |
+        Populate the database from the bundled `myCollection.json` file (the author's personal
+        collection). Behaves like an import: idempotent, returns an `ImportResults` tally, surfaces
+        per-record failures in the envelope's `errors` array, and returns 409 if an import is already
+        in progress.
+      responses:
+        '200':
+          description: Personal collection data seeded successfully (import results tally)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ImportResults'
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                    description: Empty array on a clean import; one string per record that failed to import
+                  roundTripMs:
+                    type: integer
+                    format: int64
+        '409':
+          description: An import is already in progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /v1/metadata:
     post:
       tags:
         - Metadata
       summary: Create new metadata
-      description: Create a new metadata entry with a unique key and JSON value
+      description: |
+        Create a new metadata entry under a unique `key`. The `value` is a string that must itself
+        parse as valid JSON (it is stored re-serialized, so whitespace may be normalized). Send
+        `id` and the timestamps as null on create — they are server-generated.
       requestBody:
         required: true
         content:
@@ -1188,6 +1813,14 @@ paths:
                   $ref: '#/components/schemas/MetadataRequest'
               required:
                 - metadata
+            example:
+              metadata:
+                id: null
+                key: "uiPreferences"
+                value: "{\"theme\":\"dark\",\"itemsPerPage\":25}"
+                createdAt: null
+                updatedAt: null
+                deletedAt: null
       responses:
         '201':
           description: Metadata created successfully
@@ -1195,12 +1828,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MetadataDataResponse'
+              example:
+                data:
+                  id: 1
+                  key: "uiPreferences"
+                  value: "{\"theme\": \"dark\", \"itemsPerPage\": 25}"
+                  createdAt: 1757970298640
+                  updatedAt: 1757970298640
+                  deletedAt: null
+                errors: null
+                roundTripMs: 8
         '400':
           description: Invalid input data or invalid JSON value
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors:
+                  - "Value must be valid JSON: Unexpected character ('}' (code 125))"
     get:
       tags:
         - Metadata
@@ -1251,7 +1898,10 @@ paths:
       tags:
         - Metadata
       summary: Update metadata value
-      description: Update the JSON value of an existing metadata entry
+      description: |
+        Update the JSON value of an existing metadata entry, addressed by its `key`. Only the value
+        is updatable; the key is immutable. Uses the HTTP **PATCH** method (not PUT). The request
+        body is `{ "value": "<json-string>" }`, not the wrapped `{ "metadata": ... }` shape.
       parameters:
         - name: key
           in: path
@@ -1271,6 +1921,8 @@ paths:
                   description: New JSON value (must be valid JSON)
               required:
                 - value
+            example:
+              value: "{\"theme\":\"light\",\"itemsPerPage\":50}"
       responses:
         '200':
           description: Metadata updated successfully
@@ -1278,6 +1930,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MetadataDataResponse'
+              example:
+                data:
+                  id: 1
+                  key: "uiPreferences"
+                  value: "{\"theme\": \"light\", \"itemsPerPage\": 50}"
+                  createdAt: 1757970298640
+                  updatedAt: 1757970412888
+                  deletedAt: null
+                errors: null
+                roundTripMs: 6
         '400':
           description: Invalid JSON value
           content:
@@ -1367,7 +2029,12 @@ components:
           description: Entity type to filter
         field:
           type: string
-          description: Field name to filter on
+          description: |
+            Field name to filter or sort on. For sorting, set this to the actual column you want to
+            order by (e.g. "name", "generation") together with the order_by/order_by_desc operator —
+            do NOT use the "all_fields" placeholder here. "all_fields" only appears in the filter
+            metadata to advertise that sorting is supported; sending it as a real sort field is
+            rejected with a validation error.
         operator:
           type: string
           enum: [equals, not_equals, contains, starts_with, ends_with, greater_than, less_than, greater_than_equal_to, less_than_equal_to, since, before, order_by, order_by_desc, limit, offset]
@@ -1389,6 +2056,7 @@ components:
             - **Boolean**: "true" or "false"
             - **Time**: ISO datetime string (e.g., "2023-01-01T00:00:00")
             - **System**: System ID as string (e.g., "1")
+            - **Sort (order_by, order_by_desc)**: operand is ignored; the column to sort by comes from the field
       required:
         - key
         - field
@@ -1411,18 +2079,21 @@ components:
       type: object
       properties:
         createdAt:
-          type: string
-          format: date-time
-          description: When the entity was created
+          type: integer
+          format: int64
+          description: When the entity was created, as epoch milliseconds
+          example: 1757970298640
         updatedAt:
-          type: string
-          format: date-time
-          description: When the entity was last updated
+          type: integer
+          format: int64
+          description: When the entity was last updated, as epoch milliseconds
+          example: 1757970298640
         deletedAt:
-          type: string
-          format: date-time
+          type: integer
+          format: int64
           nullable: true
-          description: When the entity was soft-deleted (null if not deleted)
+          description: When the entity was soft-deleted, as epoch milliseconds (null if not deleted)
+          example: null
 
     # Toy Schemas
     ToyRequest:
@@ -1466,6 +2137,11 @@ components:
           $ref: '#/components/schemas/ToyResponse'
         errors:
           type: 'null'
+        roundTripMs:
+          type: integer
+          format: int64
+          description: Server-side processing time in milliseconds
+          example: 9
 
     # System Schemas
     SystemRequest:
@@ -1513,6 +2189,11 @@ components:
           $ref: '#/components/schemas/SystemResponse'
         errors:
           type: 'null'
+        roundTripMs:
+          type: integer
+          format: int64
+          description: Server-side processing time in milliseconds
+          example: 9
 
     # Video Game Schemas
     VideoGameRequest:
@@ -1555,6 +2236,36 @@ components:
               items:
                 $ref: '#/components/schemas/CustomFieldValue'
 
+    SlimVideoGameBox:
+      description: |
+        A video game box as it appears nested inside a video game response. Note that the boolean
+        flags here are serialized as `physical` and `collection` (without the `is` prefix used by the
+        top-level VideoGameBoxResponse). It does not repeat the contained video game ids.
+      allOf:
+        - type: object
+          properties:
+            id:
+              type: integer
+              description: Unique identifier of the video game box
+            title:
+              type: string
+              description: Title of the video game box
+            system:
+              $ref: '#/components/schemas/SystemResponse'
+            physical:
+              type: boolean
+              description: Whether this is a physical copy
+            collection:
+              type: boolean
+              description: Whether this box contains multiple games
+        - $ref: '#/components/schemas/EntityTimestamps'
+        - type: object
+          properties:
+            customFieldValues:
+              type: array
+              items:
+                $ref: '#/components/schemas/CustomFieldValue'
+
     VideoGameResponse:
       allOf:
         - type: object
@@ -1563,7 +2274,26 @@ components:
               type: string
               enum: [videoGame]
               description: Entity type identifier
-        - $ref: '#/components/schemas/SlimVideoGame'
+            id:
+              type: integer
+              description: Unique identifier
+            title:
+              type: string
+              description: Title of the video game
+            system:
+              $ref: '#/components/schemas/SystemResponse'
+            videoGameBoxes:
+              type: array
+              description: Every box that contains this video game
+              items:
+                $ref: '#/components/schemas/SlimVideoGameBox'
+        - $ref: '#/components/schemas/EntityTimestamps'
+        - type: object
+          properties:
+            customFieldValues:
+              type: array
+              items:
+                $ref: '#/components/schemas/CustomFieldValue'
 
     VideoGameDataResponse:
       type: object
@@ -1572,6 +2302,11 @@ components:
           $ref: '#/components/schemas/VideoGameResponse'
         errors:
           type: 'null'
+        roundTripMs:
+          type: integer
+          format: int64
+          description: Server-side processing time in milliseconds
+          example: 9
 
     # Video Game Box Schemas
     VideoGameBoxRequest:
@@ -1651,6 +2386,11 @@ components:
           $ref: '#/components/schemas/VideoGameBoxResponse'
         errors:
           type: 'null'
+        roundTripMs:
+          type: integer
+          format: int64
+          description: Server-side processing time in milliseconds
+          example: 9
 
     # Board Game Schemas
     BoardGameRequest:
@@ -1732,6 +2472,11 @@ components:
           $ref: '#/components/schemas/BoardGameResponse'
         errors:
           type: 'null'
+        roundTripMs:
+          type: integer
+          format: int64
+          description: Server-side processing time in milliseconds
+          example: 9
 
     # Board Game Box Schemas
     BoardGameBoxRequest:
@@ -1844,6 +2589,11 @@ components:
           $ref: '#/components/schemas/BoardGameBoxResponse'
         errors:
           type: 'null'
+        roundTripMs:
+          type: integer
+          format: int64
+          description: Server-side processing time in milliseconds
+          example: 9
 
     # Custom Field Schemas
     CustomFieldOption:
@@ -1955,6 +2705,11 @@ components:
           $ref: '#/components/schemas/CustomFieldResponse'
         errors:
           type: 'null'
+        roundTripMs:
+          type: integer
+          format: int64
+          description: Server-side processing time in milliseconds
+          example: 9
 
     # Filter Specification Schema
     FilterSpecification:
@@ -1974,7 +2729,7 @@ components:
             - **boolean**: Boolean fields supporting equality operations
             - **time**: Timestamp fields supporting temporal operations
             - **system**: System ID fields supporting equality operations (video games and video game boxes only)
-            - **sort**: Special field for result ordering
+            - **sort**: Marker ("all_fields") advertising that result ordering is supported. To sort, send order_by/order_by_desc with an actual column in the field — not "all_fields" itself.
             - **pagination**: Special field for result limiting
         filters:
           type: object
@@ -2032,43 +2787,56 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BoardGameBoxResponse'
+        metadata:
+          type: array
+          items:
+            $ref: '#/components/schemas/MetadataResponse'
+          description: Metadata entries included in the backup
 
     ImportResults:
       type: object
+      description: |
+        The `data` payload of the import/seed endpoints: a flat tally of how many records of each
+        type already existed (and were skipped) versus how many were created. It does **not** contain
+        an error field — any per-record import failures are reported in the envelope's top-level
+        `errors` array (which is an empty array `[]` when everything imported cleanly).
       properties:
         existingCustomFields:
           type: integer
-          description: Number of existing custom fields found
+          description: Number of existing custom fields found (skipped)
         createdCustomFields:
           type: integer
           description: Number of custom fields created
         existingToys:
           type: integer
-          description: Number of existing toys found
+          description: Number of existing toys found (skipped)
         createdToys:
           type: integer
           description: Number of toys created
         existingSystems:
           type: integer
-          description: Number of existing systems found
+          description: Number of existing systems found (skipped)
         createdSystems:
           type: integer
           description: Number of systems created
-        existingVideoGamesBoxes:
+        existingVideoGameBoxes:
           type: integer
-          description: Number of existing video game boxes found
-        createdVideoGamesBoxes:
+          description: Number of existing video game boxes found (skipped)
+        createdVideoGameBoxes:
           type: integer
           description: Number of video game boxes created
         existingBoardGameBoxes:
           type: integer
-          description: Number of existing board game boxes found
+          description: Number of existing board game boxes found (skipped)
         createdBoardGameBoxes:
           type: integer
           description: Number of board game boxes created
-        exceptionBackupImport:
-          type: object
-          description: Details of any import errors
+        existingMetadata:
+          type: integer
+          description: Number of existing metadata entries found (skipped)
+        createdMetadata:
+          type: integer
+          description: Number of metadata entries created
 
     # Metadata Schemas
     MetadataRequest:
@@ -2084,22 +2852,25 @@ components:
           minLength: 1
         value:
           type: string
-          description: JSON value as string (must be valid JSON)
+          description: JSON value as string (must be parseable as valid JSON, e.g. an object, array, or quoted string)
         createdAt:
-          type: string
-          format: date-time
+          type: integer
+          format: int64
           nullable: true
-          description: Creation timestamp (auto-generated)
+          description: Creation timestamp as epoch milliseconds (auto-generated; send null on create)
+          example: null
         updatedAt:
-          type: string
-          format: date-time
+          type: integer
+          format: int64
           nullable: true
-          description: Update timestamp (auto-generated)
+          description: Update timestamp as epoch milliseconds (auto-generated; send null on create)
+          example: null
         deletedAt:
-          type: string
-          format: date-time
+          type: integer
+          format: int64
           nullable: true
-          description: Deletion timestamp (null if not deleted)
+          description: Deletion timestamp as epoch milliseconds (null if not deleted)
+          example: null
       required:
         - key
         - value
@@ -2115,20 +2886,25 @@ components:
           description: Unique key for the metadata entry
         value:
           type: string
-          description: JSON value as string
+          description: |
+            JSON value as a string. The stored value is the request value re-serialized, so whitespace
+            may be normalized (e.g. a key/value gains a space after the colon) compared to what was sent.
         createdAt:
-          type: string
-          format: date-time
-          description: When the metadata was created
+          type: integer
+          format: int64
+          description: When the metadata was created, as epoch milliseconds
+          example: 1757970298640
         updatedAt:
-          type: string
-          format: date-time
-          description: When the metadata was last updated
+          type: integer
+          format: int64
+          description: When the metadata was last updated, as epoch milliseconds
+          example: 1757970298640
         deletedAt:
-          type: string
-          format: date-time
+          type: integer
+          format: int64
           nullable: true
-          description: When the metadata was soft-deleted (null if not deleted)
+          description: When the metadata was soft-deleted, as epoch milliseconds (null if not deleted)
+          example: null
       required:
         - id
         - key
@@ -2143,24 +2919,48 @@ components:
           $ref: '#/components/schemas/MetadataResponse'
         errors:
           type: 'null'
+        roundTripMs:
+          type: integer
+          format: int64
+          description: Server-side processing time in milliseconds
+          example: 9
 
     # Response Schemas
     SuccessResponse:
       type: object
+      description: |
+        Envelope returned for actions with no entity payload (e.g. deletes). `data` is an
+        empty string for successful deletes.
       properties:
         data:
           type: string
+          example: ""
         errors:
           type: 'null'
+        roundTripMs:
+          type: integer
+          format: int64
+          description: Server-side processing time in milliseconds
+          example: 7
 
     ErrorResponse:
       type: object
+      description: |
+        Returned for any failed request. `data` is null and `errors` is an array of human-readable
+        message strings — one entry per problem detected. Note there is no `roundTripMs` field on errors.
       properties:
         data:
           type: 'null'
         errors:
-          type: object
-          description: Error details
+          type: array
+          items:
+            type: string
+          description: One or more error message strings
+      example:
+        data: null
+        errors:
+          - "title cannot be blank"
+          - "systemId must be a positive integer"
 
 tags:
   - name: System

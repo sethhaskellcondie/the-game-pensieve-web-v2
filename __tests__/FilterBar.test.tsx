@@ -296,6 +296,28 @@ describe("FilterBar", () => {
     });
   });
 
+  it("renders the Sort button only when sort props are supplied", () => {
+    setup();
+    expect(
+      screen.queryByRole("button", { name: "Sort" }),
+    ).not.toBeInTheDocument();
+
+    render(
+      <FilterBar
+        entityKey="system"
+        fields={fields}
+        filters={[]}
+        onChange={jest.fn()}
+        searchValue=""
+        onSearchChange={jest.fn()}
+        searchAriaLabel="Search systems"
+        sorts={[]}
+        onSortsChange={jest.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Sort" })).toBeInTheDocument();
+  });
+
   it("removes a filter via its ✕", () => {
     const { onChange } = setup([
       {

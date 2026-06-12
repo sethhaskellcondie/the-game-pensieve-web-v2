@@ -1,5 +1,5 @@
-import { toFilterRequest } from "@/components/filters/serialize";
-import type { ActiveFilter } from "@/components/filters/types";
+import { toFilterRequest, toSortRequest } from "@/components/filters/serialize";
+import type { ActiveFilter, ActiveSort } from "@/components/filters/types";
 
 function filter(partial: Partial<ActiveFilter>): ActiveFilter {
   return {
@@ -41,5 +41,33 @@ describe("toFilterRequest", () => {
   it("trims operands", () => {
     const dto = toFilterRequest("toy", [filter({ operand: "  Mario  " })]);
     expect(dto[0].operand).toBe("Mario");
+  });
+});
+
+describe("toSortRequest", () => {
+  const sorts: ActiveSort[] = [
+    { id: "1", field: "Release Year", label: "Release Year", direction: "desc" },
+    { id: "2", field: "name", label: "Name", direction: "asc" },
+  ];
+
+  it("sends each level's field with a sort operator and empty operand, preserving priority order", () => {
+    expect(toSortRequest("system", sorts)).toEqual([
+      {
+        key: "system",
+        field: "Release Year",
+        operator: "order_by_desc",
+        operand: "",
+      },
+      {
+        key: "system",
+        field: "name",
+        operator: "order_by",
+        operand: "",
+      },
+    ]);
+  });
+
+  it("returns nothing for an empty sort list", () => {
+    expect(toSortRequest("system", [])).toEqual([]);
   });
 });

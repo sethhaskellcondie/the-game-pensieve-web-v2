@@ -1,4 +1,8 @@
-import { buildFieldList, searchField } from "@/components/filters/fieldList";
+import {
+  buildFieldList,
+  searchField,
+  supportsSorting,
+} from "@/components/filters/fieldList";
 import type { CustomField, FilterSpecification } from "@/lib/api";
 
 // The spec is the single source of truth: it lists standard AND custom fields
@@ -126,6 +130,25 @@ describe("buildFieldList", () => {
 
   it("returns an empty list when the spec is missing", () => {
     expect(buildFieldList(null, customFields)).toEqual([]);
+  });
+});
+
+describe("supportsSorting", () => {
+  it("is true when the spec carries the sort capability marker", () => {
+    expect(supportsSorting(spec)).toBe(true);
+  });
+
+  it("is false when the spec has no sort marker", () => {
+    const noSort: FilterSpecification = {
+      type: "toy_filters",
+      fields: { name: "text" },
+      filters: { name: ["equals"] },
+    };
+    expect(supportsSorting(noSort)).toBe(false);
+  });
+
+  it("is false when the spec is missing", () => {
+    expect(supportsSorting(null)).toBe(false);
   });
 });
 

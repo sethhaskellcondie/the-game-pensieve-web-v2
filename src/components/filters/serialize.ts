@@ -1,5 +1,5 @@
 import type { EntityKey, FilterRequestDto } from "@/lib/api";
-import type { ActiveFilter, FilterFieldKind } from "./types";
+import type { ActiveFilter, ActiveSort, FilterFieldKind } from "./types";
 
 // Coerce an operand to the string shape the backend expects for its kind. Most
 // values are already correct strings; time values from a <input type="date">
@@ -30,4 +30,23 @@ export function toFilterRequest(
     });
   }
   return out;
+}
+
+// Turn the active sort levels into backend sort filters: each level sends the
+// sorted-by field name as `field` with an order_by/order_by_desc operator; the
+// operand is required by the DTO shape but ignored for sorts, so it's sent
+// empty. Array order is preserved — the backend treats the first sort filter
+// as primary, the next as tiebreaker, and so on. Appended after the regular
+// filters by callers. (The spec's "all_fields" entry is only a capability
+// marker — see supportsSorting — and is rejected if sent as a sort field.)
+export function toSortRequest(
+  key: EntityKey,
+  sorts: ActiveSort[],
+): FilterRequestDto[] {
+  return sorts.map((s) => ({
+    key,
+    field: s.field,
+    operator: s.direction === "desc" ? "order_by_desc" : "order_by",
+    operand: "",
+  }));
 }

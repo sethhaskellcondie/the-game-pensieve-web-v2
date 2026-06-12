@@ -5,9 +5,15 @@ import { PlusIcon } from "@/components/custom-fields/icons";
 import { FilterIcon, SearchIcon } from "@/components/toys/icons";
 import FilterChip from "./FilterChip";
 import FilterEditor from "./FilterEditor";
+import SortControl from "./SortControl";
 import { searchField } from "./fieldList";
 import { newFilterId } from "./ids";
-import type { ActiveFilter, EntityKey, FilterFieldDef } from "./types";
+import type {
+  ActiveFilter,
+  ActiveSort,
+  EntityKey,
+  FilterFieldDef,
+} from "./types";
 import styles from "./FilterBar.module.css";
 
 // What the editor popover is currently doing: closed, adding a new filter, or
@@ -30,6 +36,8 @@ export default function FilterBar({
   onSearchChange,
   searchPlaceholder = "Search…",
   searchAriaLabel = "Search",
+  sorts,
+  onSortsChange,
 }: {
   entityKey: EntityKey;
   fields: FilterFieldDef[];
@@ -39,6 +47,10 @@ export default function FilterBar({
   onSearchChange: (value: string) => void;
   searchPlaceholder?: string;
   searchAriaLabel?: string;
+  // Sort state, enabling the Sort button next to the Filter button. Optional so
+  // entity pages adopt sorting one at a time (currently only Systems).
+  sorts?: ActiveSort[];
+  onSortsChange?: (next: ActiveSort[]) => void;
 }) {
   const [edit, setEdit] = useState<EditState>({ mode: "closed" });
 
@@ -122,6 +134,15 @@ export default function FilterBar({
             onKeyDown={onSearchKeyDown}
           />
         </div>
+
+        {sorts != null && onSortsChange != null && (
+          <SortControl
+            fields={fields}
+            sorts={sorts}
+            onChange={onSortsChange}
+            buttonClassName={styles.addBtn}
+          />
+        )}
 
         <span className={styles.anchor}>
           <button

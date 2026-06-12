@@ -1,0 +1,210 @@
+/* The Sort button's popover: one row per sort level ("Sort by …, then by …"),
+   right-aligned under its trigger like the add-filter editor since the button
+   sits near the bar's right edge. */
+
+.anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Active-level count bubble inside the Sort button. */
+.count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--primary-600);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 65;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 24px 60px -18px rgba(var(--ink-navy-rgb), 0.42);
+  padding: 14px;
+  animation: sort-pop 0.14s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@keyframes sort-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popover {
+    animation: none;
+  }
+}
+
+.empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--gray-500);
+  white-space: nowrap;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* "Sort by" / "then by" lead-in, fixed-width so the pickers line up. */
+.prefix {
+  flex: 0 0 60px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--gray-500);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.fieldListbox {
+  min-width: 170px;
+}
+
+/* Asc/Desc segmented pair (mirrors the filter editor's Yes/No control). */
+.dirGroup {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.dirBtn {
+  height: 36px;
+  min-width: 52px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--gray-500);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.12s;
+}
+
+.dirBtn:hover {
+  border-color: #c5ccd6;
+  color: var(--ink-navy);
+}
+
+.dirOn {
+  border-color: var(--field-mint-text);
+  background: var(--field-mint-bg);
+  color: var(--field-mint-text);
+}
+
+/* Per-row move up/down + remove. */
+.rowActions {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: 0.12s;
+}
+
+.iconBtn:hover:not(:disabled) {
+  background: var(--paper);
+  color: var(--ink-navy);
+}
+
+.iconBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.removeBtn:hover:not(:disabled) {
+  background: #fdecec;
+  color: var(--cannon-red);
+}
+
+.caretUp {
+  transform: rotate(180deg);
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.addSort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink-navy);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.12s;
+}
+
+.addSort:hover:not(:disabled) {
+  background: var(--paper);
+}
+
+.addSort:disabled {
+  color: var(--gray-500);
+  cursor: not-allowed;
+}
+
+.clear {
+  height: 34px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--cannon-red);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.12s;
+}
+
+.clear:hover {
+  background: #fdecec;
+}

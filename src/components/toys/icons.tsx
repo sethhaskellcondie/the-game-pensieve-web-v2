@@ -19,6 +19,25 @@ export function SearchIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function SortIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width="15"
+      height="15"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M5 13V3M2.5 5.5 5 3l2.5 2.5" />
+      <path d="M11 3v10M8.5 10.5 11 13l2.5-2.5" />
+    </svg>
+  );
+}
+
 export function FilterIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
