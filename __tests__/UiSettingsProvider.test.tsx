@@ -4,7 +4,10 @@ import {
   UiSettingsProvider,
   useUiSettings,
 } from "@/components/UiSettingsProvider";
-import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
+import {
+  DEFAULT_STANDARD_FIELDS,
+  DEFAULT_UI_SETTINGS,
+} from "@/lib/uiSettings.types";
 
 // Probe component that surfaces the context values and exposes a button to flip
 // developer mode.
@@ -42,6 +45,7 @@ describe("UiSettingsProvider", () => {
           beginnerMode: false,
           videoGamesDefaultView: "list",
           boardGamesDefaultView: "list",
+          standardFields: DEFAULT_STANDARD_FIELDS,
         }}
       >
         <Probe />
@@ -76,6 +80,7 @@ describe("UiSettingsProvider", () => {
       beginnerMode: false,
       videoGamesDefaultView: "list",
       boardGamesDefaultView: "list",
+      standardFields: DEFAULT_STANDARD_FIELDS,
     });
 
     await waitFor(() =>

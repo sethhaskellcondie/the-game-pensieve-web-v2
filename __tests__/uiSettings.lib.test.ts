@@ -1,5 +1,6 @@
 import { loadUiSettings } from "@/lib/uiSettings";
 import {
+  DEFAULT_STANDARD_FIELDS,
   DEFAULT_UI_SETTINGS,
   parseUiSettingsValue,
   serializeUiSettings,
@@ -35,6 +36,24 @@ describe("serializeUiSettings / parseUiSettingsValue", () => {
       beginnerMode: true,
       videoGamesDefaultView: "shelf",
       boardGamesDefaultView: "list",
+      standardFields: {
+        toy: { set: false },
+        system: { generation: true, handheld: false },
+        boardGame: { boxes: true },
+        boardGameBox: {
+          boardGame: true,
+          expansion: false,
+          standAlone: true,
+          baseSet: false,
+        },
+        videoGame: { system: true, boxes: false },
+        videoGameBox: {
+          system: false,
+          games: true,
+          physical: true,
+          collection: false,
+        },
+      },
     };
     const value = serializeUiSettings(settings);
     expect(JSON.parse(value)).toEqual({
@@ -45,6 +64,24 @@ describe("serializeUiSettings / parseUiSettingsValue", () => {
       beginner_mode: true,
       video_games_default_view: "shelf",
       board_games_default_view: "list",
+      standard_fields: {
+        toy: { set: false },
+        system: { generation: true, handheld: false },
+        board_game: { boxes: true },
+        board_game_box: {
+          board_game: true,
+          expansion: false,
+          stand_alone: true,
+          base_set: false,
+        },
+        video_game: { system: true, boxes: false },
+        video_game_box: {
+          system: false,
+          games: true,
+          physical: true,
+          collection: false,
+        },
+      },
     });
     expect(parseUiSettingsValue(value)).toEqual(settings);
   });
@@ -63,8 +100,35 @@ describe("serializeUiSettings / parseUiSettingsValue", () => {
         beginnerMode: false,
         videoGamesDefaultView: "list",
         boardGamesDefaultView: "list",
+        standardFields: DEFAULT_STANDARD_FIELDS,
       },
     );
+  });
+
+  it("parses a partial standard_fields, defaulting missing fields to shown", () => {
+    const parsed = parseUiSettingsValue(
+      JSON.stringify({
+        standard_fields: {
+          board_game_box: { stand_alone: false },
+          video_game_box: { collection: false },
+        },
+      }),
+    );
+    expect(parsed.standardFields).toEqual({
+      ...DEFAULT_STANDARD_FIELDS,
+      boardGameBox: {
+        boardGame: true,
+        expansion: true,
+        standAlone: false,
+        baseSet: true,
+      },
+      videoGameBox: {
+        system: true,
+        games: true,
+        physical: true,
+        collection: false,
+      },
+    });
   });
 
   it("falls back to the list view for an unrecognized stored view", () => {
@@ -119,6 +183,7 @@ describe("loadUiSettings", () => {
       beginnerMode: true,
       videoGamesDefaultView: "shelf",
       boardGamesDefaultView: "shelf",
+      standardFields: DEFAULT_STANDARD_FIELDS,
     });
     expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(mockFetch).toHaveBeenCalledWith(
@@ -156,6 +221,24 @@ describe("loadUiSettings", () => {
       beginner_mode: false,
       video_games_default_view: "list",
       board_games_default_view: "list",
+      standard_fields: {
+        toy: { set: true },
+        system: { generation: true, handheld: true },
+        board_game: { boxes: true },
+        board_game_box: {
+          board_game: true,
+          expansion: true,
+          stand_alone: true,
+          base_set: true,
+        },
+        video_game: { system: true, boxes: true },
+        video_game_box: {
+          system: true,
+          games: true,
+          physical: true,
+          collection: true,
+        },
+      },
     });
   });
 

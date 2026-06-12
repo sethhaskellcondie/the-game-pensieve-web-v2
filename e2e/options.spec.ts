@@ -96,6 +96,49 @@ test("Default Video Games View segments flip and persist when clicked", async ({
   await persisted;
 });
 
+test("Set Fields dialog stages standard-field changes and saves them", async ({
+  page,
+}) => {
+  // Stub the write proxy so saving persists through it without mutating the
+  // shared backend state.
+  await page.route("**/api/ui-settings", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true }),
+    }),
+  );
+
+  await page.goto("/options");
+
+  await page.getByRole("button", { name: "Set Fields" }).click();
+  const dialog = page.getByRole("dialog", {
+    name: "Show/Hide Standard Fields",
+  });
+  await expect(dialog).toBeVisible();
+
+  // The dialog state is loaded from the backend server-side, so flip relative
+  // to whatever the field currently is rather than a fixed value. The Yes/No
+  // pill's accessible name includes its value, so match on the field prefix.
+  const toySet = dialog.getByRole("button", { name: /^Toys: Set:/ });
+  const before = await toySet.getAttribute("aria-pressed");
+  const flipped = before === "true" ? "false" : "true";
+
+  // Flipping only stages the change; nothing is written until Save Fields.
+  await toySet.click();
+  await expect(toySet).toHaveAttribute("aria-pressed", flipped);
+
+  const persisted = page.waitForRequest(
+    (req) => req.url().includes("/api/ui-settings") && req.method() === "POST",
+  );
+  await dialog.getByRole("button", { name: "Save Fields" }).click();
+  const request = await persisted;
+  expect(request.postDataJSON().standardFields.toy.set).toBe(
+    flipped === "true",
+  );
+  await expect(dialog).not.toBeVisible();
+});
+
 test("toggle does not change when the persist request fails", async ({
   page,
 }) => {

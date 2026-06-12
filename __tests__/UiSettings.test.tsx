@@ -70,6 +70,93 @@ describe("UiSettings", () => {
     ).toBeInTheDocument();
   });
 
+  it("opens the standard fields dialog with every field shown by default", () => {
+    renderWithProvider();
+    fireEvent.click(screen.getByRole("button", { name: "Set Fields" }));
+
+    const dialog = screen.getByRole("dialog", {
+      name: "Show/Hide Standard Fields",
+    });
+    for (const name of [
+      "Toys: Set",
+      "System: Generation",
+      "System: Handheld",
+      "Board Game: Boxes",
+      "Board Game Box: Board Game",
+      "Board Game Box: Expansion",
+      "Board Game Box: Stand Alone",
+      "Board Game Box: Base Set",
+      "Video Game: System",
+      "Video Game: Boxes",
+      "Video Game Box: System",
+      "Video Game Box: Games",
+      "Video Game Box: Physical",
+      "Video Game Box: Collection",
+    ]) {
+      // Each field renders the shared Yes/No pill; "Yes" means shown.
+      expect(
+        within(dialog).getByRole("button", { name: `${name}: Yes` }),
+      ).toHaveAttribute("aria-pressed", "true");
+    }
+  });
+
+  it("stages field changes locally and persists them on Save Fields", async () => {
+    renderWithProvider();
+    fireEvent.click(screen.getByRole("button", { name: "Set Fields" }));
+    const dialog = screen.getByRole("dialog", {
+      name: "Show/Hide Standard Fields",
+    });
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Toys: Set: Yes" }),
+    );
+    expect(
+      within(dialog).getByRole("button", { name: "Toys: Set: No" }),
+    ).toHaveAttribute("aria-pressed", "false");
+    // Flipping only stages the change; nothing is written until Save.
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Save Fields" }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Show/Hide Standard Fields" }),
+      ).not.toBeInTheDocument(),
+    );
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
+    expect(body.standardFields.toy.set).toBe(false);
+    expect(body.standardFields.system.generation).toBe(true);
+  });
+
+  it("discards staged field changes on Cancel", () => {
+    renderWithProvider();
+    fireEvent.click(screen.getByRole("button", { name: "Set Fields" }));
+    let dialog = screen.getByRole("dialog", {
+      name: "Show/Hide Standard Fields",
+    });
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Toys: Set: Yes" }),
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    expect(
+      screen.queryByRole("dialog", { name: "Show/Hide Standard Fields" }),
+    ).not.toBeInTheDocument();
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    // Reopening shows the saved state again, not the discarded draft.
+    fireEvent.click(screen.getByRole("button", { name: "Set Fields" }));
+    dialog = screen.getByRole("dialog", {
+      name: "Show/Hide Standard Fields",
+    });
+    expect(
+      within(dialog).getByRole("button", { name: "Toys: Set: Yes" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("renders a default-view choice per collection with List selected by default", () => {
     renderWithProvider();
 

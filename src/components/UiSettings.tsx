@@ -1,8 +1,9 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import Button from "./Button";
 import SettingsSection from "./SettingsSection";
+import StandardFieldsModal from "./StandardFieldsModal";
 import Toggle from "./Toggle";
 import { BoardGamesIcon, VideoGamesIcon } from "./icons";
 import { useUiSettings } from "./UiSettingsProvider";
@@ -118,6 +119,7 @@ const SETTINGS: SettingMeta[] = [
 
 export default function UiSettings() {
   const { settings, setSetting, saving } = useUiSettings();
+  const [fieldsOpen, setFieldsOpen] = useState(false);
 
   const toggle = (key: SettingKey) => (next: boolean) => {
     void setSetting(key, next);
@@ -190,10 +192,17 @@ export default function UiSettings() {
             Choose which standard fields appear in the display grid.
           </span>
         </div>
-        <Button className={styles.actionButton} disabled={saving}>
+        <Button
+          className={styles.actionButton}
+          disabled={saving}
+          onClick={() => setFieldsOpen(true)}
+        >
           Set Fields
         </Button>
       </div>
+      {fieldsOpen && (
+        <StandardFieldsModal onClose={() => setFieldsOpen(false)} />
+      )}
     </SettingsSection>
   );
 }
