@@ -2,6 +2,8 @@ import "@testing-library/jest-dom";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import BackupImport from "@/components/BackupImport";
 import { ToastProvider } from "@/components/ToastProvider";
+import { UiSettingsProvider } from "@/components/UiSettingsProvider";
+import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
 import { backupFilename, downloadTextFile } from "@/lib/download";
 
 jest.mock("@/lib/download", () => ({
@@ -20,12 +22,18 @@ const OPTION_LABELS = [
   "Seed Seth's Data",
 ];
 
-// Render inside the ToastProvider so seed outcomes can surface their toast.
-function renderBackupImport() {
+// Restore-from-backup and Seth's seed data only appear in developer mode.
+const DEVELOPER_ONLY_LABELS = ["Import From Backup", "Seed Seth's Data"];
+
+// Render inside the ToastProvider so seed outcomes can surface their toast,
+// and a UiSettingsProvider with developer mode on so every action is present.
+function renderBackupImport({ developerMode = true } = {}) {
   return render(
-    <ToastProvider>
-      <BackupImport />
-    </ToastProvider>,
+    <UiSettingsProvider initial={{ ...DEFAULT_UI_SETTINGS, developerMode }}>
+      <ToastProvider>
+        <BackupImport />
+      </ToastProvider>
+    </UiSettingsProvider>,
   );
 }
 
@@ -37,12 +45,28 @@ describe("BackupImport", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders a button for each of the five options", () => {
+  it("renders a button for each of the five options in developer mode", () => {
     renderBackupImport();
     for (const label of OPTION_LABELS) {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
     expect(screen.getAllByRole("button")).toHaveLength(OPTION_LABELS.length);
+  });
+
+  it("hides the developer-only options when developer mode is disabled", () => {
+    renderBackupImport({ developerMode: false });
+    for (const label of DEVELOPER_ONLY_LABELS) {
+      expect(
+        screen.queryByRole("button", { name: label }),
+      ).not.toBeInTheDocument();
+    }
+    const visibleLabels = OPTION_LABELS.filter(
+      (label) => !DEVELOPER_ONLY_LABELS.includes(label),
+    );
+    for (const label of visibleLabels) {
+      expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
+    }
+    expect(screen.getAllByRole("button")).toHaveLength(visibleLabels.length);
   });
 
   describe("Seed Sample Data", () => {

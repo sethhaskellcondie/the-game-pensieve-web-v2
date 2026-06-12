@@ -4,6 +4,7 @@ import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import Button from "./Button";
 import SettingsSection from "./SettingsSection";
 import { useToast } from "./ToastProvider";
+import { useUiSettings } from "./UiSettingsProvider";
 import { backupFilename, downloadTextFile } from "@/lib/download";
 import styles from "./BackupImport.module.css";
 
@@ -13,6 +14,7 @@ type BackupAction = {
   description: string;
   buttonLabel: string;
   icon: ReactNode;
+  developerOnly?: boolean;
 };
 
 const ACTIONS: BackupAction[] = [
@@ -49,6 +51,7 @@ const ACTIONS: BackupAction[] = [
     title: "Import Data (From Backup)",
     description: "Import the from the last backup.",
     buttonLabel: "Import From Backup",
+    developerOnly: true,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         {/* Circular restore arrow. */}
@@ -76,6 +79,7 @@ const ACTIONS: BackupAction[] = [
     title: "Seed Seth's Data",
     description: "Load Seth's collection as a large data set.",
     buttonLabel: "Seed Seth's Data",
+    developerOnly: true,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         {/* A person / user. */}
@@ -141,6 +145,13 @@ export default function BackupImport() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast, showSnackbar } = useToast();
+  const { settings } = useUiSettings();
+
+  // Developer-only actions (restore-from-backup, Seth's seed data) stay hidden
+  // unless developer mode is enabled.
+  const visibleActions = ACTIONS.filter(
+    (action) => !action.developerOnly || settings.developerMode,
+  );
 
   const handleBackup = async () => {
     setBusyId("backup");
@@ -273,7 +284,7 @@ export default function BackupImport() {
         onChange={handleFileSelected}
         hidden
       />
-      {ACTIONS.map((action) => {
+      {visibleActions.map((action) => {
         const isBackup = action.id === "backup";
         const isImportFile = action.id === "import-file";
         const postAction = POST_ACTIONS[action.id];

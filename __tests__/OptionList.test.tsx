@@ -19,7 +19,7 @@ describe("OptionList", () => {
     expect(screen.getByText("Heavy")).toBeInTheDocument();
   });
 
-  it("collapses overflow into a +N counter with the rest in the title", () => {
+  it("renders every option for a long list with no +N counter", () => {
     const options = [
       opt("Worker Placement", 0),
       opt("Deck Building", 1),
@@ -27,11 +27,10 @@ describe("OptionList", () => {
       opt("Engine Building", 3),
     ];
     render(<OptionList options={options} />);
-    // The first long chip shows; the remainder collapse to a counter.
-    expect(screen.getByText("Worker Placement")).toBeInTheDocument();
-    const more = screen.getByText(/^\+\d+$/);
-    expect(more).toBeInTheDocument();
-    expect(more).toHaveAttribute("title");
+    for (const o of options) {
+      expect(screen.getByText(o.name)).toBeInTheDocument();
+    }
+    expect(screen.queryByText(/^\+\d+$/)).not.toBeInTheDocument();
   });
 
   it("marks the default option with a * and leaves the others unmarked", () => {
