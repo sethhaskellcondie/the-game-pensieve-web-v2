@@ -560,6 +560,162 @@ export function getVideoGameBoxById(
   return apiGetOrNull<VideoGameBox>(`/videoGameBoxes/${id}`);
 }
 
+// ---------- Board Games ----------
+// Shapes mirror the BoardGame schemas in backend-documentation/openapi.yaml,
+// with one divergence: the live API returns richer box entries than the spec's
+// SlimBoardGameBox (expansion flags, custom field values, and timestamps ride
+// along). Board games have no create or delete endpoints — they are created
+// (and removed) through board game boxes.
+
+export type SlimBoardGameBox = {
+  id: number;
+  title: string;
+  isExpansion: boolean;
+  isStandAlone: boolean;
+  baseSetId: number | null;
+  customFieldValues: CustomFieldValue[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+};
+
+export type BoardGame = {
+  id: number;
+  key: "boardGame";
+  title: string;
+  boardGameBoxes: SlimBoardGameBox[];
+  customFieldValues: CustomFieldValue[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+};
+
+// The backend lists board games through a POST search endpoint; an empty
+// filter set returns them all. apiPost unwraps the { data, errors } envelope.
+export function searchBoardGames(
+  filters: FilterRequestDto[] = [],
+): Promise<BoardGame[]> {
+  return apiPost<BoardGame[]>("/boardGames/function/search", { filters });
+}
+
+// The update payload mirrors BoardGameRequest: title + the full custom-field
+// value set are required, so an inline edit of one field must resend the
+// game's existing values alongside the change.
+export type UpdateBoardGameInput = {
+  title: string;
+  customFieldValues: CustomFieldValue[];
+};
+
+export function updateBoardGame(
+  id: number,
+  input: UpdateBoardGameInput,
+): Promise<BoardGame> {
+  return apiPut<BoardGame>(`/boardGames/${id}`, { boardGame: input });
+}
+
+// Fetch a single board game by id. Returns null on 404 so the detail page can
+// render its own not-found state instead of throwing.
+export function getBoardGameById(id: number): Promise<BoardGame | null> {
+  return apiGetOrNull<BoardGame>(`/boardGames/${id}`);
+}
+
+// ---------- Board Game Boxes ----------
+// Shapes mirror the BoardGameBox schemas in backend-documentation/openapi.yaml.
+// Unlike video game boxes (which hold many games), a board game box links to
+// exactly one board game, and one game can have many boxes (base set, second
+// copies, expansions). Expansion boxes point at their base set via baseSetId.
+
+export type SlimBoardGame = {
+  id: number;
+  title: string;
+  customFieldValues: CustomFieldValue[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+};
+
+export type BoardGameBox = {
+  id: number;
+  key: "boardGameBox";
+  title: string;
+  isExpansion: boolean;
+  isStandAlone: boolean;
+  baseSetId: number | null;
+  boardGame: SlimBoardGame;
+  customFieldValues: CustomFieldValue[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+};
+
+// The backend lists board game boxes through a POST search endpoint; an empty
+// filter set returns them all. apiPost unwraps the { data, errors } envelope.
+export function searchBoardGameBoxes(
+  filters: FilterRequestDto[] = [],
+): Promise<BoardGameBox[]> {
+  return apiPost<BoardGameBox[]>("/boardGameBoxes/function/search", {
+    filters,
+  });
+}
+
+// A game to create through a box write — mirrors BoardGameRequest (games have
+// no standalone create endpoint; they are born inside a box).
+export type NewBoardGameInput = {
+  title: string;
+  customFieldValues: CustomFieldValue[];
+};
+
+// Create payload mirrors BoardGameBoxRequest: exactly one of boardGameId
+// (link an existing game) or boardGame (create a new game inline) must be set.
+export type CreateBoardGameBoxInput = {
+  title: string;
+  isExpansion: boolean;
+  isStandAlone: boolean;
+  baseSetId: number | null;
+  boardGameId: number | null;
+  boardGame: NewBoardGameInput | null;
+  customFieldValues: CustomFieldValue[];
+};
+
+export function createBoardGameBox(
+  input: CreateBoardGameBoxInput,
+): Promise<BoardGameBox> {
+  return apiPost<BoardGameBox>("/boardGameBoxes", { boardGameBox: input });
+}
+
+// Update payload mirrors BoardGameBoxUpdateRequest, which differs from create:
+// boardGameId is required and there is no inline boardGame. Every field is
+// required, so an edit of one field must resend the rest.
+export type UpdateBoardGameBoxInput = {
+  title: string;
+  isExpansion: boolean;
+  isStandAlone: boolean;
+  baseSetId: number | null;
+  boardGameId: number;
+  customFieldValues: CustomFieldValue[];
+};
+
+export function updateBoardGameBox(
+  id: number,
+  input: UpdateBoardGameBoxInput,
+): Promise<BoardGameBox> {
+  return apiPut<BoardGameBox>(`/boardGameBoxes/${id}`, {
+    boardGameBox: input,
+  });
+}
+
+export function deleteBoardGameBox(id: number): Promise<void> {
+  return apiDelete(`/boardGameBoxes/${id}`);
+}
+
+// Fetch a single board game box by id. Returns null on 404 so the detail page
+// can render its own not-found state instead of throwing.
+export function getBoardGameBoxById(
+  id: number,
+): Promise<BoardGameBox | null> {
+  return apiGetOrNull<BoardGameBox>(`/boardGameBoxes/${id}`);
+}
+
 export async function checkHeartbeat(
   { debug = false }: { debug?: boolean } = {},
 ): Promise<boolean> {

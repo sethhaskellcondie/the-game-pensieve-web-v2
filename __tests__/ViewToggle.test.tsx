@@ -43,4 +43,17 @@ describe("ViewToggle", () => {
       "aria-current",
     );
   });
+
+  it("builds the view URLs from basePath", () => {
+    render(<ViewToggle view="list" basePath="/board-games" />);
+
+    expect(screen.getByRole("link", { name: "List" })).toHaveAttribute(
+      "href",
+      "/board-games?view=list",
+    );
+    expect(screen.getByRole("link", { name: "Shelf" })).toHaveAttribute(
+      "href",
+      "/board-games?view=shelf",
+    );
+  });
 });
