@@ -92,3 +92,10 @@
   outline: 2px solid var(--primary-600);
   outline-offset: -4px;
 }
+
+/* Same fixed width as the Backup & Import action buttons so the two sections'
+   buttons line up visually. */
+.actionButton {
+  flex: 0 0 auto;
+  width: 220px;
+}

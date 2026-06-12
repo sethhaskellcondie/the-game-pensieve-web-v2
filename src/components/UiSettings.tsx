@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Button from "./Button";
 import SettingsSection from "./SettingsSection";
 import Toggle from "./Toggle";
 import { BoardGamesIcon, VideoGamesIcon } from "./icons";
@@ -170,6 +171,29 @@ export default function UiSettings() {
           </div>
         </div>
       ))}
+      <div className={styles.row}>
+        <span className={styles.icon}>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            {/* A display grid with a column highlighted. */}
+            <path d="M3 4h18v16H3z" />
+            <path d="M3 9h18M9 4v16M15 4v16" />
+          </svg>
+        </span>
+        <div className={styles.text}>
+          <span className={styles.title}>Show/Hide Standard Fields</span>
+          <span className={styles.description}>
+            Choose which standard fields appear in the display grid.
+          </span>
+        </div>
+        <Button className={styles.actionButton} disabled={saving}>
+          Set Fields
+        </Button>
+      </div>
     </SettingsSection>
   );
 }

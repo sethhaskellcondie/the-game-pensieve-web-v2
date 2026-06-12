@@ -62,6 +62,14 @@ describe("UiSettings", () => {
     expect(developer).toHaveAttribute("aria-checked", "false");
   });
 
+  it("renders the standard-fields row with a Set Fields button", () => {
+    renderWithProvider();
+    expect(screen.getByText("Show/Hide Standard Fields")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Set Fields" }),
+    ).toBeInTheDocument();
+  });
+
   it("renders a default-view choice per collection with List selected by default", () => {
     renderWithProvider();
 

@@ -1,9 +1,3 @@
-/* Box-detail-only chrome: the gap between the Fields and Video Games cards,
-   and the slim read-only game chart (modeled on
-   localFiles/Slim Video Game Display.png) — one row per game with the title,
-   a system chip, and a grid of its custom-field values. Field value
-   primitives come from CustomFieldValue. */
-
 .gamesCard {
   margin-top: 22px;
 }
