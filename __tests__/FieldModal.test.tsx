@@ -50,6 +50,56 @@ describe("FieldModal (create)", () => {
     expect(save).toBeEnabled();
   });
 
+  it("picks the target entity through the Applies to dropdown", () => {
+    const onSave = jest.fn<void, [FieldModalSave]>();
+    render(
+      <FieldModal
+        mode="create"
+        defaultEntityKey="boardGame"
+        onSave={onSave}
+        onClose={jest.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Field name"), {
+      target: { value: "Designer" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Applies to" }));
+    fireEvent.click(screen.getByRole("option", { name: "Toys" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Create field" }));
+    expect(onSave.mock.calls[0][0]).toEqual({
+      mode: "create",
+      input: { name: "Designer", type: "text", entityKey: "toy" },
+    });
+  });
+
+  it("Escape closes an open Applies to menu without closing the modal", () => {
+    const onClose = jest.fn();
+    render(
+      <FieldModal
+        mode="create"
+        defaultEntityKey="boardGame"
+        onSave={jest.fn()}
+        onClose={onClose}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: "Applies to" });
+    fireEvent.click(trigger);
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+    // Keydown targets the focused trigger, as in a real browser; the dropdown's
+    // capture-phase handler swallows it before the modal's Escape handler.
+    fireEvent.keyDown(trigger, { key: "Escape" });
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+
+    // A second Escape (menu closed) reaches the modal and closes it.
+    fireEvent.keyDown(trigger, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it("hides the options editor for non-enum types", () => {
     render(
       <FieldModal

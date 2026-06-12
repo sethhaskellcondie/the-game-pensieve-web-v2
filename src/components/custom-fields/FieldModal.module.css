@@ -166,39 +166,6 @@ label.label:first-of-type {
   line-height: 1.2;
 }
 
-.selectWrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.selectWrap select {
-  appearance: none;
-  width: 100%;
-  height: 42px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--white);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--ink-navy);
-  padding: 0 32px 0 12px;
-  cursor: pointer;
-}
-
-.selectWrap select:focus {
-  outline: none;
-  border-color: var(--primary-600);
-  box-shadow: 0 0 0 3px rgba(47, 112, 236, 0.12);
-}
-
-.selectWrap > svg {
-  position: absolute;
-  right: 12px;
-  pointer-events: none;
-  color: var(--gray-500);
-}
-
 .readRow {
   display: flex;
   align-items: center;

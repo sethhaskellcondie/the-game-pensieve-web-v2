@@ -30,14 +30,21 @@ const ENTITY_ICON: Partial<
 
 const ICON_SIZE = 18;
 
-// Header dropdown that scopes the table to one record type. Controlled by the
-// parent (value + onChange). Closes on outside mousedown and Escape.
+// Entity dropdown shared by the table header (scope picker) and the create
+// modal ("Applies to"). Controlled by the parent (value + onChange). Sizes to
+// its container; closes on outside mousedown and Escape. Listeners run in the
+// capture phase so they still fire (and Escape closes only the menu, not an
+// enclosing modal) when a host stops propagation.
 export default function EntitySelect({
   value,
   onChange,
+  className,
+  ariaLabel,
 }: {
   value: EntityKey;
   onChange: (key: EntityKey) => void;
+  className?: string;
+  ariaLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -50,13 +57,16 @@ export default function EntitySelect({
       }
     };
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setOpen(false);
+      }
     };
-    document.addEventListener("mousedown", onDocMouseDown);
-    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("mousedown", onDocMouseDown, true);
+    document.addEventListener("keydown", onKeyDown, true);
     return () => {
-      document.removeEventListener("mousedown", onDocMouseDown);
-      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("mousedown", onDocMouseDown, true);
+      document.removeEventListener("keydown", onKeyDown, true);
     };
   }, [open]);
 
@@ -64,12 +74,16 @@ export default function EntitySelect({
   const TriggerIcon = ENTITY_ICON[value];
 
   return (
-    <div className={styles.wrap} ref={ref}>
+    <div
+      className={`${styles.wrap}${className ? ` ${className}` : ""}`}
+      ref={ref}
+    >
       <button
         type="button"
         className={`${styles.trigger}${open ? ` ${styles.on}` : ""}`}
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-label={ariaLabel}
         onClick={() => setOpen((o) => !o)}
       >
         {TriggerIcon && (
@@ -83,7 +97,11 @@ export default function EntitySelect({
         </span>
       </button>
       {open && (
-        <div className={styles.menu} role="listbox" aria-label="Record type">
+        <div
+          className={styles.menu}
+          role="listbox"
+          aria-label={ariaLabel ?? "Record type"}
+        >
           {ENTITY_ORDER.map((key) => {
             const meta = ENTITY_META[key];
             const OptionIcon = ENTITY_ICON[key];

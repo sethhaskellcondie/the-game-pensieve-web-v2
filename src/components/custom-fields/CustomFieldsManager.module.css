@@ -54,6 +54,11 @@
   gap: 10px;
 }
 
+/* EntitySelect sizes to its container; pin the header scope picker's width. */
+.entityScope {
+  width: 236px;
+}
+
 /* The New button reuses the shared <Button> for its height, focus-visible,
    :active, and disabled behavior, and only swaps the palette to the design's
    green. Scoping under .actions raises specificity above Button's own

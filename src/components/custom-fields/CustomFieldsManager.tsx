@@ -376,7 +376,11 @@ export default function CustomFieldsManager() {
           </div>
         </div>
         <div className={styles.actions}>
-          <EntitySelect value={entityKey} onChange={handleEntityChange} />
+          <EntitySelect
+            className={styles.entityScope}
+            value={entityKey}
+            onChange={handleEntityChange}
+          />
           <Button
             className={styles.newBtn}
             onClick={() => setModal({ mode: "create" })}

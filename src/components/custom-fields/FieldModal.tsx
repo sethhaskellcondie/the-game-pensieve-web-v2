@@ -9,14 +9,13 @@ import type {
   UpdateCustomFieldInput,
 } from "@/lib/api";
 import {
-  ENTITY_META,
-  ENTITY_ORDER,
   FIELD_TYPE_META,
   FIELD_TYPE_ORDER,
   hasOptions,
   KindGlyph,
 } from "./registry";
-import { CaretIcon, GripIcon, PlusIcon, XIcon } from "./icons";
+import { GripIcon, PlusIcon, XIcon } from "./icons";
+import EntitySelect from "./EntitySelect";
 import styles from "./FieldModal.module.css";
 
 // What the modal hands back on save: a create input, or an edit input plus the
@@ -216,20 +215,11 @@ export default function FieldModal({
         {!isEdit && (
           <>
             <span className={styles.label}>Applies to</span>
-            <div className={styles.selectWrap}>
-              <select
-                aria-label="Applies to"
-                value={entityKey}
-                onChange={(e) => setEntityKey(e.target.value as EntityKey)}
-              >
-                {ENTITY_ORDER.map((key) => (
-                  <option key={key} value={key}>
-                    {ENTITY_META[key].label}
-                  </option>
-                ))}
-              </select>
-              <CaretIcon />
-            </div>
+            <EntitySelect
+              ariaLabel="Applies to"
+              value={entityKey}
+              onChange={setEntityKey}
+            />
 
             <span className={styles.label}>Field type</span>
             <div
