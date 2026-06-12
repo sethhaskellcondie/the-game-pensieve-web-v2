@@ -19,9 +19,9 @@ import DataTable, {
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import FilterBar from "@/components/filters/FilterBar";
-import { buildFieldList } from "@/components/filters/fieldList";
-import { toFilterRequest } from "@/components/filters/serialize";
-import type { ActiveFilter } from "@/components/filters/types";
+import { buildFieldList, supportsSorting } from "@/components/filters/fieldList";
+import { toFilterRequest, toSortRequest } from "@/components/filters/serialize";
+import type { ActiveFilter, ActiveSort } from "@/components/filters/types";
 import CustomFieldValue from "@/components/toys/CustomFieldValue";
 import {
   fetchEntityFields,
@@ -136,6 +136,10 @@ export default function VideoGamesManager() {
   // filter chips. Both feed the server-side search.
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<ActiveFilter[]>([]);
+  // The ordered sort levels behind the Sort button; the button renders only
+  // when the spec advertises sorting (its "all_fields" capability marker).
+  const [sorts, setSorts] = useState<ActiveSort[]>([]);
+  const canSort = useMemo(() => supportsSorting(spec), [spec]);
   // The row whose Title cell is being inline-edited, or null when idle.
   const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -208,22 +212,25 @@ export default function VideoGamesManager() {
     };
   }, [showSnackbar]);
 
-  // Re-run the server search whenever the filter chips change. Debounced so
-  // rapid edits coalesce, abortable so an in-flight request is cancelled, and
-  // seq-guarded so only the newest response is committed (last-write-wins). The
-  // initial load is handled by the mount effect, so the first run here (before
-  // any user change) is skipped. The search box doesn't filter live — it adds a
-  // title-contains chip on Enter, which flows through here.
-  const didSearch = useRef(false);
+  // Re-run the server search whenever the filter chips or sort levels change.
+  // Debounced so rapid edits coalesce, abortable so an in-flight request is
+  // cancelled, and seq-guarded so only the newest response is committed
+  // (last-write-wins). A run whose payload matches the last one sent is
+  // skipped — that covers the initial mount (the mount effect already loaded).
+  // The search box doesn't filter live — it adds a title-contains chip on
+  // Enter, which flows through here.
+  const lastDto = useRef("[]");
   const searchSeq = useRef(0);
   useEffect(() => {
-    if (!didSearch.current) {
-      didSearch.current = true;
-      return;
-    }
+    const dto = [
+      ...toFilterRequest("videoGame", filters),
+      ...toSortRequest("videoGame", sorts),
+    ];
+    const dtoJson = JSON.stringify(dto);
+    if (dtoJson === lastDto.current) return;
+    lastDto.current = dtoJson;
     const controller = new AbortController();
     const seq = ++searchSeq.current;
-    const dto = toFilterRequest("videoGame", filters);
     const timer = setTimeout(() => {
       searchVideoGamesClient(dto, controller.signal)
         .then((rows) => {
@@ -239,7 +246,7 @@ export default function VideoGamesManager() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [filters, showSnackbar]);
+  }, [filters, sorts, showSnackbar]);
 
   // Apply `next` optimistically and PUT the whole game (title + systemId +
   // values are all required by the backend), rolling the list back on failure.
@@ -474,6 +481,8 @@ export default function VideoGamesManager() {
           onSearchChange={setQuery}
           searchPlaceholder="Search video games…"
           searchAriaLabel="Search video games"
+          sorts={canSort ? sorts : undefined}
+          onSortsChange={canSort ? setSorts : undefined}
         />
         {/* No New button: video games are created through video game boxes. */}
       </div>

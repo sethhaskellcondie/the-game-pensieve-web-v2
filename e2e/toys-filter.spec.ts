@@ -137,6 +137,29 @@ function applyFilters(list: StubToy[], filters: StubFilter[]): StubToy[] {
   }, list);
 }
 
+// Apply the sort filters (operator order_by/order_by_desc; the field names the
+// sorted-by column) the way the backend does: first entry is the primary sort,
+// later entries break ties. Numeric values compare numerically, everything
+// else lexically.
+function applySorts(list: StubToy[], sorts: StubFilter[]): StubToy[] {
+  if (sorts.length === 0) return list;
+  const sorted = [...list];
+  sorted.sort((a, b) => {
+    for (const s of sorts) {
+      const av = valueOf(a, s.field);
+      const bv = valueOf(b, s.field);
+      const an = Number(av);
+      const bn = Number(bv);
+      const numeric =
+        av !== "" && bv !== "" && !Number.isNaN(an) && !Number.isNaN(bn);
+      const cmp = numeric ? an - bn : av.localeCompare(bv);
+      if (cmp !== 0) return s.operator === "order_by_desc" ? -cmp : cmp;
+    }
+    return 0;
+  });
+  return sorted;
+}
+
 async function stub(page: Page) {
   const json = (route: Parameters<Parameters<Page["route"]>[1]>[0], body: unknown) =>
     route.fulfill({
@@ -149,7 +172,14 @@ async function stub(page: Page) {
     const req = route.request();
     if (req.url().includes("/search") && req.method() === "POST") {
       const { filters } = req.postDataJSON() as { filters: StubFilter[] };
-      return json(route, { status: "ok", data: applyFilters(TOYS, filters) });
+      const isSort = (f: StubFilter) =>
+        f.operator === "order_by" || f.operator === "order_by_desc";
+      const sorts = (filters ?? []).filter(isSort);
+      const plain = (filters ?? []).filter((f) => !isSort(f));
+      return json(route, {
+        status: "ok",
+        data: applySorts(applyFilters(TOYS, plain), sorts),
+      });
     }
     return json(route, { status: "ok", data: TOYS });
   });
@@ -309,4 +339,27 @@ test("the search box commits a name-contains chip on Enter and clears", async ({
   await expect(page.getByText("Pikachu", { exact: true })).toBeVisible();
   await expect(page.getByText("R2-D2", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 2, name: "1 Toy" })).toBeVisible();
+});
+
+test("sorts toys by a custom field via the Sort button", async ({ page }) => {
+  await page.goto("/toys");
+  const names = page.locator("tbody tr td:first-child");
+  await expect(names).toHaveText(["R2-D2", "Pikachu"]);
+
+  await page.getByRole("button", { name: "Sort", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Sort options" });
+  await dialog.getByRole("button", { name: "Add sort" }).click();
+  // The new level defaults to the first field (Name); switch it to the numeric
+  // Quantity custom field.
+  await dialog.getByRole("button", { name: "Sort field 1" }).click();
+  await page.getByRole("option", { name: "Quantity", exact: true }).click();
+
+  // Quantity ascending: Pikachu (3) before R2-D2 (10).
+  await expect(names).toHaveText(["Pikachu", "R2-D2"]);
+
+  await dialog
+    .getByRole("radiogroup", { name: "Sort direction 1" })
+    .getByRole("radio", { name: "Desc" })
+    .click();
+  await expect(names).toHaveText(["R2-D2", "Pikachu"]);
 });

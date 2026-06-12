@@ -17,9 +17,9 @@ import DataTable, {
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import FilterBar from "@/components/filters/FilterBar";
-import { buildFieldList } from "@/components/filters/fieldList";
-import { toFilterRequest } from "@/components/filters/serialize";
-import type { ActiveFilter } from "@/components/filters/types";
+import { buildFieldList, supportsSorting } from "@/components/filters/fieldList";
+import { toFilterRequest, toSortRequest } from "@/components/filters/serialize";
+import type { ActiveFilter, ActiveSort } from "@/components/filters/types";
 import CustomFieldValue from "@/components/toys/CustomFieldValue";
 import {
   fetchEntityFields,
@@ -132,6 +132,10 @@ export default function BoardGamesManager() {
   // filter chips. Both feed the server-side search.
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<ActiveFilter[]>([]);
+  // The ordered sort levels behind the Sort button; the button renders only
+  // when the spec advertises sorting (its "all_fields" capability marker).
+  const [sorts, setSorts] = useState<ActiveSort[]>([]);
+  const canSort = useMemo(() => supportsSorting(spec), [spec]);
   // The row whose Title cell is being inline-edited, or null when idle.
   const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -175,22 +179,25 @@ export default function BoardGamesManager() {
     };
   }, [showSnackbar]);
 
-  // Re-run the server search whenever the filter chips change. Debounced so
-  // rapid edits coalesce, abortable so an in-flight request is cancelled, and
-  // seq-guarded so only the newest response is committed (last-write-wins). The
-  // initial load is handled by the mount effect, so the first run here (before
-  // any user change) is skipped. The search box doesn't filter live — it adds a
-  // title-contains chip on Enter, which flows through here.
-  const didSearch = useRef(false);
+  // Re-run the server search whenever the filter chips or sort levels change.
+  // Debounced so rapid edits coalesce, abortable so an in-flight request is
+  // cancelled, and seq-guarded so only the newest response is committed
+  // (last-write-wins). A run whose payload matches the last one sent is
+  // skipped — that covers the initial mount (the mount effect already loaded).
+  // The search box doesn't filter live — it adds a title-contains chip on
+  // Enter, which flows through here.
+  const lastDto = useRef("[]");
   const searchSeq = useRef(0);
   useEffect(() => {
-    if (!didSearch.current) {
-      didSearch.current = true;
-      return;
-    }
+    const dto = [
+      ...toFilterRequest("boardGame", filters),
+      ...toSortRequest("boardGame", sorts),
+    ];
+    const dtoJson = JSON.stringify(dto);
+    if (dtoJson === lastDto.current) return;
+    lastDto.current = dtoJson;
     const controller = new AbortController();
     const seq = ++searchSeq.current;
-    const dto = toFilterRequest("boardGame", filters);
     const timer = setTimeout(() => {
       searchBoardGamesClient(dto, controller.signal)
         .then((rows) => {
@@ -206,7 +213,7 @@ export default function BoardGamesManager() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [filters, showSnackbar]);
+  }, [filters, sorts, showSnackbar]);
 
   // Apply `next` optimistically and PUT the whole game (title + values are
   // both required by the backend), rolling the list back on failure. Every
@@ -407,6 +414,8 @@ export default function BoardGamesManager() {
           onSearchChange={setQuery}
           searchPlaceholder="Search board games…"
           searchAriaLabel="Search board games"
+          sorts={canSort ? sorts : undefined}
+          onSortsChange={canSort ? setSorts : undefined}
         />
         {/* No New button: board games are created through board game boxes. */}
       </div>

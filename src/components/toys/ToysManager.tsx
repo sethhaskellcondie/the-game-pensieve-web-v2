@@ -20,9 +20,9 @@ import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import { PlusIcon } from "@/components/custom-fields/icons";
 import FilterBar from "@/components/filters/FilterBar";
-import { buildFieldList } from "@/components/filters/fieldList";
-import { toFilterRequest } from "@/components/filters/serialize";
-import type { ActiveFilter } from "@/components/filters/types";
+import { buildFieldList, supportsSorting } from "@/components/filters/fieldList";
+import { toFilterRequest, toSortRequest } from "@/components/filters/serialize";
+import type { ActiveFilter, ActiveSort } from "@/components/filters/types";
 import CustomFieldValue from "./CustomFieldValue";
 import FieldEditor, { normalizeFieldValue } from "./toyFieldEditors";
 import ToyCreateModal from "./ToyCreateModal";
@@ -177,6 +177,10 @@ export default function ToysManager() {
   // filter chips. Both feed the server-side search.
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<ActiveFilter[]>([]);
+  // The ordered sort levels behind the Sort button; the button renders only
+  // when the spec advertises sorting (its "all_fields" capability marker).
+  const [sorts, setSorts] = useState<ActiveSort[]>([]);
+  const canSort = useMemo(() => supportsSorting(spec), [spec]);
   // The unified field list (standard spec fields + custom fields) the filter bar
   // offers. Recomputed only when the spec or definitions change.
   const fieldDefs = useMemo(
@@ -224,22 +228,25 @@ export default function ToysManager() {
     };
   }, [showSnackbar]);
 
-  // Re-run the server search whenever the filter chips change. Debounced so
-  // rapid edits coalesce, abortable so an in-flight request is cancelled, and
-  // seq-guarded so only the newest response is committed (last-write-wins). The
-  // initial load is handled by the mount effect, so the first run here (before
-  // any user change) is skipped. The search box doesn't filter live — it adds a
-  // name-contains chip on Enter, which flows through here.
-  const didSearch = useRef(false);
+  // Re-run the server search whenever the filter chips or sort levels change.
+  // Debounced so rapid edits coalesce, abortable so an in-flight request is
+  // cancelled, and seq-guarded so only the newest response is committed
+  // (last-write-wins). A run whose payload matches the last one sent is
+  // skipped — that covers the initial mount (the mount effect already loaded).
+  // The search box doesn't filter live — it adds a name-contains chip on
+  // Enter, which flows through here.
+  const lastDto = useRef("[]");
   const searchSeq = useRef(0);
   useEffect(() => {
-    if (!didSearch.current) {
-      didSearch.current = true;
-      return;
-    }
+    const dto = [
+      ...toFilterRequest("toy", filters),
+      ...toSortRequest("toy", sorts),
+    ];
+    const dtoJson = JSON.stringify(dto);
+    if (dtoJson === lastDto.current) return;
+    lastDto.current = dtoJson;
     const controller = new AbortController();
     const seq = ++searchSeq.current;
-    const dto = toFilterRequest("toy", filters);
     const timer = setTimeout(() => {
       searchToysClient(dto, controller.signal)
         .then((rows) => {
@@ -255,7 +262,7 @@ export default function ToysManager() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [filters, showSnackbar]);
+  }, [filters, sorts, showSnackbar]);
 
   const startEdit = useCallback((toy: Toy, field: EditField) => {
     setEditing({ id: toy.id, field });
@@ -558,6 +565,8 @@ export default function ToysManager() {
           onSearchChange={setQuery}
           searchPlaceholder="Search toys…"
           searchAriaLabel="Search toys"
+          sorts={canSort ? sorts : undefined}
+          onSortsChange={canSort ? setSorts : undefined}
         />
         <div className={styles.actions}>
           <Button className={styles.newBtn} onClick={() => setCreating(true)}>
