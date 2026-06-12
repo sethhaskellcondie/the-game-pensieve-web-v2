@@ -151,10 +151,15 @@ function routedFetch(url: string, init?: RequestInit) {
   return Promise.resolve(jsonResponse({ status: "ok", data: {} }));
 }
 
-function renderManager(massEditMode = false) {
+function renderManager(
+  massEditMode = false,
+  standardFields = DEFAULT_UI_SETTINGS.standardFields,
+) {
   return render(
     <ToastProvider>
-      <UiSettingsProvider initial={{ ...DEFAULT_UI_SETTINGS, massEditMode }}>
+      <UiSettingsProvider
+        initial={{ ...DEFAULT_UI_SETTINGS, massEditMode, standardFields }}
+      >
         <SystemsManager />
       </UiSettingsProvider>
     </ToastProvider>,
@@ -171,6 +176,24 @@ describe("SystemsManager", () => {
 
   afterEach(() => {
     mockFetch.mockReset();
+  });
+
+  it("hides only the standard columns turned off in the settings", async () => {
+    renderManager(false, {
+      ...DEFAULT_UI_SETTINGS.standardFields,
+      system: { generation: false, handheld: true },
+    });
+    await screen.findByText("NES");
+
+    expect(
+      screen.getByRole("columnheader", { name: "Name" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: "Generation" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Handheld" }),
+    ).toBeInTheDocument();
   });
 
   it("loads the systems with a count and renders the Name + Generation + Handheld + custom-field columns", async () => {

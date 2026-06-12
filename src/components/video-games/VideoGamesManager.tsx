@@ -126,6 +126,7 @@ export default function VideoGamesManager() {
   const { showToast, showSnackbar } = useToast();
   const { settings } = useUiSettings();
   const massEditMode = settings.massEditMode;
+  const standardFields = settings.standardFields.videoGame;
   const [games, setGames] = useState<VideoGame[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
   const [definitions, setDefinitions] = useState<CustomField[]>([]);
@@ -431,10 +432,19 @@ export default function VideoGamesManager() {
       width: def.type === "number" || def.type === "boolean" ? MIN_COL : 180,
       render: (game) => renderFieldCell(game, def),
     }));
-    return [...base, ...dynamic];
+    // Drop the standard columns the user hid via Options → Show/Hide Standard
+    // Fields. Column keys match the setting keys, and the title column has no
+    // setting, so it is never hidden.
+    const hidden = new Set(
+      Object.entries(standardFields)
+        .filter(([, shown]) => !shown)
+        .map(([key]) => key),
+    );
+    return [...base.filter((col) => !hidden.has(col.key)), ...dynamic];
   }, [
     definitions,
     massEditMode,
+    standardFields,
     editingId,
     systemOptions,
     commitTitle,

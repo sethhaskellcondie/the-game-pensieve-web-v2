@@ -217,10 +217,15 @@ function routedFetch(url: string, init?: RequestInit) {
   return Promise.resolve(jsonResponse({ status: "ok", data: {} }));
 }
 
-function renderManager(massEditMode = false) {
+function renderManager(
+  massEditMode = false,
+  standardFields = DEFAULT_UI_SETTINGS.standardFields,
+) {
   return render(
     <ToastProvider>
-      <UiSettingsProvider initial={{ ...DEFAULT_UI_SETTINGS, massEditMode }}>
+      <UiSettingsProvider
+        initial={{ ...DEFAULT_UI_SETTINGS, massEditMode, standardFields }}
+      >
         <BoardGameBoxesManager />
       </UiSettingsProvider>
     </ToastProvider>,
@@ -237,6 +242,35 @@ describe("BoardGameBoxesManager", () => {
 
   afterEach(() => {
     mockFetch.mockReset();
+  });
+
+  it("hides only the standard columns turned off in the settings", async () => {
+    renderManager(false, {
+      ...DEFAULT_UI_SETTINGS.standardFields,
+      boardGameBox: {
+        boardGame: true,
+        expansion: false,
+        standAlone: true,
+        baseSet: false,
+      },
+    });
+    await screen.findByText("Set-A-Watch Doomed Run");
+
+    expect(
+      screen.getByRole("columnheader", { name: "Title" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Board Game" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: "Expansion" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Stand Alone" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: "Base Set" }),
+    ).not.toBeInTheDocument();
   });
 
   it("loads the boxes with a count and the Title + Board Game + flags + Base Set + custom-field columns", async () => {

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { DEFAULT_STANDARD_FIELDS } from "../src/lib/uiSettings.types";
 
 type StubField = {
   id: number;
@@ -177,7 +178,8 @@ async function stubBoardGames(page: Page) {
 // page.route can't stub them. Pin the modes off and the default view to list
 // (the bare /board-games assertions below assume it) — keep every board spec
 // pinning these same values to avoid clashing writes to the shared backend
-// state (see toys.spec.ts).
+// state (see toys.spec.ts). The standard-field columns are pinned to all-shown
+// (the default) because these specs assert on them.
 async function pinNormalMode(page: Page) {
   const current = await (await page.request.get("/api/ui-settings")).json();
   await page.request.post("/api/ui-settings", {
@@ -186,6 +188,7 @@ async function pinNormalMode(page: Page) {
       massInputMode: false,
       massEditMode: false,
       boardGamesDefaultView: "list",
+      standardFields: DEFAULT_STANDARD_FIELDS,
     },
   });
 }

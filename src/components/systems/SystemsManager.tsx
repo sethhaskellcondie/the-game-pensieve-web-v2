@@ -167,6 +167,7 @@ export default function SystemsManager() {
   const { showToast, showSnackbar } = useToast();
   const { settings } = useUiSettings();
   const massEditMode = settings.massEditMode;
+  const standardFields = settings.standardFields.system;
   const [systems, setSystems] = useState<System[]>([]);
   const [definitions, setDefinitions] = useState<CustomField[]>([]);
   const [spec, setSpec] = useState<FilterSpecification | null>(null);
@@ -534,10 +535,19 @@ export default function SystemsManager() {
       width: def.type === "number" || def.type === "boolean" ? MIN_COL : 180,
       render: (system) => renderFieldCell(system, def),
     }));
-    return [...base, ...dynamic];
+    // Drop the standard columns the user hid via Options → Show/Hide Standard
+    // Fields. Column keys match the setting keys, and the name column has no
+    // setting, so it is never hidden.
+    const hidden = new Set(
+      Object.entries(standardFields)
+        .filter(([, shown]) => !shown)
+        .map(([key]) => key),
+    );
+    return [...base.filter((col) => !hidden.has(col.key)), ...dynamic];
   }, [
     definitions,
     massEditMode,
+    standardFields,
     editingId,
     commitName,
     commitGeneration,

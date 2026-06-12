@@ -168,10 +168,15 @@ function routedFetch(url: string, init?: RequestInit) {
   return Promise.resolve(jsonResponse({ status: "ok", data: {} }));
 }
 
-function renderManager(massEditMode = false) {
+function renderManager(
+  massEditMode = false,
+  standardFields = DEFAULT_UI_SETTINGS.standardFields,
+) {
   return render(
     <ToastProvider>
-      <UiSettingsProvider initial={{ ...DEFAULT_UI_SETTINGS, massEditMode }}>
+      <UiSettingsProvider
+        initial={{ ...DEFAULT_UI_SETTINGS, massEditMode, standardFields }}
+      >
         <BoardGamesManager />
       </UiSettingsProvider>
     </ToastProvider>,
@@ -188,6 +193,25 @@ describe("BoardGamesManager", () => {
 
   afterEach(() => {
     mockFetch.mockReset();
+  });
+
+  it("hides the Boxes column when it is hidden in the standard-field settings", async () => {
+    renderManager(false, {
+      ...DEFAULT_UI_SETTINGS.standardFields,
+      boardGame: { boxes: false },
+    });
+    await screen.findByText("Set-A-Watch");
+
+    expect(
+      screen.getByRole("columnheader", { name: "Title" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: "Boxes" }),
+    ).not.toBeInTheDocument();
+    // Custom-field columns are unaffected.
+    expect(
+      screen.getByRole("columnheader", { name: "Has App" }),
+    ).toBeInTheDocument();
   });
 
   it("loads the games with a count and renders the Title + Boxes + custom-field columns", async () => {

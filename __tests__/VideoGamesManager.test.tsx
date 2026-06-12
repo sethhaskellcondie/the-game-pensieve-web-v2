@@ -183,10 +183,15 @@ function routedFetch(url: string, init?: RequestInit) {
   return Promise.resolve(jsonResponse({ status: "ok", data: {} }));
 }
 
-function renderManager(massEditMode = false) {
+function renderManager(
+  massEditMode = false,
+  standardFields = DEFAULT_UI_SETTINGS.standardFields,
+) {
   return render(
     <ToastProvider>
-      <UiSettingsProvider initial={{ ...DEFAULT_UI_SETTINGS, massEditMode }}>
+      <UiSettingsProvider
+        initial={{ ...DEFAULT_UI_SETTINGS, massEditMode, standardFields }}
+      >
         <VideoGamesManager />
       </UiSettingsProvider>
     </ToastProvider>,
@@ -203,6 +208,24 @@ describe("VideoGamesManager", () => {
 
   afterEach(() => {
     mockFetch.mockReset();
+  });
+
+  it("hides only the standard columns turned off in the settings", async () => {
+    renderManager(false, {
+      ...DEFAULT_UI_SETTINGS.standardFields,
+      videoGame: { system: false, boxes: true },
+    });
+    await screen.findByText("Super Mario Bros.");
+
+    expect(
+      screen.getByRole("columnheader", { name: "Title" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: "System" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Boxes" }),
+    ).toBeInTheDocument();
   });
 
   it("loads the games with a count and renders the Title + System + Boxes + custom-field columns", async () => {

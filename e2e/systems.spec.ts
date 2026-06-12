@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { DEFAULT_STANDARD_FIELDS } from "../src/lib/uiSettings.types";
 
 type StubField = {
   id: number;
@@ -145,12 +146,18 @@ async function stubSystems(page: Page) {
 // These specs all assume the normal (non-mass) UI, so pin both off (the same
 // values every other spec pins, to avoid clashing writes to the shared backend
 // state); the mass-mode behaviors are covered deterministically by the
-// SystemsManager and SystemCreateModal unit tests. Other settings are read back
-// and preserved.
+// SystemsManager and SystemCreateModal unit tests. The standard-field columns
+// are pinned to all-shown (the default) because these specs assert on them.
+// Other settings are read back and preserved.
 async function pinNormalMode(page: Page) {
   const current = await (await page.request.get("/api/ui-settings")).json();
   await page.request.post("/api/ui-settings", {
-    data: { ...current, massInputMode: false, massEditMode: false },
+    data: {
+      ...current,
+      massInputMode: false,
+      massEditMode: false,
+      standardFields: DEFAULT_STANDARD_FIELDS,
+    },
   });
 }
 

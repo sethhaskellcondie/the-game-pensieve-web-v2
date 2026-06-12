@@ -218,10 +218,15 @@ function routedFetch(url: string, init?: RequestInit) {
   return Promise.resolve(jsonResponse({ status: "ok", data: {} }));
 }
 
-function renderManager(massEditMode = false) {
+function renderManager(
+  massEditMode = false,
+  standardFields = DEFAULT_UI_SETTINGS.standardFields,
+) {
   return render(
     <ToastProvider>
-      <UiSettingsProvider initial={{ ...DEFAULT_UI_SETTINGS, massEditMode }}>
+      <UiSettingsProvider
+        initial={{ ...DEFAULT_UI_SETTINGS, massEditMode, standardFields }}
+      >
         <VideoGameBoxesManager />
       </UiSettingsProvider>
     </ToastProvider>,
@@ -238,6 +243,35 @@ describe("VideoGameBoxesManager", () => {
 
   afterEach(() => {
     mockFetch.mockReset();
+  });
+
+  it("hides only the standard columns turned off in the settings", async () => {
+    renderManager(false, {
+      ...DEFAULT_UI_SETTINGS.standardFields,
+      videoGameBox: {
+        system: true,
+        games: false,
+        physical: true,
+        collection: false,
+      },
+    });
+    await screen.findByText("Super Mario All-Stars");
+
+    expect(
+      screen.getByRole("columnheader", { name: "Title" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "System" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: "Games" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Physical" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: "Collection" }),
+    ).not.toBeInTheDocument();
   });
 
   it("loads the boxes with a count and renders the standard + custom-field columns", async () => {

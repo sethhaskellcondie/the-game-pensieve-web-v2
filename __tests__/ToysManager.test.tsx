@@ -169,10 +169,15 @@ function routedFetch(url: string, init?: RequestInit) {
   return Promise.resolve(jsonResponse({ status: "ok", data: {} }));
 }
 
-function renderManager(massEditMode = false) {
+function renderManager(
+  massEditMode = false,
+  standardFields = DEFAULT_UI_SETTINGS.standardFields,
+) {
   return render(
     <ToastProvider>
-      <UiSettingsProvider initial={{ ...DEFAULT_UI_SETTINGS, massEditMode }}>
+      <UiSettingsProvider
+        initial={{ ...DEFAULT_UI_SETTINGS, massEditMode, standardFields }}
+      >
         <ToysManager />
       </UiSettingsProvider>
     </ToastProvider>,
@@ -189,6 +194,25 @@ describe("ToysManager", () => {
 
   afterEach(() => {
     mockFetch.mockReset();
+  });
+
+  it("hides the Set column when it is hidden in the standard-field settings", async () => {
+    renderManager(false, {
+      ...DEFAULT_UI_SETTINGS.standardFields,
+      toy: { set: false },
+    });
+    await screen.findByText("R2-D2");
+
+    expect(
+      screen.getByRole("columnheader", { name: "Name" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: "Set" }),
+    ).not.toBeInTheDocument();
+    // Custom-field columns are unaffected.
+    expect(
+      screen.getByRole("columnheader", { name: "Boxed" }),
+    ).toBeInTheDocument();
   });
 
   it("loads the toys with a count and renders the Name + Set + custom-field columns", async () => {

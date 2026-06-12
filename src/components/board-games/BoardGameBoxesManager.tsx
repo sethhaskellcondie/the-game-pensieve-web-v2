@@ -130,6 +130,7 @@ export default function BoardGameBoxesManager() {
   const { showToast, showSnackbar } = useToast();
   const { settings } = useUiSettings();
   const massEditMode = settings.massEditMode;
+  const standardFields = settings.standardFields.boardGameBox;
   const [boxes, setBoxes] = useState<BoardGameBox[]>([]);
   // The unfiltered box list from the mount load. Search responses carry only
   // baseSetId, so the Base Set column resolves titles against this list — a
@@ -484,10 +485,19 @@ export default function BoardGameBoxesManager() {
       width: def.type === "number" || def.type === "boolean" ? MIN_COL : 180,
       render: (box) => renderFieldCell(box, def),
     }));
-    return [...base, ...dynamic];
+    // Drop the standard columns the user hid via Options → Show/Hide Standard
+    // Fields. Column keys match the setting keys, and the title column has no
+    // setting, so it is never hidden.
+    const hidden = new Set(
+      Object.entries(standardFields)
+        .filter(([, shown]) => !shown)
+        .map(([key]) => key),
+    );
+    return [...base.filter((col) => !hidden.has(col.key)), ...dynamic];
   }, [
     definitions,
     massEditMode,
+    standardFields,
     editingId,
     baseSetTitleById,
     commitTitle,

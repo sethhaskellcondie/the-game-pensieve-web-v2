@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { DEFAULT_STANDARD_FIELDS } from "../src/lib/uiSettings.types";
 
 type StubSystem = {
   id: number;
@@ -196,6 +197,8 @@ const PICKER_GAMES = [
 // page.route can't stub them. Pin the modes off and the default view to list
 // (the bare /video-games assertions below assume it) — the same values every
 // other spec pins, to avoid clashing writes to the shared backend state.
+// The standard-field columns are pinned to all-shown (the default) because
+// these specs assert on the boxes table's columns.
 async function pinNormalMode(page: Page) {
   const current = await (await page.request.get("/api/ui-settings")).json();
   await page.request.post("/api/ui-settings", {
@@ -204,6 +207,7 @@ async function pinNormalMode(page: Page) {
       massInputMode: false,
       massEditMode: false,
       videoGamesDefaultView: "list",
+      standardFields: DEFAULT_STANDARD_FIELDS,
     },
   });
 }
