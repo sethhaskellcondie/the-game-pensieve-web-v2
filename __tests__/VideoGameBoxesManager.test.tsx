@@ -55,8 +55,8 @@ const boxes: VideoGameBox[] = [
     isPhysical: true,
     isCollection: true,
     customFieldValues: [
-      { customFieldId: 10, customFieldName: "Condition", customFieldType: "text", value: "Mint" },
-      { customFieldId: 11, customFieldName: "Sealed", customFieldType: "boolean", value: "false" },
+      { customFieldId: 10, customFieldName: "Condition", customFieldType: "text", value: "Mint", valueOptionId: null },
+      { customFieldId: 11, customFieldName: "Sealed", customFieldType: "boolean", value: "false", valueOptionId: null },
     ],
     createdAt: "",
     updatedAt: "",
@@ -705,6 +705,7 @@ describe("VideoGameBoxesManager", () => {
         (v: { customFieldId: number }) => v.customFieldId === 10,
       );
       expect(cf.value).toBe("Good");
+      expect(cf.valueOptionId).toBeNull();
     });
   });
 

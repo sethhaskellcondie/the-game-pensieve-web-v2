@@ -59,12 +59,12 @@ const toys: Toy[] = [
     name: "R2-D2",
     set: "Star Wars",
     customFieldValues: [
-      { customFieldId: 10, customFieldName: "Boxed", customFieldType: "boolean", value: "true" },
-      { customFieldId: 11, customFieldName: "Year", customFieldType: "number", value: "1977" },
-      { customFieldId: 12, customFieldName: "Series", customFieldType: "dropdown", value: "Original" },
-      { customFieldId: 13, customFieldName: "Condition", customFieldType: "radio_button", value: "Mint" },
-      { customFieldId: 14, customFieldName: "Build", customFieldType: "progress_bar", value: "Opened" },
-      { customFieldId: 15, customFieldName: "Line", customFieldType: "text", value: "Astromech" },
+      { customFieldId: 10, customFieldName: "Boxed", customFieldType: "boolean", value: "true", valueOptionId: null },
+      { customFieldId: 11, customFieldName: "Year", customFieldType: "number", value: "1977", valueOptionId: null },
+      { customFieldId: 12, customFieldName: "Series", customFieldType: "dropdown", value: "Original", valueOptionId: 21 },
+      { customFieldId: 13, customFieldName: "Condition", customFieldType: "radio_button", value: "Mint", valueOptionId: 31 },
+      { customFieldId: 14, customFieldName: "Build", customFieldType: "progress_bar", value: "Opened", valueOptionId: 42 },
+      { customFieldId: 15, customFieldName: "Line", customFieldType: "text", value: "Astromech", valueOptionId: null },
     ],
     createdAt: "",
     updatedAt: "",
@@ -77,7 +77,7 @@ const toys: Toy[] = [
     set: "Pokemon",
     // Missing the "Year" value on purpose.
     customFieldValues: [
-      { customFieldId: 10, customFieldName: "Boxed", customFieldType: "boolean", value: "false" },
+      { customFieldId: 10, customFieldName: "Boxed", customFieldType: "boolean", value: "false", valueOptionId: null },
     ],
     createdAt: "",
     updatedAt: "",

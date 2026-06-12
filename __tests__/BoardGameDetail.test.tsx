@@ -31,7 +31,7 @@ const game: BoardGame = {
       isStandAlone: true,
       baseSetId: null,
       customFieldValues: [
-        { customFieldId: 20, customFieldName: "Notes", customFieldType: "text", value: "Sleeved" },
+        { customFieldId: 20, customFieldName: "Notes", customFieldType: "text", value: "Sleeved", valueOptionId: null },
       ],
       createdAt: "",
       updatedAt: "",
@@ -50,7 +50,7 @@ const game: BoardGame = {
     },
   ],
   customFieldValues: [
-    { customFieldId: 9, customFieldName: "Publisher", customFieldType: "text", value: "Rock Manor Games" },
+    { customFieldId: 9, customFieldName: "Publisher", customFieldType: "text", value: "Rock Manor Games", valueOptionId: null },
   ],
   createdAt: "",
   updatedAt: "",

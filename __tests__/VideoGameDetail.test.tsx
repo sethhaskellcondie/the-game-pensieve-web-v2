@@ -57,9 +57,9 @@ const game: VideoGame = {
     { id: 42, title: "SNES Classics Collection" },
   ],
   customFieldValues: [
-    { customFieldId: 1, customFieldName: "Developer", customFieldType: "text", value: "Square" },
-    { customFieldId: 2, customFieldName: "Genre", customFieldType: "dropdown", value: "RPG" },
-    { customFieldId: 3, customFieldName: "Favorite", customFieldType: "boolean", value: "false" },
+    { customFieldId: 1, customFieldName: "Developer", customFieldType: "text", value: "Square", valueOptionId: null },
+    { customFieldId: 2, customFieldName: "Genre", customFieldType: "dropdown", value: "RPG", valueOptionId: 12 },
+    { customFieldId: 3, customFieldName: "Favorite", customFieldType: "boolean", value: "false", valueOptionId: null },
   ],
   createdAt: "",
   updatedAt: "",
@@ -228,6 +228,7 @@ describe("VideoGameDetail", () => {
       (v: { customFieldId: number }) => v.customFieldId === 1,
     );
     expect(cf.value).toBe("Squaresoft");
+    expect(cf.valueOptionId).toBeNull();
   });
 
   it("changes a dropdown custom field via the custom listbox", async () => {
@@ -241,6 +242,7 @@ describe("VideoGameDetail", () => {
       (v: { customFieldId: number }) => v.customFieldId === 2,
     );
     expect(cf.value).toBe("Action");
+    expect(cf.valueOptionId).toBe(11);
   });
 
   it("rolls back the optimistic value when the PUT fails", async () => {

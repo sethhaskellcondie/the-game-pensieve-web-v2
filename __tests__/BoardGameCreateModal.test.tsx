@@ -72,6 +72,7 @@ describe("BoardGameCreateModal", () => {
           customFieldName: "Designer",
           customFieldType: "text",
           value: "Klaus Teuber",
+          valueOptionId: null,
         },
       ],
     });

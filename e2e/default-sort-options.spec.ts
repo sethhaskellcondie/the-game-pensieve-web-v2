@@ -17,6 +17,7 @@ type StubSystem = {
     customFieldName: string;
     customFieldType: string;
     value: string;
+    valueOptionId: number | null;
   }[];
   createdAt: string;
   updatedAt: string;
@@ -85,6 +86,7 @@ function system(
         customFieldName: "Release Year",
         customFieldType: "number",
         value: releaseYear,
+        valueOptionId: null,
       },
     ],
     createdAt: "",

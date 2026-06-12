@@ -10,6 +10,7 @@ type StubToy = {
     customFieldName: string;
     customFieldType: string;
     value: string;
+    valueOptionId: number | null;
   }[];
   createdAt: string;
   updatedAt: string;
@@ -66,7 +67,9 @@ const FILTER_SPEC = {
       "less_than",
       "less_than_equal_to",
     ],
-    Series: ["equals", "not_equals", "contains", "starts_with", "ends_with"],
+    // Enum (option-backed) fields only support identity checks — the backend
+    // matches on option id, so the text operators don't apply.
+    Series: ["equals", "not_equals"],
   },
 };
 
@@ -77,8 +80,8 @@ const TOYS: StubToy[] = [
     name: "R2-D2",
     set: "Star Wars",
     customFieldValues: [
-      { customFieldId: 11, customFieldName: "Quantity", customFieldType: "number", value: "10" },
-      { customFieldId: 12, customFieldName: "Series", customFieldType: "dropdown", value: "Original" },
+      { customFieldId: 11, customFieldName: "Quantity", customFieldType: "number", value: "10", valueOptionId: null },
+      { customFieldId: 12, customFieldName: "Series", customFieldType: "dropdown", value: "Original", valueOptionId: 21 },
     ],
     createdAt: "",
     updatedAt: "",
@@ -90,8 +93,8 @@ const TOYS: StubToy[] = [
     name: "Pikachu",
     set: "Pokemon",
     customFieldValues: [
-      { customFieldId: 11, customFieldName: "Quantity", customFieldType: "number", value: "3" },
-      { customFieldId: 12, customFieldName: "Series", customFieldType: "dropdown", value: "Special" },
+      { customFieldId: 11, customFieldName: "Quantity", customFieldType: "number", value: "3", valueOptionId: null },
+      { customFieldId: 12, customFieldName: "Series", customFieldType: "dropdown", value: "Special", valueOptionId: 22 },
     ],
     createdAt: "",
     updatedAt: "",
@@ -105,10 +108,28 @@ function valueOf(toy: StubToy, field: string): string {
   return toy.customFieldValues.find((v) => v.customFieldName === field)?.value ?? "";
 }
 
+// The option-backed ("enum") custom field types, whose filters match on the
+// selected option's id rather than its name text.
+const ENUM_TYPES = new Set(["dropdown", "radio_button", "progress_bar"]);
+
+// What the backend matches a filter operand against: enum custom fields by the
+// entry's valueOptionId (the UI sends the option's id, e.g. "22"), everything
+// else by its text value.
+function filterValueOf(toy: StubToy, field: string): string {
+  if (field === "name") return toy.name;
+  if (field === "set") return toy.set;
+  const entry = toy.customFieldValues.find((v) => v.customFieldName === field);
+  if (!entry) return "";
+  if (ENUM_TYPES.has(entry.customFieldType)) {
+    return entry.valueOptionId == null ? "" : String(entry.valueOptionId);
+  }
+  return entry.value;
+}
+
 function applyFilters(list: StubToy[], filters: StubFilter[]): StubToy[] {
   return (filters ?? []).reduce<StubToy[]>((out, f) => {
     return out.filter((t) => {
-      const raw = valueOf(t, f.field);
+      const raw = filterValueOf(t, f.field);
       const a = String(raw).toLowerCase();
       const b = f.operand.toLowerCase();
       switch (f.operator) {
@@ -306,6 +327,11 @@ test("filters on a dropdown custom field via its option picker", async ({
   await page.getByRole("option", { name: "Special", exact: true }).click();
   await editor.getByRole("button", { name: "Add" }).click();
 
+  // The filter is sent with the option's id as its operand (the stub matches
+  // on valueOptionId), but the chip shows the option's name.
+  await expect(page.getByRole("button", { name: "Edit Series filter" })).toContainText(
+    "Special",
+  );
   await expect(page.getByText("Pikachu", { exact: true })).toBeVisible();
   await expect(page.getByText("R2-D2", { exact: true })).toHaveCount(0);
 });
@@ -364,6 +390,11 @@ test("sorts toys by a custom field via the Sort button", async ({ page }) => {
   // The new level defaults to the first field (Name); switch it to the numeric
   // Quantity custom field.
   await dialog.getByRole("button", { name: "Sort field 1" }).click();
+  // The enum (dropdown) Series field is not sortable, so the sort picker
+  // doesn't offer it.
+  await expect(
+    page.getByRole("option", { name: "Series", exact: true }),
+  ).toHaveCount(0);
   await page.getByRole("option", { name: "Quantity", exact: true }).click();
 
   // Quantity ascending: Pikachu (3) before R2-D2 (10).

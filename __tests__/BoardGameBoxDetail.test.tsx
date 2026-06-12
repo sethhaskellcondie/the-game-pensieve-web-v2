@@ -30,6 +30,7 @@ function slimGame(id: number, title: string, publisher?: string) {
             customFieldName: "Publisher",
             customFieldType: "text" as const,
             value: publisher,
+            valueOptionId: null,
           },
         ]
       : [],

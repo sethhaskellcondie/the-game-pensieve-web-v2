@@ -6,7 +6,7 @@ import { FilterIcon, SearchIcon } from "@/components/toys/icons";
 import FilterChip from "./FilterChip";
 import FilterEditor from "./FilterEditor";
 import SortControl from "./SortControl";
-import { searchField } from "./fieldList";
+import { searchField, sortableFields } from "./fieldList";
 import { newFilterId } from "./ids";
 import type {
   ActiveFilter,
@@ -137,7 +137,7 @@ export default function FilterBar({
 
         {sorts != null && onSortsChange != null && (
           <SortControl
-            fields={fields}
+            fields={sortableFields(fields)}
             sorts={sorts}
             onChange={onSortsChange}
             buttonClassName={styles.addBtn}

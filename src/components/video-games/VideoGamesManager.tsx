@@ -2,15 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type {
-  CustomField,
-  CustomFieldOption,
-  CustomFieldType,
-  CustomFieldValue as CustomFieldValueType,
-  FilterSpecification,
-  System,
-  UpdateVideoGameInput,
-  VideoGame,
+import {
+  toCustomFieldValue,
+  type CustomField,
+  type CustomFieldOption,
+  type CustomFieldType,
+  type CustomFieldValue as CustomFieldValueType,
+  type FilterSpecification,
+  type System,
+  type UpdateVideoGameInput,
+  type VideoGame,
 } from "@/lib/api";
 import DataTable, {
   MIN_COL,
@@ -361,12 +362,7 @@ export default function VideoGamesManager() {
         game.customFieldValues.find((v) => v.customFieldId === def.id)?.value ??
         "";
       if (value === current) return;
-      const entry: CustomFieldValueType = {
-        customFieldId: def.id,
-        customFieldName: def.name,
-        customFieldType: def.type,
-        value,
-      };
+      const entry: CustomFieldValueType = toCustomFieldValue(def, value);
       const exists = game.customFieldValues.some(
         (v) => v.customFieldId === def.id,
       );

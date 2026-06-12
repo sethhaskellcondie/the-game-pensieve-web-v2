@@ -58,9 +58,9 @@ const games: BoardGame[] = [
       },
     ],
     customFieldValues: [
-      { customFieldId: 12, customFieldName: "Publisher", customFieldType: "text", value: "Rock Manor Games" },
-      { customFieldId: 10, customFieldName: "Has App", customFieldType: "boolean", value: "true" },
-      { customFieldId: 11, customFieldName: "Weight", customFieldType: "dropdown", value: "Light" },
+      { customFieldId: 12, customFieldName: "Publisher", customFieldType: "text", value: "Rock Manor Games", valueOptionId: null },
+      { customFieldId: 10, customFieldName: "Has App", customFieldType: "boolean", value: "true", valueOptionId: null },
+      { customFieldId: 11, customFieldName: "Weight", customFieldType: "dropdown", value: "Light", valueOptionId: 21 },
     ],
     createdAt: "",
     updatedAt: "",
@@ -73,7 +73,7 @@ const games: BoardGame[] = [
     boardGameBoxes: [],
     // Missing the "Weight" value on purpose.
     customFieldValues: [
-      { customFieldId: 10, customFieldName: "Has App", customFieldType: "boolean", value: "false" },
+      { customFieldId: 10, customFieldName: "Has App", customFieldType: "boolean", value: "false", valueOptionId: null },
     ],
     createdAt: "",
     updatedAt: "",
@@ -457,6 +457,7 @@ describe("BoardGamesManager", () => {
         (v: { customFieldId: number }) => v.customFieldId === 10,
       );
       expect(cf.value).toBe("false");
+      expect(cf.valueOptionId).toBeNull();
     });
   });
 
@@ -490,6 +491,7 @@ describe("BoardGamesManager", () => {
         (v: { customFieldId: number }) => v.customFieldId === 11,
       );
       expect(cf.value).toBe("Heavy");
+      expect(cf.valueOptionId).toBe(22);
     });
   });
 });

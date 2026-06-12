@@ -20,6 +20,7 @@ type StubToy = {
     customFieldName: string;
     customFieldType: string;
     value: string;
+    valueOptionId: number | null;
   }[];
   createdAt: string;
   updatedAt: string;
@@ -82,8 +83,8 @@ const TOYS: StubToy[] = [
     name: "R2-D2",
     set: "Star Wars",
     customFieldValues: [
-      { customFieldId: 10, customFieldName: "Boxed", customFieldType: "boolean", value: "true" },
-      { customFieldId: 11, customFieldName: "Year", customFieldType: "number", value: "1977" },
+      { customFieldId: 10, customFieldName: "Boxed", customFieldType: "boolean", value: "true", valueOptionId: null },
+      { customFieldId: 11, customFieldName: "Year", customFieldType: "number", value: "1977", valueOptionId: null },
     ],
     createdAt: "",
     updatedAt: "",
@@ -95,7 +96,7 @@ const TOYS: StubToy[] = [
     name: "Pikachu",
     set: "Pokemon",
     customFieldValues: [
-      { customFieldId: 10, customFieldName: "Boxed", customFieldType: "boolean", value: "false" },
+      { customFieldId: 10, customFieldName: "Boxed", customFieldType: "boolean", value: "false", valueOptionId: null },
     ],
     createdAt: "",
     updatedAt: "",

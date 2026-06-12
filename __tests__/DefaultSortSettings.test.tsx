@@ -78,10 +78,10 @@ describe("DefaultSortSettings", () => {
     ).toBeInTheDocument();
     const buttons = screen.getAllByRole("button", { name: /^Default sort for/ });
     expect(buttons.map((b) => b.getAttribute("aria-label"))).toEqual([
-      "Default sort for Video Games",
-      "Default sort for Video Game Boxes",
-      "Default sort for Board Games",
-      "Default sort for Board Game Boxes",
+      "Default sort for Video Games (List View)",
+      "Default sort for Video Game (Shelf View)",
+      "Default sort for Board Games (List View)",
+      "Default sort for Board Game Boxes (Shelf View)",
       "Default sort for Toys",
       "Default sort for Systems",
     ]);

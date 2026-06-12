@@ -21,7 +21,11 @@ import {
   resolveDefaultSorts,
   toDefaultSortLevels,
 } from "./filters/defaultSorts";
-import { buildFieldList, supportsSorting } from "./filters/fieldList";
+import {
+  buildFieldList,
+  sortableFields,
+  supportsSorting,
+} from "./filters/fieldList";
 import type { ActiveSort, FilterFieldDef } from "./filters/types";
 import rowStyles from "./UiSettings.module.css";
 import styles from "./DefaultSortSettings.module.css";
@@ -88,7 +92,8 @@ async function readJson<T>(res: Response): Promise<T> {
 
 // The sortable field list for one entity: the filter spec's standard fields
 // merged with the entity's custom fields — the same list the entity page's
-// own Sort button offers. Empty when the spec doesn't advertise sorting, which
+// own Sort button offers (so enum custom fields, which the backend cannot
+// sort, are excluded). Empty when the spec doesn't advertise sorting, which
 // leaves that row's Sort button disabled.
 async function fetchSortFields(
   key: EntityKey,
@@ -103,9 +108,11 @@ async function fetchSortFields(
     ),
   ]);
   if (!supportsSorting(spec)) return [];
-  return buildFieldList(
-    spec,
-    [...defs].sort((a, b) => a.order - b.order),
+  return sortableFields(
+    buildFieldList(
+      spec,
+      [...defs].sort((a, b) => a.order - b.order),
+    ),
   );
 }
 

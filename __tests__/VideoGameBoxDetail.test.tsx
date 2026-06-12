@@ -52,8 +52,8 @@ const box: VideoGameBox = {
       id: 71,
       title: "Super Mario Bros.",
       customFieldValues: [
-        { customFieldId: 11, customFieldName: "Finished", customFieldType: "boolean", value: "true" },
-        { customFieldId: 12, customFieldName: "Hours Played", customFieldType: "number", value: "14" },
+        { customFieldId: 11, customFieldName: "Finished", customFieldType: "boolean", value: "true", valueOptionId: null },
+        { customFieldId: 12, customFieldName: "Hours Played", customFieldType: "number", value: "14", valueOptionId: null },
       ],
       createdAt: "",
       updatedAt: "",
@@ -64,8 +64,8 @@ const box: VideoGameBox = {
   isPhysical: true,
   isCollection: true,
   customFieldValues: [
-    { customFieldId: 1, customFieldName: "Condition", customFieldType: "text", value: "Mint" },
-    { customFieldId: 2, customFieldName: "Sealed", customFieldType: "boolean", value: "false" },
+    { customFieldId: 1, customFieldName: "Condition", customFieldType: "text", value: "Mint", valueOptionId: null },
+    { customFieldId: 2, customFieldName: "Sealed", customFieldType: "boolean", value: "false", valueOptionId: null },
   ],
   createdAt: "",
   updatedAt: "",
@@ -387,6 +387,7 @@ describe("VideoGameBoxDetail", () => {
       (v: { customFieldId: number }) => v.customFieldId === 1,
     );
     expect(cf.value).toBe("Good");
+    expect(cf.valueOptionId).toBeNull();
   });
 
   it("rolls back the optimistic value when the PUT fails", async () => {

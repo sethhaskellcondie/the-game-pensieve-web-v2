@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type {
-  CustomField,
-  CustomFieldType,
-  CustomFieldOption,
-  CustomFieldValue,
-  NewBoardGameInput,
+import {
+  toCustomFieldValue,
+  type CustomField,
+  type CustomFieldType,
+  type CustomFieldOption,
+  type CustomFieldValue,
+  type NewBoardGameInput,
 } from "@/lib/api";
 import {
   FIELD_TYPE_META,
@@ -168,12 +169,7 @@ export default function BoardGameCreateModal({
     // the same shape the detail pages send.
     const customFieldValues: CustomFieldValue[] = definitions
       .filter((def) => (values[def.id] ?? "") !== "")
-      .map((def) => ({
-        customFieldId: def.id,
-        customFieldName: def.name,
-        customFieldType: def.type,
-        value: values[def.id],
-      }));
+      .map((def) => toCustomFieldValue(def, values[def.id]));
     const ok = await onCreate({
       title: title.trim(),
       customFieldValues,

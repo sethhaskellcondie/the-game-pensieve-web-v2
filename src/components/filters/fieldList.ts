@@ -79,6 +79,20 @@ export function buildFieldList(
   return out;
 }
 
+// The option-bearing ("enum") custom field kinds. Their values are option-id
+// references, so the backend filters them by id and offers no sorting on them.
+const ENUM_KINDS = new Set<FilterFieldKind>([
+  "dropdown",
+  "radio_button",
+  "progress_bar",
+]);
+
+// The subset of a field list that sort controls may offer: everything except
+// the enum custom fields, which the backend cannot sort.
+export function sortableFields(fields: FilterFieldDef[]): FilterFieldDef[] {
+  return fields.filter((f) => !ENUM_KINDS.has(f.kind));
+}
+
 // Whether the spec advertises sorting via its sort capability marker (the
 // "all_fields": "sort" entry). The marker is metadata only — sort filters send
 // the actual field name, never the marker itself (the backend rejects it).

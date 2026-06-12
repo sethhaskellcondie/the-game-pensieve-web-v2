@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type {
-  CustomField,
-  CustomFieldOption,
-  CustomFieldType,
-  CustomFieldValue,
-  NewVideoGameInput,
-  System,
-  UpdateVideoGameBoxInput,
-  VideoGameBox,
+import {
+  toCustomFieldValue,
+  type CustomField,
+  type CustomFieldOption,
+  type CustomFieldType,
+  type CustomFieldValue,
+  type NewVideoGameInput,
+  type System,
+  type UpdateVideoGameBoxInput,
+  type VideoGameBox,
 } from "@/lib/api";
 import Header from "@/components/Header";
 import Button from "@/components/Button";
@@ -158,12 +159,7 @@ export default function VideoGameBoxDetail({
       box.customFieldValues.find((v) => v.customFieldId === def.id)?.value ??
       "";
     if (raw === current) return;
-    const entry: CustomFieldValue = {
-      customFieldId: def.id,
-      customFieldName: def.name,
-      customFieldType: def.type,
-      value: raw,
-    };
+    const entry: CustomFieldValue = toCustomFieldValue(def, raw);
     const exists = box.customFieldValues.some(
       (v) => v.customFieldId === def.id,
     );

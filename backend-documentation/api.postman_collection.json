@@ -500,6 +500,25 @@
 			"response": []
 		},
 		{
+			"name": "create entity with enum custom field value (by option id)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"toy\": {\n        \"name\": \"Mega Man\",\n        \"set\": \"Amiibo\",\n        \"customFieldValues\": [\n            {\n                \"customFieldId\": 3,\n                \"customFieldName\": \"Completion Status\",\n                \"customFieldType\": \"dropdown\",\n                \"valueOptionId\": 2\n            }\n        ]\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"description": "For enum custom field values (dropdown, radio_button, progress_bar) send the selected option's id in valueOptionId; the value text is ignored on write and resolved by the server. The response returns both valueOptionId and the resolved value text.",
+				"url": "http://localhost:8080/v1/toys"
+			},
+			"response": []
+		},
+		{
 			"name": "read one custom field",
 			"request": {
 				"method": "GET",

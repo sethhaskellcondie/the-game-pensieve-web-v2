@@ -47,7 +47,9 @@ info:
     - **Metadata** is arbitrary JSON stored under a unique string key, independent of the collection entities.
 
     ## Custom Field Values
-    Every entity request and response carries a `customFieldValues` array. Each entry is `{ customFieldId, customFieldName, customFieldType, value }` where `value` is **always a string**, regardless of the field's type — `"true"`/`"false"` for booleans, `"2006"` for numbers, the option name for enum types. On creation you may send `customFieldId: 0` as a placeholder when the value is keyed by `customFieldName`; the server returns the resolved id in the response.
+    Every entity request and response carries a `customFieldValues` array. Each entry is `{ customFieldId, customFieldName, customFieldType, value, valueOptionId }` where `value` is **always a string**, regardless of the field's type — `"true"`/`"false"` for booleans, `"2006"` for numbers. On creation you may send `customFieldId: 0` as a placeholder when the value is keyed by `customFieldName`; the server returns the resolved id in the response.
+
+    For **enum** types (`dropdown`, `radio_button`, `progress_bar`) the selected option is stored as a reference to an option id. On **write** send `valueOptionId` set to the chosen option's id (the `value` text is ignored and derived by the server). On **read** the response returns both `valueOptionId` (the option id) and `value` (the option's current text). Because the value is a reference, renaming an option is automatically reflected in existing values. For all non-enum types `valueOptionId` is `null`.
 
     ## Filter System
     The API provides advanced filtering capabilities through the `/{entity}/function/search` endpoints. Call `GET /v1/filters/{entity}` first to discover the fields and operators available for an entity. Operators by field type:
@@ -56,6 +58,7 @@ info:
     - **Boolean filters**: equals
     - **Time filters**: since, before (operand is epoch milliseconds or an ISO datetime string)
     - **System filters**: equals, not_equals (for `system_id` on video games and video game boxes)
+    - **Enum custom field filters** (`dropdown`, `radio_button`, `progress_bar`): equals, not_equals — the operand is the selected option's id (a whole number). These fields filter by option id (like system filters), so they support no sorting and no text matching (contains/starts_with/ends_with).
     - **Custom field filters**: filter on a custom field by sending its field metadata (custom fields surface as filterable fields for their entity)
     - **Sort and Pagination**: order_by, order_by_desc, limit, offset — multiple sort filters are supported and applied in request order (first = primary sort, second = tiebreaker, ...)
   version: 1.0.0

@@ -64,9 +64,9 @@ const games: VideoGame[] = [
       { id: 32, title: "Super Mario Bros." },
     ],
     customFieldValues: [
-      { customFieldId: 12, customFieldName: "Developer", customFieldType: "text", value: "Nintendo" },
-      { customFieldId: 10, customFieldName: "Favorite", customFieldType: "boolean", value: "true" },
-      { customFieldId: 11, customFieldName: "Genre", customFieldType: "dropdown", value: "Action" },
+      { customFieldId: 12, customFieldName: "Developer", customFieldType: "text", value: "Nintendo", valueOptionId: null },
+      { customFieldId: 10, customFieldName: "Favorite", customFieldType: "boolean", value: "true", valueOptionId: null },
+      { customFieldId: 11, customFieldName: "Genre", customFieldType: "dropdown", value: "Action", valueOptionId: 21 },
     ],
     createdAt: "",
     updatedAt: "",
@@ -80,7 +80,7 @@ const games: VideoGame[] = [
     videoGameBoxes: [],
     // Missing the "Genre" value on purpose.
     customFieldValues: [
-      { customFieldId: 10, customFieldName: "Favorite", customFieldType: "boolean", value: "false" },
+      { customFieldId: 10, customFieldName: "Favorite", customFieldType: "boolean", value: "false", valueOptionId: null },
     ],
     createdAt: "",
     updatedAt: "",
@@ -561,6 +561,7 @@ describe("VideoGamesManager", () => {
         (v: { customFieldId: number }) => v.customFieldId === 10,
       );
       expect(cf.value).toBe("false");
+      expect(cf.valueOptionId).toBeNull();
     });
   });
 
@@ -594,6 +595,7 @@ describe("VideoGamesManager", () => {
         (v: { customFieldId: number }) => v.customFieldId === 11,
       );
       expect(cf.value).toBe("RPG");
+      expect(cf.valueOptionId).toBe(22);
     });
   });
 });

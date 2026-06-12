@@ -2,14 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type {
-  CustomField,
-  CustomFieldType,
-  CustomFieldValue as CustomFieldValueType,
-  FilterRequestDto,
-  FilterSpecification,
-  System,
-  UpdateSystemInput,
+import {
+  toCustomFieldValue,
+  type CustomField,
+  type CustomFieldType,
+  type CustomFieldValue as CustomFieldValueType,
+  type FilterRequestDto,
+  type FilterSpecification,
+  type System,
+  type UpdateSystemInput,
 } from "@/lib/api";
 import Button from "@/components/Button";
 import DataTable, {
@@ -383,12 +384,7 @@ export default function SystemsManager() {
         system.customFieldValues.find((v) => v.customFieldId === def.id)
           ?.value ?? "";
       if (value === current) return;
-      const entry: CustomFieldValueType = {
-        customFieldId: def.id,
-        customFieldName: def.name,
-        customFieldType: def.type,
-        value,
-      };
+      const entry: CustomFieldValueType = toCustomFieldValue(def, value);
       const exists = system.customFieldValues.some(
         (v) => v.customFieldId === def.id,
       );

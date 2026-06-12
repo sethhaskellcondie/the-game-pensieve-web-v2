@@ -21,6 +21,7 @@ type StubSystem = {
     customFieldName: string;
     customFieldType: string;
     value: string;
+    valueOptionId: number | null;
   }[];
   createdAt: string;
   updatedAt: string;
@@ -91,8 +92,8 @@ const SYSTEMS: StubSystem[] = [
     generation: 3,
     handheld: false,
     customFieldValues: [
-      { customFieldId: 10, customFieldName: "Modded", customFieldType: "boolean", value: "true" },
-      { customFieldId: 11, customFieldName: "Controllers", customFieldType: "number", value: "2" },
+      { customFieldId: 10, customFieldName: "Modded", customFieldType: "boolean", value: "true", valueOptionId: null },
+      { customFieldId: 11, customFieldName: "Controllers", customFieldType: "number", value: "2", valueOptionId: null },
     ],
     createdAt: "",
     updatedAt: "",
@@ -105,7 +106,7 @@ const SYSTEMS: StubSystem[] = [
     generation: 4,
     handheld: true,
     customFieldValues: [
-      { customFieldId: 10, customFieldName: "Modded", customFieldType: "boolean", value: "false" },
+      { customFieldId: 10, customFieldName: "Modded", customFieldType: "boolean", value: "false", valueOptionId: null },
     ],
     createdAt: "",
     updatedAt: "",

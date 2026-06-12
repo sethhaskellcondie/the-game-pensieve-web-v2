@@ -23,6 +23,7 @@ type StubGame = {
     customFieldName: string;
     customFieldType: string;
     value: string;
+    valueOptionId: number | null;
   }[];
   createdAt: string;
   updatedAt: string;
@@ -67,7 +68,9 @@ const FILTER_SPEC = {
     updated_at: ["since", "before"],
     all_fields: ["order_by", "order_by_desc"],
     pagination_fields: ["limit", "offset"],
-    Genre: ["equals", "not_equals", "contains", "starts_with", "ends_with"],
+    // Enum (option-backed) fields only support identity checks — the backend
+    // matches on option id, so the text operators don't apply.
+    Genre: ["equals", "not_equals"],
   },
 };
 
@@ -84,7 +87,7 @@ const GAMES: StubGame[] = [
     system: SYSTEMS[0],
     videoGameBoxes: [],
     customFieldValues: [
-      { customFieldId: 12, customFieldName: "Genre", customFieldType: "dropdown", value: "Action" },
+      { customFieldId: 12, customFieldName: "Genre", customFieldType: "dropdown", value: "Action", valueOptionId: 21 },
     ],
     createdAt: "",
     updatedAt: "",
@@ -97,7 +100,7 @@ const GAMES: StubGame[] = [
     system: SYSTEMS[1],
     videoGameBoxes: [],
     customFieldValues: [
-      { customFieldId: 12, customFieldName: "Genre", customFieldType: "dropdown", value: "RPG" },
+      { customFieldId: 12, customFieldName: "Genre", customFieldType: "dropdown", value: "RPG", valueOptionId: 22 },
     ],
     createdAt: "",
     updatedAt: "",
@@ -105,19 +108,29 @@ const GAMES: StubGame[] = [
   },
 ];
 
-function valueOf(game: StubGame, field: string): string {
+// The option-backed ("enum") custom field types, whose filters match on the
+// selected option's id rather than its name text.
+const ENUM_TYPES = new Set(["dropdown", "radio_button", "progress_bar"]);
+
+// What the backend matches a filter operand against: the System filter and the
+// enum custom fields by id (the UI sends the system's id / the option's id,
+// e.g. "22" — the latter against the entry's valueOptionId), everything else
+// by its text value.
+function filterValueOf(game: StubGame, field: string): string {
   if (field === "title") return game.title;
-  // The System filter sends the system's id as its operand.
   if (field === "system_id") return String(game.system.id);
-  return (
-    game.customFieldValues.find((v) => v.customFieldName === field)?.value ?? ""
-  );
+  const entry = game.customFieldValues.find((v) => v.customFieldName === field);
+  if (!entry) return "";
+  if (ENUM_TYPES.has(entry.customFieldType)) {
+    return entry.valueOptionId == null ? "" : String(entry.valueOptionId);
+  }
+  return entry.value;
 }
 
 function applyFilters(list: StubGame[], filters: StubFilter[]): StubGame[] {
   return (filters ?? []).reduce<StubGame[]>((out, f) => {
     return out.filter((g) => {
-      const a = valueOf(g, f.field).toLowerCase();
+      const a = filterValueOf(g, f.field).toLowerCase();
       const b = f.operand.toLowerCase();
       switch (f.operator) {
         case "contains":
@@ -288,6 +301,11 @@ test("filters on a dropdown custom field via its option picker", async ({
   await page.getByRole("option", { name: "RPG", exact: true }).click();
   await editor.getByRole("button", { name: "Add" }).click();
 
+  // The filter is sent with the option's id as its operand (the stub matches
+  // on valueOptionId), but the chip shows the option's name.
+  await expect(page.getByRole("button", { name: "Edit Genre filter" })).toContainText(
+    "RPG",
+  );
   await expect(page.getByText("Chrono Trigger", { exact: true })).toBeVisible();
   await expect(page.getByText("Super Mario Bros.", { exact: true })).toHaveCount(0);
 });

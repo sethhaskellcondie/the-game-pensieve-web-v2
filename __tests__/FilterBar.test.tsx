@@ -187,7 +187,10 @@ describe("FilterBar", () => {
         label: "Series",
         kind: "dropdown",
         operator: "equals",
-        operand: "Original",
+        // Enum custom fields filter by option id; the name is a snapshot for
+        // the chip.
+        operand: "21",
+        operandLabel: "Original",
         options: fields[2].options,
       },
     ]);
@@ -197,7 +200,8 @@ describe("FilterBar", () => {
       screen.getByRole("dialog", { name: "Edit filter" }),
     ).toBeInTheDocument();
 
-    // Change the selected option to "Special" via the value listbox.
+    // Change the selected option to "Special" via the value listbox — the new
+    // filter carries that option's id with its name snapshotted for display.
     fireEvent.click(screen.getByRole("button", { name: "Series value" }));
     fireEvent.click(screen.getByRole("option", { name: "Special" }));
     fireEvent.click(screen.getByRole("button", { name: "Update" }));
@@ -205,7 +209,29 @@ describe("FilterBar", () => {
     expect(onChange).toHaveBeenCalledTimes(1);
     const next = onChange.mock.calls[0][0] as ActiveFilter[];
     expect(next).toHaveLength(1);
-    expect(next[0]).toMatchObject({ id: "a", operand: "Special" });
+    expect(next[0]).toMatchObject({
+      id: "a",
+      operand: "22",
+      operandLabel: "Special",
+    });
+  });
+
+  it("shows option names (not ids) on an enum custom field's chip", () => {
+    setup([
+      {
+        id: "a",
+        field: "Series",
+        label: "Series",
+        kind: "dropdown",
+        operator: "equals",
+        operand: "21",
+        operandLabel: "Original",
+        options: fields[2].options,
+      },
+    ]);
+    const chip = screen.getByRole("button", { name: "Edit Series filter" });
+    expect(within(chip).getByText("Original")).toBeInTheDocument();
+    expect(within(chip).queryByText("21")).not.toBeInTheDocument();
   });
 
   describe("system fields with valueOptions", () => {
@@ -316,6 +342,34 @@ describe("FilterBar", () => {
       />,
     );
     expect(screen.getByRole("button", { name: "Sort" })).toBeInTheDocument();
+  });
+
+  it("omits enum custom fields from the sort field picker", () => {
+    // The backend cannot sort enum custom fields (they're option-id
+    // references), so the Series dropdown must not be offered as a sort field.
+    render(
+      <FilterBar
+        entityKey="system"
+        fields={fields}
+        filters={[]}
+        onChange={jest.fn()}
+        searchValue=""
+        onSearchChange={jest.fn()}
+        searchAriaLabel="Search systems"
+        sorts={[{ id: "s1", field: "name", label: "Name", direction: "asc" }]}
+        onSortsChange={jest.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Sort" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sort field 1" }));
+    const labels = within(
+      screen.getByRole("listbox", { name: "Sort field 1" }),
+    )
+      .getAllByRole("option")
+      .map((o) => o.textContent);
+    expect(labels).toContain("Year");
+    expect(labels).not.toContain("Series");
   });
 
   it("removes a filter via its ✕", () => {

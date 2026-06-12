@@ -54,12 +54,12 @@ const toy: Toy = {
   name: "R2-D2",
   set: "Star Wars",
   customFieldValues: [
-    { customFieldId: 1, customFieldName: "Line", customFieldType: "text", value: "Astromech" },
-    { customFieldId: 2, customFieldName: "Series", customFieldType: "dropdown", value: "Breath of the Wild" },
-    { customFieldId: 3, customFieldName: "Articulated", customFieldType: "boolean", value: "true" },
-    { customFieldId: 4, customFieldName: "Quantity", customFieldType: "number", value: "2" },
-    { customFieldId: 5, customFieldName: "Condition", customFieldType: "radio_button", value: "Mint" },
-    { customFieldId: 6, customFieldName: "Build Progress", customFieldType: "progress_bar", value: "Painted" },
+    { customFieldId: 1, customFieldName: "Line", customFieldType: "text", value: "Astromech", valueOptionId: null },
+    { customFieldId: 2, customFieldName: "Series", customFieldType: "dropdown", value: "Breath of the Wild", valueOptionId: 11 },
+    { customFieldId: 3, customFieldName: "Articulated", customFieldType: "boolean", value: "true", valueOptionId: null },
+    { customFieldId: 4, customFieldName: "Quantity", customFieldType: "number", value: "2", valueOptionId: null },
+    { customFieldId: 5, customFieldName: "Condition", customFieldType: "radio_button", value: "Mint", valueOptionId: 21 },
+    { customFieldId: 6, customFieldName: "Build Progress", customFieldType: "progress_bar", value: "Painted", valueOptionId: 33 },
   ],
   createdAt: "",
   updatedAt: "",
@@ -207,6 +207,7 @@ describe("ToyDetail", () => {
       (v: { customFieldId: number }) => v.customFieldId === 5,
     );
     expect(cf.value).toBe("Good");
+    expect(cf.valueOptionId).toBe(22);
   });
 
   it("changes a dropdown via the custom listbox", async () => {
@@ -228,6 +229,7 @@ describe("ToyDetail", () => {
       (v: { customFieldId: number }) => v.customFieldId === 2,
     );
     expect(cf.value).toBe("Ocarina of Time");
+    expect(cf.valueOptionId).toBe(12);
   });
 
   it("sets a progress stage by clicking a chip", async () => {
@@ -240,6 +242,7 @@ describe("ToyDetail", () => {
       (v: { customFieldId: number }) => v.customFieldId === 6,
     );
     expect(cf.value).toBe("Finished");
+    expect(cf.valueOptionId).toBe(34);
   });
 
   it("treats a blank Name as a no-op (no PUT, value unchanged)", () => {
@@ -260,9 +263,9 @@ describe("ToyDetail", () => {
     const bad: Toy = {
       ...toy,
       customFieldValues: [
-        { customFieldId: 4, customFieldName: "Quantity", customFieldType: "number", value: "not-a-number" },
-        { customFieldId: 2, customFieldName: "Series", customFieldType: "dropdown", value: "Ghost Option" },
-        { customFieldId: 5, customFieldName: "Condition", customFieldType: "radio_button", value: "Pristine" },
+        { customFieldId: 4, customFieldName: "Quantity", customFieldType: "number", value: "not-a-number", valueOptionId: null },
+        { customFieldId: 2, customFieldName: "Series", customFieldType: "dropdown", value: "Ghost Option", valueOptionId: null },
+        { customFieldId: 5, customFieldName: "Condition", customFieldType: "radio_button", value: "Pristine", valueOptionId: null },
       ],
     };
     renderDetail(bad);

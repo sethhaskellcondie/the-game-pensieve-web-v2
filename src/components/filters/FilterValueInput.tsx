@@ -7,9 +7,9 @@ import styles from "./FilterEditor.module.css";
 // The value control for a filter, chosen by the field's kind (and operator).
 // Always reports its value as a string via onChange (the backend's operand
 // contract). Booleans use a Yes/No pair; option kinds offer their option list
-// for equality matches but fall back to free text for substring operators
-// (the backend exposes those on option fields too); time uses a date input;
-// everything else uses a text/number input.
+// (committing the option's id — enum custom fields filter by option id, with
+// no text matching); time uses a date input; everything else uses a
+// text/number input.
 export default function FilterValueInput({
   field,
   operator,
@@ -54,8 +54,10 @@ export default function FilterValueInput({
     );
   }
 
-  // Option fields show their option picker only when matching a whole value
-  // (is / is not); substring operators get a free-text input.
+  // Option fields show their option picker when matching a whole value
+  // (is / is not) — the only operators the backend offers for enum custom
+  // fields. The listbox shows option names but commits the option's id, the
+  // operand the backend expects.
   const isOptionKind =
     field.kind === "dropdown" ||
     field.kind === "radio_button" ||
@@ -69,7 +71,10 @@ export default function FilterValueInput({
     return (
       <Listbox
         value={value}
-        options={field.options.map((o) => ({ value: o.name, label: o.name }))}
+        options={field.options.map((o) => ({
+          value: String(o.id),
+          label: o.name,
+        }))}
         onChange={onChange}
         ariaLabel={`${field.label} value`}
         placeholder="Select…"

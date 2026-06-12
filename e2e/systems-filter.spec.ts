@@ -11,6 +11,7 @@ type StubSystem = {
     customFieldName: string;
     customFieldType: string;
     value: string;
+    valueOptionId: number | null;
   }[];
   createdAt: string;
   updatedAt: string;
@@ -64,7 +65,9 @@ const FILTER_SPEC = {
     updated_at: ["since", "before"],
     all_fields: ["order_by", "order_by_desc"],
     pagination_fields: ["limit", "offset"],
-    Region: ["equals", "not_equals", "contains", "starts_with", "ends_with"],
+    // Enum (option-backed) fields only support identity checks — the backend
+    // matches on option id, so the text operators don't apply.
+    Region: ["equals", "not_equals"],
   },
 };
 
@@ -76,7 +79,7 @@ const SYSTEMS: StubSystem[] = [
     generation: 3,
     handheld: false,
     customFieldValues: [
-      { customFieldId: 12, customFieldName: "Region", customFieldType: "dropdown", value: "NTSC" },
+      { customFieldId: 12, customFieldName: "Region", customFieldType: "dropdown", value: "NTSC", valueOptionId: 21 },
     ],
     createdAt: "",
     updatedAt: "",
@@ -89,7 +92,7 @@ const SYSTEMS: StubSystem[] = [
     generation: 4,
     handheld: true,
     customFieldValues: [
-      { customFieldId: 12, customFieldName: "Region", customFieldType: "dropdown", value: "PAL" },
+      { customFieldId: 12, customFieldName: "Region", customFieldType: "dropdown", value: "PAL", valueOptionId: 22 },
     ],
     createdAt: "",
     updatedAt: "",
@@ -97,20 +100,31 @@ const SYSTEMS: StubSystem[] = [
   },
 ];
 
-function valueOf(system: StubSystem, field: string): string {
+// The option-backed ("enum") custom field types, whose filters match on the
+// selected option's id rather than its name text.
+const ENUM_TYPES = new Set(["dropdown", "radio_button", "progress_bar"]);
+
+// What the backend matches a filter operand against: enum custom fields by the
+// entry's valueOptionId (the UI sends the option's id, e.g. "22"), everything
+// else by its text value.
+function filterValueOf(system: StubSystem, field: string): string {
   if (field === "name") return system.name;
   if (field === "generation") return String(system.generation);
   if (field === "handheld") return String(system.handheld);
-  return (
-    system.customFieldValues.find((v) => v.customFieldName === field)?.value ??
-    ""
+  const entry = system.customFieldValues.find(
+    (v) => v.customFieldName === field,
   );
+  if (!entry) return "";
+  if (ENUM_TYPES.has(entry.customFieldType)) {
+    return entry.valueOptionId == null ? "" : String(entry.valueOptionId);
+  }
+  return entry.value;
 }
 
 function applyFilters(list: StubSystem[], filters: StubFilter[]): StubSystem[] {
   return (filters ?? []).reduce<StubSystem[]>((out, f) => {
     return out.filter((s) => {
-      const raw = valueOf(s, f.field);
+      const raw = filterValueOf(s, f.field);
       const a = String(raw).toLowerCase();
       const b = f.operand.toLowerCase();
       switch (f.operator) {
@@ -273,6 +287,11 @@ test("filters on a dropdown custom field via its option picker", async ({
   await page.getByRole("option", { name: "PAL", exact: true }).click();
   await editor.getByRole("button", { name: "Add" }).click();
 
+  // The filter is sent with the option's id as its operand (the stub matches
+  // on valueOptionId), but the chip shows the option's name.
+  await expect(page.getByRole("button", { name: "Edit Region filter" })).toContainText(
+    "PAL",
+  );
   await expect(page.getByText("Game Boy", { exact: true })).toBeVisible();
   await expect(page.getByText("NES", { exact: true })).toHaveCount(0);
 });

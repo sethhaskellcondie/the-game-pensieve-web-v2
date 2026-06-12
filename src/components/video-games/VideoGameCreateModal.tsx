@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type {
-  CustomField,
-  CustomFieldType,
-  CustomFieldOption,
-  CustomFieldValue,
-  NewVideoGameInput,
-  System,
+import {
+  toCustomFieldValue,
+  type CustomField,
+  type CustomFieldType,
+  type CustomFieldOption,
+  type CustomFieldValue,
+  type NewVideoGameInput,
+  type System,
 } from "@/lib/api";
 import {
   FIELD_TYPE_META,
@@ -199,12 +200,7 @@ export default function VideoGameCreateModal({
     // the same shape the detail pages send.
     const customFieldValues: CustomFieldValue[] = definitions
       .filter((def) => (values[def.id] ?? "") !== "")
-      .map((def) => ({
-        customFieldId: def.id,
-        customFieldName: def.name,
-        customFieldType: def.type,
-        value: values[def.id],
-      }));
+      .map((def) => toCustomFieldValue(def, values[def.id]));
     const ok = await onCreate({
       title: title.trim(),
       systemId: selectedSystem.id,

@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type {
-  CustomField,
-  CustomFieldType,
-  CustomFieldOption,
-  CustomFieldValue,
-  UpdateSystemInput,
+import {
+  toCustomFieldValue,
+  type CustomField,
+  type CustomFieldType,
+  type CustomFieldOption,
+  type CustomFieldValue,
+  type UpdateSystemInput,
 } from "@/lib/api";
 import {
   FIELD_TYPE_META,
@@ -195,12 +196,7 @@ export default function SystemCreateModal({
     // same shape SystemDetail/SystemsManager send.
     const customFieldValues: CustomFieldValue[] = definitions
       .filter((def) => (values[def.id] ?? "") !== "")
-      .map((def) => ({
-        customFieldId: def.id,
-        customFieldName: def.name,
-        customFieldType: def.type,
-        value: values[def.id],
-      }));
+      .map((def) => toCustomFieldValue(def, values[def.id]));
     const ok = await onCreate({
       name: name.trim(),
       generation: Number(generation),

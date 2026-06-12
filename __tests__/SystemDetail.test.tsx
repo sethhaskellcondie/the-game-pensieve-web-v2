@@ -29,9 +29,9 @@ const system: System = {
   generation: 4,
   handheld: true,
   customFieldValues: [
-    { customFieldId: 1, customFieldName: "Storage", customFieldType: "text", value: "Cartridge" },
-    { customFieldId: 2, customFieldName: "Region", customFieldType: "dropdown", value: "NTSC" },
-    { customFieldId: 3, customFieldName: "Modded", customFieldType: "boolean", value: "false" },
+    { customFieldId: 1, customFieldName: "Storage", customFieldType: "text", value: "Cartridge", valueOptionId: null },
+    { customFieldId: 2, customFieldName: "Region", customFieldType: "dropdown", value: "NTSC", valueOptionId: 11 },
+    { customFieldId: 3, customFieldName: "Modded", customFieldType: "boolean", value: "false", valueOptionId: null },
   ],
   createdAt: "",
   updatedAt: "",
@@ -202,6 +202,7 @@ describe("SystemDetail", () => {
       (v: { customFieldId: number }) => v.customFieldId === 1,
     );
     expect(cf.value).toBe("Disc");
+    expect(cf.valueOptionId).toBeNull();
   });
 
   it("changes a dropdown via the custom listbox", async () => {
@@ -215,6 +216,7 @@ describe("SystemDetail", () => {
       (v: { customFieldId: number }) => v.customFieldId === 2,
     );
     expect(cf.value).toBe("PAL");
+    expect(cf.valueOptionId).toBe(12);
   });
 
   it("rolls back the optimistic value when the PUT fails", async () => {

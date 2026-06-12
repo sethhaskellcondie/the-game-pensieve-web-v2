@@ -11,16 +11,17 @@ import styles from "./FilterEditor.module.css";
 
 // The default operand for a freshly-picked field so a chip is never created
 // empty: booleans start "true", option fields start on their default (or first)
-// option, everything else starts blank for the user to fill in.
+// option's id (enum custom fields filter by option id), everything else starts
+// blank for the user to fill in.
 function defaultOperand(field: FilterFieldDef): string {
   if (field.kind === "boolean") return "true";
   if (field.valueOptions && field.valueOptions.length > 0) {
     return field.valueOptions[0].value;
   }
   if (field.options && field.options.length > 0) {
-    return (
-      field.options.find((o) => o.isDefault)?.name ?? field.options[0].name
-    );
+    const option =
+      field.options.find((o) => o.isDefault) ?? field.options[0];
+    return String(option.id);
   }
   return "";
 }
@@ -104,9 +105,11 @@ export default function FilterEditor({
       operator,
       operand: operand.trim(),
       options: field.options,
-      operandLabel: field.valueOptions?.find(
-        (o) => o.value === operand.trim(),
-      )?.label,
+      // Both valueOptions fields (system_id) and enum custom fields carry an
+      // id operand; snapshot its display name so the chip stays readable.
+      operandLabel:
+        field.valueOptions?.find((o) => o.value === operand.trim())?.label ??
+        field.options?.find((o) => String(o.id) === operand.trim())?.name,
     });
   };
 

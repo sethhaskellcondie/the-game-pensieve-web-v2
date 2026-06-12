@@ -2,16 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type {
-  BoardGame,
-  BoardGameBox,
-  CreateBoardGameBoxInput,
-  CustomField,
-  CustomFieldOption,
-  CustomFieldType,
-  CustomFieldValue,
-  SlimBoardGameBox,
-  UpdateBoardGameInput,
+import {
+  toCustomFieldValue,
+  type BoardGame,
+  type BoardGameBox,
+  type CreateBoardGameBoxInput,
+  type CustomField,
+  type CustomFieldOption,
+  type CustomFieldType,
+  type CustomFieldValue,
+  type SlimBoardGameBox,
+  type UpdateBoardGameInput,
 } from "@/lib/api";
 import Header from "@/components/Header";
 import Button from "@/components/Button";
@@ -115,12 +116,7 @@ export default function BoardGameDetail({
       game.customFieldValues.find((v) => v.customFieldId === def.id)?.value ??
       "";
     if (raw === current) return;
-    const entry: CustomFieldValue = {
-      customFieldId: def.id,
-      customFieldName: def.name,
-      customFieldType: def.type,
-      value: raw,
-    };
+    const entry: CustomFieldValue = toCustomFieldValue(def, raw);
     const exists = game.customFieldValues.some(
       (v) => v.customFieldId === def.id,
     );

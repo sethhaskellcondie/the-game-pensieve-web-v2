@@ -297,13 +297,46 @@ export function getFilterSpec(entity: EntityKey): Promise<FilterSpecification> {
 // backend-documentation/openapi.yaml.
 
 // A custom field's value on a specific entity. `value` is always a string
-// representation (e.g. "true"/"false" for booleans, "123" for numbers).
+// representation (e.g. "true"/"false" for booleans, "123" for numbers). The
+// enum kinds (dropdown/radio_button/progress_bar) store the value as an option
+// reference: `valueOptionId` is the selected option's id and `value` is that
+// option's current text. On write the backend reads only `valueOptionId` for
+// enum kinds (the text is re-derived server-side, so option renames flow
+// through automatically); for all other kinds `valueOptionId` is null.
 export type CustomFieldValue = {
   customFieldId: number;
   customFieldName: string;
   customFieldType: CustomFieldType;
   value: string;
+  valueOptionId: number | null;
 };
+
+// The option-backed ("enum") custom field types, whose values are stored as
+// references to a CustomFieldOption rather than as text.
+export function isEnumCustomFieldType(type: CustomFieldType): boolean {
+  return (
+    type === "dropdown" || type === "radio_button" || type === "progress_bar"
+  );
+}
+
+// Build the CustomFieldValue entry for `def` set to `value` — the editors'
+// string representation, which for enum kinds is the selected option's name.
+// For enum kinds the option's id is resolved into valueOptionId (the part the
+// backend actually reads on write); other kinds carry null.
+export function toCustomFieldValue(
+  def: CustomField,
+  value: string,
+): CustomFieldValue {
+  return {
+    customFieldId: def.id,
+    customFieldName: def.name,
+    customFieldType: def.type,
+    value,
+    valueOptionId: isEnumCustomFieldType(def.type)
+      ? (def.options.find((o) => o.name === value)?.id ?? null)
+      : null,
+  };
+}
 
 export type Toy = {
   id: number;

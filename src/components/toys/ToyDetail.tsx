@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import type {
-  CustomField,
-  CustomFieldOption,
-  CustomFieldType,
-  CustomFieldValue,
-  Toy,
-  UpdateToyInput,
+import {
+  toCustomFieldValue,
+  type CustomField,
+  type CustomFieldOption,
+  type CustomFieldType,
+  type CustomFieldValue,
+  type Toy,
+  type UpdateToyInput,
 } from "@/lib/api";
 import Header from "@/components/Header";
 import Button from "@/components/Button";
@@ -105,12 +106,7 @@ export default function ToyDetail({
     const current =
       toy.customFieldValues.find((v) => v.customFieldId === def.id)?.value ?? "";
     if (raw === current) return;
-    const entry: CustomFieldValue = {
-      customFieldId: def.id,
-      customFieldName: def.name,
-      customFieldType: def.type,
-      value: raw,
-    };
+    const entry: CustomFieldValue = toCustomFieldValue(def, raw);
     const exists = toy.customFieldValues.some(
       (v) => v.customFieldId === def.id,
     );

@@ -30,6 +30,7 @@ type StubGame = {
     customFieldName: string;
     customFieldType: string;
     value: string;
+    valueOptionId: number | null;
   }[];
   createdAt: string;
   updatedAt: string;
@@ -86,8 +87,8 @@ const GAMES: StubGame[] = [
       slimBox(32, "Set-A-Watch Doomed Run"),
     ],
     customFieldValues: [
-      { customFieldId: 10, customFieldName: "Has App", customFieldType: "boolean", value: "true" },
-      { customFieldId: 11, customFieldName: "Min Players", customFieldType: "number", value: "1" },
+      { customFieldId: 10, customFieldName: "Has App", customFieldType: "boolean", value: "true", valueOptionId: null },
+      { customFieldId: 11, customFieldName: "Min Players", customFieldType: "number", value: "1", valueOptionId: null },
     ],
     createdAt: "",
     updatedAt: "",
@@ -99,7 +100,7 @@ const GAMES: StubGame[] = [
     title: "Jekyll vs Hyde",
     boardGameBoxes: [],
     customFieldValues: [
-      { customFieldId: 10, customFieldName: "Has App", customFieldType: "boolean", value: "false" },
+      { customFieldId: 10, customFieldName: "Has App", customFieldType: "boolean", value: "false", valueOptionId: null },
     ],
     createdAt: "",
     updatedAt: "",

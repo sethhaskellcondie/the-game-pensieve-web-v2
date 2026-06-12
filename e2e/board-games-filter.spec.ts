@@ -22,6 +22,7 @@ type StubBox = {
     customFieldName: string;
     customFieldType: string;
     value: string;
+    valueOptionId: number | null;
   }[];
   createdAt: string;
   updatedAt: string;
@@ -69,7 +70,9 @@ const FILTER_SPEC = {
     updated_at: ["since", "before"],
     all_fields: ["order_by", "order_by_desc"],
     pagination_fields: ["limit", "offset"],
-    Condition: ["equals", "not_equals", "contains", "starts_with", "ends_with"],
+    // Enum (option-backed) fields only support identity checks — the backend
+    // matches on option id, so the text operators don't apply.
+    Condition: ["equals", "not_equals"],
   },
 };
 
@@ -94,7 +97,7 @@ const BOXES: StubBox[] = [
     baseSetId: null,
     boardGame: slimGame(41, "Set-A-Watch"),
     customFieldValues: [
-      { customFieldId: 12, customFieldName: "Condition", customFieldType: "dropdown", value: "Mint" },
+      { customFieldId: 12, customFieldName: "Condition", customFieldType: "dropdown", value: "Mint", valueOptionId: 21 },
     ],
     createdAt: "",
     updatedAt: "",
@@ -109,7 +112,7 @@ const BOXES: StubBox[] = [
     baseSetId: 31,
     boardGame: slimGame(41, "Set-A-Watch"),
     customFieldValues: [
-      { customFieldId: 12, customFieldName: "Condition", customFieldType: "dropdown", value: "Worn" },
+      { customFieldId: 12, customFieldName: "Condition", customFieldType: "dropdown", value: "Worn", valueOptionId: 22 },
     ],
     createdAt: "",
     updatedAt: "",
@@ -117,19 +120,29 @@ const BOXES: StubBox[] = [
   },
 ];
 
-function valueOf(box: StubBox, field: string): string {
+// The option-backed ("enum") custom field types, whose filters match on the
+// selected option's id rather than its name text.
+const ENUM_TYPES = new Set(["dropdown", "radio_button", "progress_bar"]);
+
+// What the backend matches a filter operand against: enum custom fields by the
+// entry's valueOptionId (the UI sends the option's id, e.g. "22"), everything
+// else by its text value.
+function filterValueOf(box: StubBox, field: string): string {
   if (field === "title") return box.title;
   if (field === "is_expansion") return String(box.isExpansion);
   if (field === "is_stand_alone") return String(box.isStandAlone);
-  return (
-    box.customFieldValues.find((v) => v.customFieldName === field)?.value ?? ""
-  );
+  const entry = box.customFieldValues.find((v) => v.customFieldName === field);
+  if (!entry) return "";
+  if (ENUM_TYPES.has(entry.customFieldType)) {
+    return entry.valueOptionId == null ? "" : String(entry.valueOptionId);
+  }
+  return entry.value;
 }
 
 function applyFilters(list: StubBox[], filters: StubFilter[]): StubBox[] {
   return (filters ?? []).reduce<StubBox[]>((out, f) => {
     return out.filter((box) => {
-      const a = valueOf(box, f.field).toLowerCase();
+      const a = filterValueOf(box, f.field).toLowerCase();
       const b = f.operand.toLowerCase();
       switch (f.operator) {
         case "contains":
@@ -282,6 +295,11 @@ test("filters on a dropdown custom field via its option picker", async ({
   await page.getByRole("option", { name: "Worn", exact: true }).click();
   await editor.getByRole("button", { name: "Add" }).click();
 
+  // The filter is sent with the option's id as its operand (the stub matches
+  // on valueOptionId), but the chip shows the option's name.
+  await expect(
+    page.getByRole("button", { name: "Edit Condition filter" }),
+  ).toContainText("Worn");
   await expect(
     page.getByText("Set-A-Watch Doomed Run", { exact: true }),
   ).toBeVisible();

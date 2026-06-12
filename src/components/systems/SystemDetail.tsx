@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import type {
-  CustomField,
-  CustomFieldOption,
-  CustomFieldType,
-  CustomFieldValue,
-  System,
-  UpdateSystemInput,
+import {
+  toCustomFieldValue,
+  type CustomField,
+  type CustomFieldOption,
+  type CustomFieldType,
+  type CustomFieldValue,
+  type System,
+  type UpdateSystemInput,
 } from "@/lib/api";
 import Header from "@/components/Header";
 import Button from "@/components/Button";
@@ -119,12 +120,7 @@ export default function SystemDetail({
       system.customFieldValues.find((v) => v.customFieldId === def.id)?.value ??
       "";
     if (raw === current) return;
-    const entry: CustomFieldValue = {
-      customFieldId: def.id,
-      customFieldName: def.name,
-      customFieldType: def.type,
-      value: raw,
-    };
+    const entry: CustomFieldValue = toCustomFieldValue(def, raw);
     const exists = system.customFieldValues.some(
       (v) => v.customFieldId === def.id,
     );

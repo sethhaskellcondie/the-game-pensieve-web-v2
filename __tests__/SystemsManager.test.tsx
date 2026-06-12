@@ -36,9 +36,9 @@ const systems: System[] = [
     generation: 3,
     handheld: false,
     customFieldValues: [
-      { customFieldId: 12, customFieldName: "Storage", customFieldType: "text", value: "Cartridge" },
-      { customFieldId: 10, customFieldName: "Modded", customFieldType: "boolean", value: "true" },
-      { customFieldId: 11, customFieldName: "Region", customFieldType: "dropdown", value: "NTSC" },
+      { customFieldId: 12, customFieldName: "Storage", customFieldType: "text", value: "Cartridge", valueOptionId: null },
+      { customFieldId: 10, customFieldName: "Modded", customFieldType: "boolean", value: "true", valueOptionId: null },
+      { customFieldId: 11, customFieldName: "Region", customFieldType: "dropdown", value: "NTSC", valueOptionId: 21 },
     ],
     createdAt: "",
     updatedAt: "",
@@ -52,7 +52,7 @@ const systems: System[] = [
     handheld: true,
     // Missing the "Region" value on purpose.
     customFieldValues: [
-      { customFieldId: 10, customFieldName: "Modded", customFieldType: "boolean", value: "false" },
+      { customFieldId: 10, customFieldName: "Modded", customFieldType: "boolean", value: "false", valueOptionId: null },
     ],
     createdAt: "",
     updatedAt: "",
@@ -516,6 +516,7 @@ describe("SystemsManager", () => {
         (v: { customFieldId: number }) => v.customFieldId === 10,
       );
       expect(cf.value).toBe("false");
+      expect(cf.valueOptionId).toBeNull();
     });
   });
 
@@ -549,6 +550,7 @@ describe("SystemsManager", () => {
         (v: { customFieldId: number }) => v.customFieldId === 12,
       );
       expect(cf.value).toBe("Disc");
+      expect(cf.valueOptionId).toBeNull();
     });
   });
 
@@ -570,6 +572,7 @@ describe("SystemsManager", () => {
         (v: { customFieldId: number }) => v.customFieldId === 11,
       );
       expect(cf.value).toBe("PAL");
+      expect(cf.valueOptionId).toBe(22);
     });
   });
 

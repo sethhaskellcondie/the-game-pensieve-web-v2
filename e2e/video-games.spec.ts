@@ -33,6 +33,7 @@ type StubGame = {
     customFieldName: string;
     customFieldType: string;
     value: string;
+    valueOptionId: number | null;
   }[];
   createdAt: string;
   updatedAt: string;
@@ -82,8 +83,8 @@ const GAMES: StubGame[] = [
       { id: 32, title: "Super Mario Bros." },
     ],
     customFieldValues: [
-      { customFieldId: 10, customFieldName: "Favorite", customFieldType: "boolean", value: "true" },
-      { customFieldId: 11, customFieldName: "Hours Played", customFieldType: "number", value: "12" },
+      { customFieldId: 10, customFieldName: "Favorite", customFieldType: "boolean", value: "true", valueOptionId: null },
+      { customFieldId: 11, customFieldName: "Hours Played", customFieldType: "number", value: "12", valueOptionId: null },
     ],
     createdAt: "",
     updatedAt: "",
@@ -96,7 +97,7 @@ const GAMES: StubGame[] = [
     system: SYSTEMS[1],
     videoGameBoxes: [],
     customFieldValues: [
-      { customFieldId: 10, customFieldName: "Favorite", customFieldType: "boolean", value: "false" },
+      { customFieldId: 10, customFieldName: "Favorite", customFieldType: "boolean", value: "false", valueOptionId: null },
     ],
     createdAt: "",
     updatedAt: "",

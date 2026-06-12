@@ -50,7 +50,7 @@ const boxes: BoardGameBox[] = [
     baseSetId: null,
     boardGame: slimGame(41, "Set-A-Watch"),
     customFieldValues: [
-      { customFieldId: 20, customFieldName: "Notes", customFieldType: "text", value: "Sleeved" },
+      { customFieldId: 20, customFieldName: "Notes", customFieldType: "text", value: "Sleeved", valueOptionId: null },
     ],
     createdAt: "",
     updatedAt: "",
