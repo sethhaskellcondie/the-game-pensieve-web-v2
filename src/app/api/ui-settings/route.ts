@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
       massEditMode: Boolean(settings.massEditMode),
       developerMode: Boolean(settings.developerMode),
       hideAnimations: Boolean(settings.hideAnimations),
+      beginnerMode: Boolean(settings.beginnerMode),
       videoGamesDefaultView: asCollectionView(settings.videoGamesDefaultView),
       boardGamesDefaultView: asCollectionView(settings.boardGamesDefaultView),
     });

@@ -39,6 +39,7 @@ describe("UiSettingsProvider", () => {
           massEditMode: false,
           developerMode: false,
           hideAnimations: false,
+          beginnerMode: false,
           videoGamesDefaultView: "list",
           boardGamesDefaultView: "list",
         }}
@@ -72,6 +73,7 @@ describe("UiSettingsProvider", () => {
       massEditMode: false,
       developerMode: true,
       hideAnimations: false,
+      beginnerMode: false,
       videoGamesDefaultView: "list",
       boardGamesDefaultView: "list",
     });

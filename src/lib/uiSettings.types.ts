@@ -18,6 +18,7 @@ export type UiSettings = {
   massEditMode: boolean;
   developerMode: boolean;
   hideAnimations: boolean;
+  beginnerMode: boolean;
   videoGamesDefaultView: CollectionView;
   boardGamesDefaultView: CollectionView;
 };
@@ -27,6 +28,7 @@ export const DEFAULT_UI_SETTINGS: UiSettings = {
   massEditMode: false,
   developerMode: false,
   hideAnimations: false,
+  beginnerMode: false,
   videoGamesDefaultView: "list",
   boardGamesDefaultView: "list",
 };
@@ -44,6 +46,7 @@ type StoredUiSettings = {
   mass_edit_mode: boolean;
   developer_mode: boolean;
   hide_animations: boolean;
+  beginner_mode: boolean;
   video_games_default_view: CollectionView;
   board_games_default_view: CollectionView;
 };
@@ -59,6 +62,7 @@ export function parseUiSettingsValue(value: string): UiSettings {
       massEditMode: Boolean(parsed?.mass_edit_mode),
       developerMode: Boolean(parsed?.developer_mode),
       hideAnimations: Boolean(parsed?.hide_animations),
+      beginnerMode: Boolean(parsed?.beginner_mode),
       videoGamesDefaultView: asCollectionView(parsed?.video_games_default_view),
       boardGamesDefaultView: asCollectionView(parsed?.board_games_default_view),
     };
@@ -74,6 +78,7 @@ export function serializeUiSettings(settings: UiSettings): string {
     mass_edit_mode: settings.massEditMode,
     developer_mode: settings.developerMode,
     hide_animations: settings.hideAnimations,
+    beginner_mode: settings.beginnerMode,
     video_games_default_view: settings.videoGamesDefaultView,
     board_games_default_view: settings.boardGamesDefaultView,
   };

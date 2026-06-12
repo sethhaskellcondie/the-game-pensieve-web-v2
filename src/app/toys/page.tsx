@@ -13,8 +13,9 @@ export default function ToysPage() {
     <>
       <Header
         icon={<ToysIcon />}
-        title="TOYS"
-        tagline="All of your toys and their data in one place!"
+        title="TOYS AND "
+        titleAccent="ACCESSORIES"
+        tagline="Toys, controllers, additional peripherals and everything else!"
       />
 
       <main className={styles.content}>

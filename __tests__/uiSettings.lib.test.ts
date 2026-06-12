@@ -32,6 +32,7 @@ describe("serializeUiSettings / parseUiSettingsValue", () => {
       massEditMode: false,
       developerMode: true,
       hideAnimations: true,
+      beginnerMode: true,
       videoGamesDefaultView: "shelf",
       boardGamesDefaultView: "list",
     };
@@ -41,6 +42,7 @@ describe("serializeUiSettings / parseUiSettingsValue", () => {
       mass_edit_mode: false,
       developer_mode: true,
       hide_animations: true,
+      beginner_mode: true,
       video_games_default_view: "shelf",
       board_games_default_view: "list",
     });
@@ -58,6 +60,7 @@ describe("serializeUiSettings / parseUiSettingsValue", () => {
         massEditMode: false,
         developerMode: true,
         hideAnimations: false,
+        beginnerMode: false,
         videoGamesDefaultView: "list",
         boardGamesDefaultView: "list",
       },
@@ -99,6 +102,7 @@ describe("loadUiSettings", () => {
           mass_edit_mode: false,
           developer_mode: true,
           hide_animations: true,
+          beginner_mode: true,
           video_games_default_view: "shelf",
           board_games_default_view: "shelf",
         }),
@@ -112,6 +116,7 @@ describe("loadUiSettings", () => {
       massEditMode: false,
       developerMode: true,
       hideAnimations: true,
+      beginnerMode: true,
       videoGamesDefaultView: "shelf",
       boardGamesDefaultView: "shelf",
     });
@@ -148,6 +153,7 @@ describe("loadUiSettings", () => {
       mass_edit_mode: false,
       developer_mode: false,
       hide_animations: false,
+      beginner_mode: false,
       video_games_default_view: "list",
       board_games_default_view: "list",
     });

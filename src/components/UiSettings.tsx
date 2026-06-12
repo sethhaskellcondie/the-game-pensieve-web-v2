@@ -55,9 +55,22 @@ const VIEW_SETTINGS: {
 
 const SETTINGS: SettingMeta[] = [
   {
+    key: "beginnerMode",
+    title: "Beginner Mode",
+    description: "Show extra guidance while you learn how to use the Pensieve.",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        {/* A young seedling: stem with two leaves. */}
+        <path d="M12 21v-8" />
+        <path d="M12 13C12 9 9.5 6.5 4 6c.5 5.5 3 8 8 7Z" />
+        <path d="M12 11c0-3.5 2-5.5 8-6-.5 5-2.5 7-8 6Z" />
+      </svg>
+    ),
+  },
+  {
     key: "massInputMode",
     title: "Mass Input Mode",
-    description: "Add many entries in a row without leaving the form.",
+    description: "Input forms will loop, speeding up data entry.",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         {/* Two arrows dropping down into an inbox tray. */}
@@ -69,7 +82,7 @@ const SETTINGS: SettingMeta[] = [
   {
     key: "massEditMode",
     title: "Mass Edit Mode",
-    description: "Select and update multiple records at once.",
+    description: "Allows in-line editing of records in the display chart.",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         {/* A sheet of paper with a folded corner, and a pen writing on it. */}
@@ -83,7 +96,7 @@ const SETTINGS: SettingMeta[] = [
   {
     key: "developerMode",
     title: "Developer Mode",
-    description: "Show the developer tools.",
+    description: "Includes extra buttons for debugging and testing.",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M8 9l-4 3 4 3M16 9l4 3-4 3M13 6l-2 12" />
@@ -93,7 +106,7 @@ const SETTINGS: SettingMeta[] = [
   {
     key: "hideAnimations",
     title: "Hide Animations",
-    description: "Show a static header instead of the animated background.",
+    description: "Show a static header instead of the animating the background.",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M10 9v6M14 9v6M4 4l16 16M4 12a8 8 0 0 1 8-8M20 12a8 8 0 0 1-8 8" />
