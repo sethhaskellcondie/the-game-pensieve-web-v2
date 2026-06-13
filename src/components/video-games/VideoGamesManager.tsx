@@ -520,6 +520,7 @@ export default function VideoGamesManager() {
       </div>
 
       <DataTable
+        storageKey="video-games"
         columns={columns}
         rows={games}
         getRowKey={(game) => game.id}

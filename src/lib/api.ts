@@ -338,6 +338,22 @@ export function toCustomFieldValue(
   };
 }
 
+// Keep only the entries the backend accepts on write. Reads can return
+// placeholder entries for enum fields with no selection yet (`valueOptionId`
+// null), but a write containing one is rejected with a 400. Since an entity
+// write applies `customFieldValues` as a partial upsert — omitted entries are
+// left unchanged — dropping the placeholders is safe and required. Every
+// create/update in this module runs its values (including nested games')
+// through this before sending.
+export function writableCustomFieldValues(
+  values: CustomFieldValue[],
+): CustomFieldValue[] {
+  return values.filter(
+    (v) =>
+      !isEnumCustomFieldType(v.customFieldType) || v.valueOptionId !== null,
+  );
+}
+
 export type Toy = {
   id: number;
   key: "toy";
@@ -355,9 +371,9 @@ export function searchToys(filters: FilterRequestDto[] = []): Promise<Toy[]> {
   return apiPost<Toy[]>("/toys/function/search", { filters });
 }
 
-// The update payload mirrors ToyRequest: name + set + the full custom-field
-// value set are all required, so an inline edit of one field must resend the
-// toy's existing values alongside the change.
+// The update payload mirrors ToyRequest: name and set are required, while
+// customFieldValues is applied as a partial upsert (entries omitted from the
+// array are left unchanged on the server).
 export type UpdateToyInput = {
   name: string;
   set: string;
@@ -365,7 +381,12 @@ export type UpdateToyInput = {
 };
 
 export function updateToy(id: number, input: UpdateToyInput): Promise<Toy> {
-  return apiPut<Toy>(`/toys/${id}`, { toy: input });
+  return apiPut<Toy>(`/toys/${id}`, {
+    toy: {
+      ...input,
+      customFieldValues: writableCustomFieldValues(input.customFieldValues),
+    },
+  });
 }
 
 // Creating a toy takes the same shape as updating one (ToyRequest: name + set +
@@ -373,7 +394,12 @@ export function updateToy(id: number, input: UpdateToyInput): Promise<Toy> {
 export type CreateToyInput = UpdateToyInput;
 
 export function createToy(input: CreateToyInput): Promise<Toy> {
-  return apiPost<Toy>("/toys", { toy: input });
+  return apiPost<Toy>("/toys", {
+    toy: {
+      ...input,
+      customFieldValues: writableCustomFieldValues(input.customFieldValues),
+    },
+  });
 }
 
 export function deleteToy(id: number): Promise<void> {
@@ -411,9 +437,9 @@ export function searchSystems(
   return apiPost<System[]>("/systems/function/search", { filters });
 }
 
-// The update payload mirrors SystemRequest: name + generation + handheld + the
-// full custom-field value set are all required, so an inline edit of one field
-// must resend the system's existing values alongside the change.
+// The update payload mirrors SystemRequest: name, generation, and handheld are
+// required, while customFieldValues is applied as a partial upsert (entries
+// omitted from the array are left unchanged on the server).
 export type UpdateSystemInput = {
   name: string;
   generation: number;
@@ -425,7 +451,12 @@ export function updateSystem(
   id: number,
   input: UpdateSystemInput,
 ): Promise<System> {
-  return apiPut<System>(`/systems/${id}`, { system: input });
+  return apiPut<System>(`/systems/${id}`, {
+    system: {
+      ...input,
+      customFieldValues: writableCustomFieldValues(input.customFieldValues),
+    },
+  });
 }
 
 // Creating a system takes the same shape as updating one (SystemRequest), so
@@ -433,7 +464,12 @@ export function updateSystem(
 export type CreateSystemInput = UpdateSystemInput;
 
 export function createSystem(input: CreateSystemInput): Promise<System> {
-  return apiPost<System>("/systems", { system: input });
+  return apiPost<System>("/systems", {
+    system: {
+      ...input,
+      customFieldValues: writableCustomFieldValues(input.customFieldValues),
+    },
+  });
 }
 
 export function deleteSystem(id: number): Promise<void> {
@@ -478,9 +514,9 @@ export function searchVideoGames(
   return apiPost<VideoGame[]>("/videoGames/function/search", { filters });
 }
 
-// The update payload mirrors VideoGameRequest: title + systemId + the full
-// custom-field value set are all required, so an inline edit of one field must
-// resend the game's existing values alongside the change.
+// The update payload mirrors VideoGameRequest: title and systemId are
+// required, while customFieldValues is applied as a partial upsert (entries
+// omitted from the array are left unchanged on the server).
 export type UpdateVideoGameInput = {
   title: string;
   systemId: number;
@@ -491,7 +527,12 @@ export function updateVideoGame(
   id: number,
   input: UpdateVideoGameInput,
 ): Promise<VideoGame> {
-  return apiPut<VideoGame>(`/videoGames/${id}`, { videoGame: input });
+  return apiPut<VideoGame>(`/videoGames/${id}`, {
+    videoGame: {
+      ...input,
+      customFieldValues: writableCustomFieldValues(input.customFieldValues),
+    },
+  });
 }
 
 // Fetch a single video game by id. Returns null on 404 so the detail page can
@@ -546,10 +587,12 @@ export type NewVideoGameInput = {
   customFieldValues: CustomFieldValue[];
 };
 
-// The update payload mirrors VideoGameBoxRequest: every field is required, so
-// an edit of one field must resend the rest. existingVideoGameIds carries the
-// box's current game ids and newVideoGames stays empty when only editing box
-// fields. isCollection is absent — the backend derives it from the game count.
+// The update payload mirrors VideoGameBoxRequest: every standard field is
+// required, so an edit of one field must resend the rest, while each
+// customFieldValues array is applied as a partial upsert. existingVideoGameIds
+// carries the box's current game ids and newVideoGames stays empty when only
+// editing box fields. isCollection is absent — the backend derives it from the
+// game count.
 export type UpdateVideoGameBoxInput = {
   title: string;
   systemId: number;
@@ -559,12 +602,27 @@ export type UpdateVideoGameBoxInput = {
   customFieldValues: CustomFieldValue[];
 };
 
+// Box writes carry custom field values at two levels (the box's own and each
+// inline new game's); both get the unwritable placeholders dropped.
+function writableVideoGameBoxInput(
+  input: UpdateVideoGameBoxInput,
+): UpdateVideoGameBoxInput {
+  return {
+    ...input,
+    newVideoGames: input.newVideoGames.map((g) => ({
+      ...g,
+      customFieldValues: writableCustomFieldValues(g.customFieldValues),
+    })),
+    customFieldValues: writableCustomFieldValues(input.customFieldValues),
+  };
+}
+
 export function updateVideoGameBox(
   id: number,
   input: UpdateVideoGameBoxInput,
 ): Promise<VideoGameBox> {
   return apiPut<VideoGameBox>(`/videoGameBoxes/${id}`, {
-    videoGameBox: input,
+    videoGameBox: writableVideoGameBoxInput(input),
   });
 }
 
@@ -576,7 +634,9 @@ export type CreateVideoGameBoxInput = UpdateVideoGameBoxInput;
 export function createVideoGameBox(
   input: CreateVideoGameBoxInput,
 ): Promise<VideoGameBox> {
-  return apiPost<VideoGameBox>("/videoGameBoxes", { videoGameBox: input });
+  return apiPost<VideoGameBox>("/videoGameBoxes", {
+    videoGameBox: writableVideoGameBoxInput(input),
+  });
 }
 
 // Deleting a box also deletes any of its games that live in no other box
@@ -631,9 +691,9 @@ export function searchBoardGames(
   return apiPost<BoardGame[]>("/boardGames/function/search", { filters });
 }
 
-// The update payload mirrors BoardGameRequest: title + the full custom-field
-// value set are required, so an inline edit of one field must resend the
-// game's existing values alongside the change.
+// The update payload mirrors BoardGameRequest: title is required, while
+// customFieldValues is applied as a partial upsert (entries omitted from the
+// array are left unchanged on the server).
 export type UpdateBoardGameInput = {
   title: string;
   customFieldValues: CustomFieldValue[];
@@ -643,7 +703,12 @@ export function updateBoardGame(
   id: number,
   input: UpdateBoardGameInput,
 ): Promise<BoardGame> {
-  return apiPut<BoardGame>(`/boardGames/${id}`, { boardGame: input });
+  return apiPut<BoardGame>(`/boardGames/${id}`, {
+    boardGame: {
+      ...input,
+      customFieldValues: writableCustomFieldValues(input.customFieldValues),
+    },
+  });
 }
 
 // Fetch a single board game by id. Returns null on 404 so the detail page can
@@ -713,12 +778,24 @@ export type CreateBoardGameBoxInput = {
 export function createBoardGameBox(
   input: CreateBoardGameBoxInput,
 ): Promise<BoardGameBox> {
-  return apiPost<BoardGameBox>("/boardGameBoxes", { boardGameBox: input });
+  return apiPost<BoardGameBox>("/boardGameBoxes", {
+    boardGameBox: {
+      ...input,
+      boardGame: input.boardGame && {
+        ...input.boardGame,
+        customFieldValues: writableCustomFieldValues(
+          input.boardGame.customFieldValues,
+        ),
+      },
+      customFieldValues: writableCustomFieldValues(input.customFieldValues),
+    },
+  });
 }
 
 // Update payload mirrors BoardGameBoxUpdateRequest, which differs from create:
-// boardGameId is required and there is no inline boardGame. Every field is
-// required, so an edit of one field must resend the rest.
+// boardGameId is required and there is no inline boardGame. Every standard
+// field is required, so an edit of one field must resend the rest, while
+// customFieldValues is applied as a partial upsert.
 export type UpdateBoardGameBoxInput = {
   title: string;
   isExpansion: boolean;
@@ -733,7 +810,10 @@ export function updateBoardGameBox(
   input: UpdateBoardGameBoxInput,
 ): Promise<BoardGameBox> {
   return apiPut<BoardGameBox>(`/boardGameBoxes/${id}`, {
-    boardGameBox: input,
+    boardGameBox: {
+      ...input,
+      customFieldValues: writableCustomFieldValues(input.customFieldValues),
+    },
   });
 }
 

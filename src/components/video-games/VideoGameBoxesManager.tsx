@@ -665,6 +665,7 @@ export default function VideoGameBoxesManager() {
       </div>
 
       <DataTable
+        storageKey="video-game-boxes"
         columns={columns}
         rows={boxes}
         getRowKey={(box) => box.id}

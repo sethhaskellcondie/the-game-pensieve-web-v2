@@ -51,6 +51,13 @@ info:
 
     For **enum** types (`dropdown`, `radio_button`, `progress_bar`) the selected option is stored as a reference to an option id. On **write** send `valueOptionId` set to the chosen option's id (the `value` text is ignored and derived by the server). On **read** the response returns both `valueOptionId` (the option id) and `value` (the option's current text). Because the value is a reference, renaming an option is automatically reflected in existing values. For all non-enum types `valueOptionId` is `null`.
 
+    ### Updating values (partial upsert)
+    On an entity `PUT`, the `customFieldValues` array is applied as a **partial upsert keyed by `customFieldId`**: each entry you include is created or updated, and any value you **omit is left unchanged** — an update never deletes a value. This means you can update a single custom field by sending **only that one entry** in `customFieldValues`; you do **not** need to send the entity's full set of values. The response always returns the entity's complete, current set of values regardless of how many you sent.
+
+    Two consequences for clients:
+    - **Do not send placeholder entries for values that have no selection yet — omit them.** In particular, an enum entry with `valueOptionId: null` is **rejected with a 400** (`valueOptionId` must reference a valid option of that field). To leave an enum field unset, simply leave it out of the array.
+    - **There is currently no way to clear a value once set.** Omitting an entry keeps its existing stored value; it does not remove it. (Changing the selection is supported — send the entry with the new `valueOptionId`.)
+
     ## Filter System
     The API provides advanced filtering capabilities through the `/{entity}/function/search` endpoints. Call `GET /v1/filters/{entity}` first to discover the fields and operators available for an entity. Operators by field type:
     - **Text filters**: equals, not_equals, contains, starts_with, ends_with

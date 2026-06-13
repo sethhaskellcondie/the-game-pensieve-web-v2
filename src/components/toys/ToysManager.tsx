@@ -607,6 +607,7 @@ export default function ToysManager() {
       </div>
 
       <DataTable
+        storageKey="toys"
         columns={columns}
         rows={toys}
         getRowKey={(toy) => toy.id}

@@ -626,6 +626,7 @@ export default function SystemsManager() {
       </div>
 
       <DataTable
+        storageKey="systems"
         columns={columns}
         rows={systems}
         getRowKey={(system) => system.id}

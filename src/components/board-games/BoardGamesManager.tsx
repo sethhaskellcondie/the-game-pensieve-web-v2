@@ -452,6 +452,7 @@ export default function BoardGamesManager() {
       </div>
 
       <DataTable
+        storageKey="board-games"
         columns={columns}
         rows={games}
         getRowKey={(game) => game.id}

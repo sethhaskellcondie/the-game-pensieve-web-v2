@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { ChevronRightIcon, TrashIcon } from "@/components/custom-fields/icons";
+import { usePersistentColumnWidths } from "./usePersistentColumnWidths";
 import styles from "./DataTable.module.css";
 
 // A single column definition. `render` turns a row into the cell's content, so
@@ -41,6 +42,10 @@ export type DataTableProps<Row> = {
   onRowClick?: (row: Row) => void;
   // aria-label for a clickable row (announced when the row is focused).
   rowClickLabel?: (row: Row) => string;
+  // When set, the user's column-width resizes are saved per page in the browser
+  // (localStorage) under this key so they survive a refresh. Omit for no
+  // persistence.
+  storageKey?: string;
 };
 
 // The default per-column resize floor; also a handy default width for columns
@@ -103,10 +108,9 @@ export default function DataTable<Row>({
   detailsLabel,
   onRowClick,
   rowClickLabel,
+  storageKey,
 }: DataTableProps<Row>) {
-  const [widths, setWidths] = useState<Record<string, number>>(() =>
-    Object.fromEntries(columns.map((c) => [c.key, c.width])),
-  );
+  const [widths, setWidths] = usePersistentColumnWidths(storageKey, columns);
   // confirmDelete state: which row's "Are you sure?" menu is open, and where.
   // The menu is position:fixed (anchored from the trash button's rect) so the
   // table's scroll container can't clip it; like the dropdown editors, any

@@ -13,6 +13,7 @@ import EntitySelect from "./EntitySelect";
 import KindBadge from "./KindBadge";
 import OptionList from "./OptionList";
 import FieldModal, { type FieldModalSave } from "./FieldModal";
+import { usePersistentColumnWidths } from "@/components/data-table/usePersistentColumnWidths";
 import { GripIcon, PlusIcon, TrashIcon } from "./icons";
 import styles from "./CustomFieldsManager.module.css";
 
@@ -114,11 +115,9 @@ export default function CustomFieldsManager() {
   // The row whose name is being edited inline, plus its working draft.
   const [editingNameId, setEditingNameId] = useState<number | null>(null);
   const [draftName, setDraftName] = useState("");
-  const [widths, setWidths] = useState<Record<ColKey, number>>(() =>
-    Object.fromEntries(COLS.map((c) => [c.key, c.width])) as Record<
-      ColKey,
-      number
-    >,
+  const [widths, setWidths] = usePersistentColumnWidths<ColKey>(
+    "custom-fields",
+    COLS,
   );
 
   // Refetch the current scope after a mutation. Runs from event handlers, so a
