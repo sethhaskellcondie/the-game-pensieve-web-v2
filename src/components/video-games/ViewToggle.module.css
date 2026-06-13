@@ -17,6 +17,14 @@
   overflow: hidden;
 }
 
+/* Flow variant (pinned={false}): the host cluster owns the right-edge
+   placement, so the pill drops its own absolute positioning. Defined after
+   .toggle so it wins the position/transform declarations. */
+.inline {
+  position: static;
+  transform: none;
+}
+
 .segment {
   display: inline-flex;
   align-items: center;

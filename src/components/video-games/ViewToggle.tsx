@@ -13,12 +13,20 @@ export type VideoGamesView = CollectionView;
 export default function ViewToggle({
   view,
   basePath = "/video-games",
+  pinned = true,
 }: {
   view: VideoGamesView;
   basePath?: string;
+  // When true (the default) the control pins itself to the header's right edge.
+  // Set false to render it in normal flow — e.g. inside a flex cluster that
+  // also holds a beginner hint.
+  pinned?: boolean;
 }) {
   return (
-    <nav className={styles.toggle} aria-label="View">
+    <nav
+      className={pinned ? styles.toggle : `${styles.toggle} ${styles.inline}`}
+      aria-label="View"
+    >
       <Link
         href={`${basePath}?view=list`}
         className={styles.segment}

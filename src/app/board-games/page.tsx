@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { BoardGameBoxIcon, BoardGamesIcon } from "@/components/icons";
+import BeginnerHint from "@/components/BeginnerHint";
 import Header from "@/components/Header";
 import BoardGamesManager from "@/components/board-games/BoardGamesManager";
 import BoardGameBoxesManager from "@/components/board-games/BoardGameBoxesManager";
@@ -37,7 +38,14 @@ export default async function BoardGamesPage({
             : "Every board game you have, no matter how many boxes they are in!"
         }
       >
-        <ViewToggle view={view} basePath="/board-games" />
+        <div className={styles.viewControls}>
+          <BeginnerHint
+            className={styles.viewHint}
+            placement="bottom-end"
+            text="Board Games can be viewed in two different ways the the list view will list all of the games that are in the collection, but some games come in multiple boxes, like expansions, or additional characters. So the shelf view will show all of the boxes that you have on your shelves."
+          />
+          <ViewToggle view={view} basePath="/board-games" pinned={false} />
+        </div>
       </Header>
 
       <main className={styles.content}>
