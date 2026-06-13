@@ -15,6 +15,7 @@ export default function SystemsPage() {
         icon={<SystemsIcon />}
         title="SYSTEMS"
         tagline="All of your systems and their data in one place!"
+        beginnerHint="Many video game collections are organized by system, manage all of the systems for any game in your collection here."
       />
 
       <main className={styles.content}>

@@ -16,6 +16,7 @@ export default function ToysPage() {
         title="TOYS AND "
         titleAccent="ACCESSORIES"
         tagline="Toys, controllers, additional peripherals and everything else!"
+        beginnerHint="Toys and Accessories are the generic placeholder for everything else that you would like to include in your collection, comic books, lego sets, or other collectables."
       />
 
       <main className={styles.content}>
