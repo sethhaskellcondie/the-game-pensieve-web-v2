@@ -21,6 +21,7 @@ import {
   StandardFieldGlyph,
 } from "@/components/custom-fields/registry";
 import { useToast } from "@/components/ToastProvider";
+import DeleteEntityButton from "@/components/detail/DeleteEntityButton";
 import FieldEditor, {
   normalizeFieldValue,
 } from "@/components/toys/toyFieldEditors";
@@ -217,6 +218,14 @@ export default function SystemDetail({
               );
             })}
           </div>
+
+          <DeleteEntityButton
+            endpoint={`/api/systems/${system.id}`}
+            label="Delete System"
+            successMessage="System deleted."
+            errorNoun="system"
+            backHref="/systems"
+          />
         </div>
       </main>
     </>

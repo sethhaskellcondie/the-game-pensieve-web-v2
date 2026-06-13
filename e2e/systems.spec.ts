@@ -225,52 +225,20 @@ test("filters the rows via the search box on Enter", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 2, name: "1 System" })).toBeVisible();
 });
 
-test("exposes the New, Filter, and per-row delete controls", async ({ page }) => {
+test("exposes the New and Filter controls, with no per-row delete", async ({
+  page,
+}) => {
   await page.goto("/systems");
 
   await expect(page.getByRole("button", { name: "New" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Add filter" })).toBeVisible();
 
+  // Delete moved off the grid row and onto the system detail page (covered by
+  // the DeleteEntityButton unit test, since the detail page fetches
+  // server-side and can't be stubbed through page.route).
   const row = page.getByRole("row").filter({ hasText: "NES" });
   await row.hover();
-  await expect(row.getByRole("button", { name: "Delete NES" })).toBeVisible();
-});
-
-test("deletes a system from the grid after the Are-you-sure confirmation", async ({
-  page,
-}) => {
-  // Registered after stubSystems' catch-all so it wins for the DELETE.
-  let deletedUrl: string | null = null;
-  await page.route("**/api/systems/*", (route) => {
-    if (route.request().method() !== "DELETE") return route.fallback();
-    deletedUrl = route.request().url();
-    return route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ status: "ok" }),
-    });
-  });
-
-  await page.goto("/systems");
-  const row = page.getByRole("row").filter({ hasText: "NES" });
-  await row.hover();
-  await row.getByRole("button", { name: "Delete NES" }).click();
-
-  // Dismissing the menu deletes nothing.
-  const menu = page.getByRole("menu", { name: "Delete NES?" });
-  await expect(menu.getByText("Are you sure?")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(menu).toBeHidden();
-  expect(deletedUrl).toBeNull();
-
-  // Confirming removes the row and toasts.
-  await row.hover();
-  await row.getByRole("button", { name: "Delete NES" }).click();
-  await menu.getByRole("menuitem", { name: "Delete" }).click();
-
-  await expect(page.getByText("System deleted.")).toBeVisible();
-  await expect(page.getByText("NES", { exact: true })).toHaveCount(0);
-  expect(String(deletedUrl)).toContain("/api/systems/1");
+  await expect(row.getByRole("button", { name: "Delete NES" })).toHaveCount(0);
 });
 
 test("creates a system through the New dialog and shows it in the list", async ({

@@ -479,39 +479,16 @@ test("creates an expansion whose base set auto-fills the linked game", async ({
   });
 });
 
-test("deletes a box from the grid after the Are-you-sure confirmation", async ({
-  page,
-}) => {
-  let deletedUrl: string | null = null;
-  await page.route("**/api/board-game-boxes/*", (route) => {
-    if (route.request().method() !== "DELETE") return route.fallback();
-    deletedUrl = route.request().url();
-    return route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ status: "ok" }),
-    });
-  });
-
+test("offers no per-row delete control on the boxes grid", async ({ page }) => {
   await page.goto("/board-games?view=shelf");
   await expect(page.getByText("Jekyll Box", { exact: true })).toBeVisible();
 
-  // The trash opens the confirmation; dismissing it deletes nothing.
-  await page.getByRole("button", { name: "Delete Jekyll Box" }).click();
-  const menu = page.getByRole("menu", { name: "Delete Jekyll Box?" });
-  await expect(menu.getByText("Are you sure?")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(menu).toBeHidden();
-  expect(deletedUrl).toBeNull();
-  await expect(page.getByText("Jekyll Box", { exact: true })).toBeVisible();
-
-  // Confirming removes the row and toasts.
-  await page.getByRole("button", { name: "Delete Jekyll Box" }).click();
-  await menu.getByRole("menuitem", { name: "Delete" }).click();
-
-  await expect(page.getByText("Board game box deleted.")).toBeVisible();
-  await expect(page.getByText("Jekyll Box", { exact: true })).toHaveCount(0);
-  expect(String(deletedUrl)).toContain("/api/board-game-boxes/33");
+  // Delete moved off the grid row and onto the box detail page (covered by the
+  // DeleteEntityButton unit test, since the detail page fetches server-side and
+  // can't be stubbed through page.route).
+  await expect(
+    page.getByRole("button", { name: "Delete Jekyll Box" }),
+  ).toHaveCount(0);
 });
 
 test("Escape closes the stacked game dialog but not the box dialog", async ({

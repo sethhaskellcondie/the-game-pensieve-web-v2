@@ -601,37 +601,6 @@ export default function VideoGameBoxesManager() {
     [showToast, showSnackbar],
   );
 
-  // Delete a box (the grid's trash asks "Are you sure?" first — the backend
-  // also deletes any of the box's games that live in no other box). The row
-  // only leaves the grid once the backend confirms.
-  const handleDelete = useCallback(
-    async (box: VideoGameBox): Promise<void> => {
-      try {
-        const res = await fetch(`/api/video-game-boxes/${box.id}`, {
-          method: "DELETE",
-        });
-        if (!res.ok) {
-          const body = (await res.json().catch(() => null)) as {
-            message?: string;
-          } | null;
-          throw new Error(body?.message ?? "Request failed");
-        }
-        setBoxes((bs) => bs.filter((b) => b.id !== box.id));
-        showToast({ message: "Video game box deleted.", variant: "success" });
-      } catch (error) {
-        console.error("Delete video game box failed", error);
-        showSnackbar({
-          message:
-            error instanceof Error
-              ? `Couldn't delete the video game box: ${error.message}`
-              : "Couldn't delete the video game box. Please try again.",
-          variant: "error",
-        });
-      }
-    },
-    [showToast, showSnackbar],
-  );
-
   const hasFilters = filters.length > 0;
 
   return (
@@ -676,11 +645,7 @@ export default function VideoGameBoxesManager() {
             ? "No video game boxes match your filters."
             : "No video game boxes yet."
         }
-        // Deleting a box also deletes games that live in no other box, so the
-        // trash goes through the confirmDelete "Are you sure?" menu.
-        onDelete={(box) => void handleDelete(box)}
-        deleteLabel={(box) => `Delete ${box.title}`}
-        confirmDelete
+        // Deleting a box now lives on its detail page, not the grid row.
         // The leading details column only appears in mass edit mode; otherwise
         // the whole row navigates to the box's detail page. Both routes are
         // the same — they just differ in affordance per mode.

@@ -170,7 +170,7 @@ export default function SortControl({
         >
           {sorts.length === 0 ? (
             <p className={styles.empty}>
-              Not sorted — results keep their default order.
+              Add sort criteria to override default sort.
             </p>
           ) : (
             <ul className={styles.rows}>

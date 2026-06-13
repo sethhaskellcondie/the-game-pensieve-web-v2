@@ -276,18 +276,19 @@ describe("SystemsManager", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the New, Filter, and per-row delete controls", async () => {
+  it("renders the New and Filter controls, with no per-row delete", async () => {
     renderManager();
     await screen.findByText("NES");
 
     expect(screen.getByRole("button", { name: "New" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add filter" })).toBeInTheDocument();
 
+    // Delete moved off the grid row and onto the system detail page.
     const row = screen.getByText("NES").closest("tr");
     expect(row).not.toBeNull();
     expect(
-      within(row as HTMLElement).getByRole("button", { name: "Delete NES" }),
-    ).toBeInTheDocument();
+      within(row as HTMLElement).queryByRole("button", { name: "Delete NES" }),
+    ).not.toBeInTheDocument();
   });
 
   it("omits the mass-edit crumb when mass edit mode is off", async () => {
@@ -342,17 +343,6 @@ describe("SystemsManager", () => {
     expect(mockPush).toHaveBeenCalledWith("/systems/2");
   });
 
-  it("does not navigate when the row's delete button is clicked", async () => {
-    renderManager(false);
-    await screen.findByText("NES");
-
-    const row = screen.getByText("NES").closest("tr");
-    fireEvent.click(
-      within(row as HTMLElement).getByRole("button", { name: "Delete NES" }),
-    );
-
-    expect(mockPush).not.toHaveBeenCalled();
-  });
 
   it("does not make rows click-navigable in mass edit mode", async () => {
     renderManager(true);
@@ -574,53 +564,5 @@ describe("SystemsManager", () => {
       expect(cf.value).toBe("PAL");
       expect(cf.valueOptionId).toBe(22);
     });
-  });
-
-  it("deletes a system after the Are-you-sure confirmation and removes its row", async () => {
-    renderManager();
-    await screen.findByText("NES");
-
-    fireEvent.click(screen.getByRole("button", { name: "Delete NES" }));
-
-    // Nothing is sent until the menu's Delete confirms.
-    const menu = screen.getByRole("menu", { name: "Delete NES?" });
-    expect(within(menu).getByText("Are you sure?")).toBeInTheDocument();
-    expect(
-      mockFetch.mock.calls.some(([, init]) => init?.method === "DELETE"),
-    ).toBe(false);
-
-    fireEvent.click(within(menu).getByRole("menuitem", { name: "Delete" }));
-
-    await waitFor(() =>
-      expect(screen.queryByText("NES")).not.toBeInTheDocument(),
-    );
-    const del = mockFetch.mock.calls.find(
-      ([, init]) => init?.method === "DELETE",
-    );
-    expect(String(del![0])).toMatch(/\/api\/systems\/1$/);
-    expect(screen.getByText("System deleted.")).toBeInTheDocument();
-  });
-
-  it("keeps the row and shows an error when the delete fails", async () => {
-    renderManager();
-    await screen.findByText("NES");
-
-    mockFetch.mockImplementation((url: string, init?: RequestInit) => {
-      if (init?.method === "DELETE") {
-        return Promise.resolve(
-          jsonResponse(
-            { status: "error", message: "boom" },
-            { ok: false, status: 502 },
-          ),
-        );
-      }
-      return routedFetch(url, init);
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Delete NES" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
-
-    await screen.findByText(/Couldn't delete the system/);
-    expect(screen.getByText("NES")).toBeInTheDocument();
   });
 });

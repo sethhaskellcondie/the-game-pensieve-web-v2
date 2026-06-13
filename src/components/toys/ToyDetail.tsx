@@ -21,6 +21,7 @@ import {
   StandardFieldGlyph,
 } from "@/components/custom-fields/registry";
 import { useToast } from "@/components/ToastProvider";
+import DeleteEntityButton from "@/components/detail/DeleteEntityButton";
 import FieldEditor, { normalizeFieldValue } from "./toyFieldEditors";
 import styles from "./ToyDetail.module.css";
 
@@ -202,6 +203,14 @@ export default function ToyDetail({
               );
             })}
           </div>
+
+          <DeleteEntityButton
+            endpoint={`/api/toys/${toy.id}`}
+            label="Delete Toy"
+            successMessage="Toy deleted."
+            errorNoun="toy"
+            backHref="/toys"
+          />
         </div>
       </main>
     </>

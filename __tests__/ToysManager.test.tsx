@@ -283,18 +283,19 @@ describe("ToysManager", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the New, Filter, and per-row delete controls", async () => {
+  it("renders the New and Filter controls, with no per-row delete", async () => {
     renderManager();
     await screen.findByText("R2-D2");
 
     expect(screen.getByRole("button", { name: "New" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add filter" })).toBeInTheDocument();
 
+    // Delete moved off the grid row and onto the toy detail page.
     const row = screen.getByText("R2-D2").closest("tr");
     expect(row).not.toBeNull();
     expect(
-      within(row as HTMLElement).getByRole("button", { name: "Delete R2-D2" }),
-    ).toBeInTheDocument();
+      within(row as HTMLElement).queryByRole("button", { name: "Delete R2-D2" }),
+    ).not.toBeInTheDocument();
   });
 
   it("omits the mass-edit crumb when mass edit mode is off", async () => {
@@ -349,17 +350,6 @@ describe("ToysManager", () => {
     expect(mockPush).toHaveBeenCalledWith("/toys/2");
   });
 
-  it("does not navigate when the row's delete button is clicked", async () => {
-    renderManager(false);
-    await screen.findByText("R2-D2");
-
-    const row = screen.getByText("R2-D2").closest("tr");
-    fireEvent.click(
-      within(row as HTMLElement).getByRole("button", { name: "Delete R2-D2" }),
-    );
-
-    expect(mockPush).not.toHaveBeenCalled();
-  });
 
   it("does not make rows click-navigable in mass edit mode", async () => {
     renderManager(true);
@@ -576,51 +566,4 @@ describe("ToysManager", () => {
     });
   });
 
-  it("deletes a toy after the Are-you-sure confirmation and removes its row", async () => {
-    renderManager();
-    await screen.findByText("R2-D2");
-
-    fireEvent.click(screen.getByRole("button", { name: "Delete R2-D2" }));
-
-    // Nothing is sent until the menu's Delete confirms.
-    const menu = screen.getByRole("menu", { name: "Delete R2-D2?" });
-    expect(within(menu).getByText("Are you sure?")).toBeInTheDocument();
-    expect(
-      mockFetch.mock.calls.some(([, init]) => init?.method === "DELETE"),
-    ).toBe(false);
-
-    fireEvent.click(within(menu).getByRole("menuitem", { name: "Delete" }));
-
-    await waitFor(() =>
-      expect(screen.queryByText("R2-D2")).not.toBeInTheDocument(),
-    );
-    const del = mockFetch.mock.calls.find(
-      ([, init]) => init?.method === "DELETE",
-    );
-    expect(String(del![0])).toMatch(/\/api\/toys\/1$/);
-    expect(screen.getByText("Toy deleted.")).toBeInTheDocument();
-  });
-
-  it("keeps the row and shows an error when the delete fails", async () => {
-    renderManager();
-    await screen.findByText("R2-D2");
-
-    mockFetch.mockImplementation((url: string, init?: RequestInit) => {
-      if (init?.method === "DELETE") {
-        return Promise.resolve(
-          jsonResponse(
-            { status: "error", message: "boom" },
-            { ok: false, status: 502 },
-          ),
-        );
-      }
-      return routedFetch(url, init);
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Delete R2-D2" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
-
-    await screen.findByText(/Couldn't delete the toy/);
-    expect(screen.getByText("R2-D2")).toBeInTheDocument();
-  });
 });

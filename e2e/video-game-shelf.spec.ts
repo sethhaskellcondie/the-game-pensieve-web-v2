@@ -410,45 +410,18 @@ test("creates a box through the New dialog with a new game and an existing game"
   });
 });
 
-test("deletes a box from the grid after the Are-you-sure confirmation", async ({
-  page,
-}) => {
-  let deletedUrl: string | null = null;
-  await page.route("**/api/video-game-boxes/*", (route) => {
-    if (route.request().method() !== "DELETE") return route.fallback();
-    deletedUrl = route.request().url();
-    return route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ status: "ok" }),
-    });
-  });
-
+test("offers no per-row delete control on the boxes grid", async ({ page }) => {
   await page.goto("/video-games?view=shelf");
   await expect(
     page.getByText("Chrono Trigger", { exact: true }),
   ).toBeVisible();
 
-  // The trash opens the confirmation; dismissing it deletes nothing.
-  await page.getByRole("button", { name: "Delete Chrono Trigger" }).click();
-  const menu = page.getByRole("menu", { name: "Delete Chrono Trigger?" });
-  await expect(menu.getByText("Are you sure?")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(menu).toBeHidden();
-  expect(deletedUrl).toBeNull();
+  // Delete moved off the grid row and onto the box detail page (covered by the
+  // DeleteEntityButton unit test, since the detail page fetches server-side and
+  // can't be stubbed through page.route).
   await expect(
-    page.getByText("Chrono Trigger", { exact: true }),
-  ).toBeVisible();
-
-  // Confirming removes the row and toasts.
-  await page.getByRole("button", { name: "Delete Chrono Trigger" }).click();
-  await menu.getByRole("menuitem", { name: "Delete" }).click();
-
-  await expect(page.getByText("Video game box deleted.")).toBeVisible();
-  await expect(page.getByText("Chrono Trigger", { exact: true })).toHaveCount(
-    0,
-  );
-  expect(String(deletedUrl)).toContain("/api/video-game-boxes/33");
+    page.getByRole("button", { name: "Delete Chrono Trigger" }),
+  ).toHaveCount(0);
 });
 
 test("Escape closes the stacked game dialog but not the box dialog", async ({
@@ -507,4 +480,41 @@ test("the box detail page shows the Fields and Video Games cards and links back 
   await expect(
     page.getByRole("heading", { level: 2, name: "3 Video Game Boxes" }),
   ).toBeVisible();
+});
+
+// Same live-backend smoke test, for the box detail page's delete control. Only
+// the page load is server-side; the DELETE is a browser request, so page.route
+// stubs it and the real box #1 is never touched. The full confirm/error logic
+// lives in __tests__/DeleteEntityButton.test.tsx.
+test("deletes a box from its detail page after the Are-you-sure confirmation", async ({
+  page,
+}) => {
+  let deletedUrl: string | null = null;
+  await page.route("**/api/video-game-boxes/*", (route) => {
+    if (route.request().method() !== "DELETE") return route.fallback();
+    deletedUrl = route.request().url();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ status: "ok" }),
+    });
+  });
+
+  await page.goto("/video-game-boxes/1");
+
+  // The red delete button sits at the bottom of the detail page and confirms
+  // before deleting. Dismissing the menu deletes nothing.
+  await page.getByRole("button", { name: "Delete Video Game Box" }).click();
+  const menu = page.getByRole("menu", { name: "Delete Video Game Box?" });
+  await expect(menu.getByText("Are you sure?")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  expect(deletedUrl).toBeNull();
+
+  // Confirming deletes the box and returns to the shelf.
+  await page.getByRole("button", { name: "Delete Video Game Box" }).click();
+  await menu.getByRole("menuitem", { name: "Delete" }).click();
+
+  await expect(page).toHaveURL("/video-games?view=shelf");
+  expect(String(deletedUrl)).toContain("/api/video-game-boxes/1");
 });

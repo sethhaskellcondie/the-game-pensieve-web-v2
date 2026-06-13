@@ -29,6 +29,7 @@ import {
   StandardFieldGlyph,
 } from "@/components/custom-fields/registry";
 import { useToast } from "@/components/ToastProvider";
+import DeleteEntityButton from "@/components/detail/DeleteEntityButton";
 // Aliased: CustomFieldValue (the type) is already imported from the API types.
 import CustomFieldValueDisplay from "@/components/toys/CustomFieldValue";
 import FieldEditor, {
@@ -439,6 +440,14 @@ export default function VideoGameBoxDetail({
               </ul>
             )}
           </div>
+
+          <DeleteEntityButton
+            endpoint={`/api/video-game-boxes/${box.id}`}
+            label="Delete Video Game Box"
+            successMessage="Video game box deleted."
+            errorNoun="video game box"
+            backHref="/video-games?view=shelf"
+          />
         </div>
       </main>
 

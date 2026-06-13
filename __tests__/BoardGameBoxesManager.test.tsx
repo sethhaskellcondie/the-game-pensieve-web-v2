@@ -339,67 +339,17 @@ describe("BoardGameBoxesManager", () => {
     expect(within(row).getByText("Set-A-Watch Base Box")).toBeInTheDocument();
   });
 
-  it("offers a New button and per-row delete controls", async () => {
+  it("offers a New button but no per-row delete controls", async () => {
     renderManager();
     await screen.findByText("Set-A-Watch Doomed Run");
 
     expect(screen.getByRole("button", { name: "New" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Delete Jekyll Box" }),
-    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add filter" })).toBeInTheDocument();
-  });
 
-  it("deletes a box after the Are-you-sure confirmation and removes its row", async () => {
-    renderManager();
-    await screen.findByText("Jekyll vs Hyde");
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "Delete Jekyll Box" }),
-    );
-
-    // Nothing is sent until the menu's Delete confirms.
-    const menu = screen.getByRole("menu", { name: "Delete Jekyll Box?" });
-    expect(within(menu).getByText("Are you sure?")).toBeInTheDocument();
+    // Delete moved off the grid row and onto the box detail page.
     expect(
-      mockFetch.mock.calls.some(([, init]) => init?.method === "DELETE"),
-    ).toBe(false);
-
-    fireEvent.click(within(menu).getByRole("menuitem", { name: "Delete" }));
-
-    await waitFor(() =>
-      expect(screen.queryByText("Jekyll vs Hyde")).not.toBeInTheDocument(),
-    );
-    const del = mockFetch.mock.calls.find(
-      ([, init]) => init?.method === "DELETE",
-    );
-    expect(String(del![0])).toMatch(/\/api\/board-game-boxes\/33$/);
-    expect(screen.getByText("Board game box deleted.")).toBeInTheDocument();
-  });
-
-  it("keeps the row and shows an error when the delete fails", async () => {
-    renderManager();
-    await screen.findByText("Jekyll vs Hyde");
-
-    mockFetch.mockImplementation((url: string, init?: RequestInit) => {
-      if (init?.method === "DELETE") {
-        return Promise.resolve(
-          jsonResponse(
-            { status: "error", message: "boom" },
-            { ok: false, status: 502 },
-          ),
-        );
-      }
-      return routedFetch(url, init);
-    });
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "Delete Jekyll Box" }),
-    );
-    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
-
-    await screen.findByText(/Couldn't delete the board game box/);
-    expect(screen.getByText("Jekyll vs Hyde")).toBeInTheDocument();
+      screen.queryByRole("button", { name: "Delete Jekyll Box" }),
+    ).not.toBeInTheDocument();
   });
 
   it("creates a box through the New dialog, POSTing the payload and prepending the row", async () => {

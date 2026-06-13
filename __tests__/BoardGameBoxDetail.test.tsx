@@ -12,6 +12,13 @@ import { ToastProvider } from "@/components/ToastProvider";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
 
+// The detail page's DeleteEntityButton calls useRouter to leave for the list
+// after a delete; the navigation itself is covered by DeleteEntityButton's own
+// test, so a no-op router is enough here.
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), prefetch: jest.fn() }),
+}));
+
 const definitions: CustomField[] = [
   { id: 20, name: "Notes", type: "text", entityKey: "boardGameBox", order: 0, options: [] },
 ];

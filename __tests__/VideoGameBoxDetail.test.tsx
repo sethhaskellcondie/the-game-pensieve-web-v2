@@ -6,6 +6,14 @@ import { ToastProvider } from "@/components/ToastProvider";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
 
+// The detail page's box-level DeleteEntityButton calls useRouter to leave for
+// the list after a delete; that navigation is covered by DeleteEntityButton's
+// own test, so a no-op router is enough here. (The per-game remove control
+// below is separate — it edits the box, it doesn't navigate.)
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), prefetch: jest.fn() }),
+}));
+
 const systems: System[] = [
   {
     id: 1,
@@ -195,13 +203,17 @@ describe("VideoGameBoxDetail", () => {
     ]);
   });
 
-  it("offers no delete button when the box holds a single game", () => {
+  it("offers no per-game remove control when the box holds a single game", () => {
     renderDetail({ ...box, videoGames: [box.videoGames[0]] });
 
-    // The last game can't be removed from a box.
+    // The last game can't be removed from a box. (The box's own "Delete Video
+    // Game Box" button is separate and always present, so scope to the game.)
     expect(
-      screen.queryByRole("button", { name: /^Delete / }),
+      screen.queryByRole("button", { name: "Delete Super Mario Bros." }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Delete Video Game Box" }),
+    ).toBeInTheDocument();
   });
 
   it("deletes a game after confirming, PUTting the box without its id", async () => {
