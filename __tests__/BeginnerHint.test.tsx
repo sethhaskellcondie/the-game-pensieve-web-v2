@@ -35,7 +35,8 @@ describe("BeginnerHint", () => {
 
     fireEvent.click(button);
     expect(button).toHaveAttribute("aria-expanded", "true");
-    const text = screen.getByText(HINT_TEXT);
+    const text = screen.getByRole("tooltip");
+    expect(text).toHaveTextContent(HINT_TEXT);
     expect(button).toHaveAttribute("aria-controls", text.id);
 
     fireEvent.click(button);

@@ -1,8 +1,8 @@
+/* The trigger anchors the absolutely-positioned tooltip, so the wrapper only
+   needs to be a positioning context sized to the seedling button. */
 .hint {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
+  position: relative;
+  display: inline-flex;
 }
 
 /* The trigger is just the seedling icon in its green; the light green chip on
@@ -32,10 +32,39 @@
   height: 18px;
 }
 
-/* Text color is inherited so each host context (dark sidebar, light page)
-   keeps the hint readable. */
+/* The disclosed hint is a floating tooltip card: it overlays whatever sits
+   beside the trigger (absolute + high z-index) instead of pushing the layout,
+   and carries its own surface/border/shadow so it stays readable on top of any
+   host background. data-placement anchors it to the trigger (see component). */
 .text {
+  position: absolute;
+  z-index: 50;
+  width: max-content;
+  max-width: 300px;
   margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--white-pure);
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 28px -10px rgba(var(--ink-navy-rgb), 0.35);
+  color: var(--gray-700);
   font-size: var(--text-caption);
   line-height: 1.5;
+  text-align: left;
+}
+
+.text[data-placement^="bottom"] {
+  top: calc(100% + 8px);
+}
+
+.text[data-placement^="top"] {
+  bottom: calc(100% + 8px);
+}
+
+.text[data-placement$="start"] {
+  left: 0;
+}
+
+.text[data-placement$="end"] {
+  right: 0;
 }

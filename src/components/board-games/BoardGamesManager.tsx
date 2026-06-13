@@ -15,6 +15,7 @@ import DataTable, {
   MIN_COL,
   type ColumnDef,
 } from "@/components/data-table/DataTable";
+import BeginnerHint from "@/components/BeginnerHint";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import FilterBar from "@/components/filters/FilterBar";
@@ -448,7 +449,14 @@ export default function BoardGamesManager() {
           sorts={canSort ? sorts : undefined}
           onSortsChange={canSort ? setSorts : undefined}
         />
-        {/* No New button: board games are created through board game boxes. */}
+        {/* No New button: board games are created through board game boxes.
+            A beginner hint sits where that button would be to explain why. */}
+        <div className={styles.actions}>
+          <BeginnerHint
+            placement="bottom-end"
+            text="Board Games can only be created and deleted through Board Game Boxes, (How they appear on your shelf) Go to the Shelf View and create a new box to create a new board game inside that box!"
+          />
+        </div>
       </div>
 
       <DataTable

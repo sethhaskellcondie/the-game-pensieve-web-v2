@@ -33,8 +33,8 @@ export default async function BoardGamesPage({
         titleAccent="GAMES"
         tagline={
           view === "shelf"
-            ? "All of your games as they appear on your shelves!"
-            : "Every single game in your collection in one single list!"
+            ? "Every box on the shelf with a board game, or part of a board game in it!"
+            : "Every board game you have, no matter how many boxes they are in!"
         }
       >
         <ViewToggle view={view} basePath="/board-games" />

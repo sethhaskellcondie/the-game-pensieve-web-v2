@@ -76,6 +76,7 @@ export default function Sidebar() {
 
       <BeginnerHint
         className={styles.beginnerHint}
+        placement="top-start"
         text="Beginner mode is on, click on this symbol to learn more about the best ways to use the pensieve, turn beginner mode off on the options page."
       />
 

@@ -1,11 +1,21 @@
 .header {
   flex: 0 0 auto;
   position: relative;
-  overflow: hidden;
   color: var(--white-pure);
   /* Deep navy base the grid + wash layers sit on. */
   background: var(--ink-navy);
   padding: 46px 52px 40px;
+}
+
+/* Clips the animated grid/wash/glow to the header box. This used to live on
+   .header itself, but that also clipped foreground content — notably a beginner
+   hint tooltip, which needs to overflow below the header. Scoping the clip to
+   the decorative layers lets .content (z-index 2) escape and float over the page. */
+.bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 /* Faint static grid drawn with two crossed 1px line gradients. */
@@ -151,14 +161,10 @@
 
 /* Beginner hint pinned to the top-right of the hero row. The default seedling
    green sinks into the navy, so the icon borrows the pale field-green; the
-   disclosed text grows downward without disturbing the title block. */
+   disclosed tooltip floats below the icon (bottom-end) over the hero. */
 .headerHint {
   margin-left: auto;
   align-self: flex-start;
-  align-items: flex-end;
-  max-width: 340px;
-  text-align: right;
-  color: rgba(var(--white-rgb), 0.82);
   --beginner-hint-color: var(--field-green-bg);
 }
 

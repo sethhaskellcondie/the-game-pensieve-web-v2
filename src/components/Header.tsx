@@ -31,9 +31,11 @@ export default function Header({
 
   return (
     <header className={styles.header} data-static={settings.hideAnimations}>
-      <div className={styles.grid} />
-      <div className={styles.wash} />
-      <div className={styles.glow} />
+      <div className={styles.bg}>
+        <div className={styles.grid} />
+        <div className={styles.wash} />
+        <div className={styles.glow} />
+      </div>
       <div className={styles.content}>
         <div className={styles.heroTop}>
           <div className={styles.heroMark}>{icon}</div>
@@ -45,7 +47,11 @@ export default function Header({
             <div className={styles.tag}>{tagline}</div>
           </div>
           {beginnerHint ? (
-            <BeginnerHint className={styles.headerHint} text={beginnerHint} />
+            <BeginnerHint
+              className={styles.headerHint}
+              text={beginnerHint}
+              placement="bottom-end"
+            />
           ) : null}
         </div>
         {children}
