@@ -524,6 +524,8 @@ export default function ToysManager() {
       label: def.name,
       width:
         def.type === "number" || def.type === "boolean" ? MIN_COL : 180,
+      // Only free text gets the ellipsis; every other type clips cleanly.
+      clip: def.type !== "text",
       render: (toy) => renderFieldCell(toy, def),
     }));
     // Drop the standard columns the user hid via Options → Show/Hide Standard

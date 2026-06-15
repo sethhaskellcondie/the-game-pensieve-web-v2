@@ -28,9 +28,11 @@
   font-weight: 700;
 }
 
+/* Dropdown/radio/progress labels clip cleanly to the pill when a column gets
+   narrow, but without an ellipsis — the "…" truncation marker is reserved for
+   text-type cells (handled by `.cell` in DataTable.module.css). */
 .pillLabel {
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

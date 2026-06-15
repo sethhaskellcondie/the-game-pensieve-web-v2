@@ -449,6 +449,7 @@ export default function VideoGameBoxesManager() {
         key: "system",
         label: "System",
         width: 180,
+        clip: true,
         render: massEditMode
           ? (box) => (
               <FieldEditor
@@ -467,6 +468,7 @@ export default function VideoGameBoxesManager() {
         key: "games",
         label: "Games",
         width: MIN_COL,
+        clip: true,
         render: (box) => (
           <CustomFieldValue
             type="number"
@@ -478,6 +480,7 @@ export default function VideoGameBoxesManager() {
         key: "physical",
         label: "Physical",
         width: MIN_COL,
+        clip: true,
         render: massEditMode
           ? (box) => (
               <FieldEditor
@@ -500,6 +503,7 @@ export default function VideoGameBoxesManager() {
         key: "collection",
         label: "Collection",
         width: MIN_COL,
+        clip: true,
         render: (box) => (
           <CustomFieldValue
             type="boolean"
@@ -546,6 +550,8 @@ export default function VideoGameBoxesManager() {
       key: `cf-${def.id}`,
       label: def.name,
       width: def.type === "number" || def.type === "boolean" ? MIN_COL : 180,
+      // Only free text gets the ellipsis; every other type clips cleanly.
+      clip: def.type !== "text",
       render: (box) => renderFieldCell(box, def),
     }));
     // Drop the standard columns the user hid via Options → Show/Hide Standard

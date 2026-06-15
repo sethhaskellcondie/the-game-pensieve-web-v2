@@ -49,8 +49,8 @@ const boxes: VideoGameBox[] = [
     title: "Super Mario All-Stars",
     system: systems[1],
     videoGames: [
-      { id: 1, title: "Super Mario Bros.", customFieldValues: [], createdAt: "", updatedAt: "", deletedAt: null },
-      { id: 2, title: "Super Mario Bros. 3", customFieldValues: [], createdAt: "", updatedAt: "", deletedAt: null },
+      { id: 1, title: "Super Mario Bros.", system: systems[1], customFieldValues: [], createdAt: "", updatedAt: "", deletedAt: null },
+      { id: 2, title: "Super Mario Bros. 3", system: systems[1], customFieldValues: [], createdAt: "", updatedAt: "", deletedAt: null },
     ],
     isPhysical: true,
     isCollection: true,
@@ -68,7 +68,7 @@ const boxes: VideoGameBox[] = [
     title: "Chrono Trigger",
     system: systems[0],
     videoGames: [
-      { id: 3, title: "Chrono Trigger", customFieldValues: [], createdAt: "", updatedAt: "", deletedAt: null },
+      { id: 3, title: "Chrono Trigger", system: systems[0], customFieldValues: [], createdAt: "", updatedAt: "", deletedAt: null },
     ],
     isPhysical: false,
     isCollection: false,

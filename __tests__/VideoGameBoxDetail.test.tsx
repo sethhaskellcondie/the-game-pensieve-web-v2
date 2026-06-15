@@ -59,6 +59,7 @@ const box: VideoGameBox = {
     {
       id: 71,
       title: "Super Mario Bros.",
+      system: systems[0],
       customFieldValues: [
         { customFieldId: 11, customFieldName: "Finished", customFieldType: "boolean", value: "true", valueOptionId: null },
         { customFieldId: 12, customFieldName: "Hours Played", customFieldType: "number", value: "14", valueOptionId: null },
@@ -67,7 +68,7 @@ const box: VideoGameBox = {
       updatedAt: "",
       deletedAt: null,
     },
-    { id: 72, title: "Super Mario Bros. 3", customFieldValues: [], createdAt: "", updatedAt: "", deletedAt: null },
+    { id: 72, title: "Super Mario Bros. 3", system: systems[1], customFieldValues: [], createdAt: "", updatedAt: "", deletedAt: null },
   ],
   isPhysical: true,
   isCollection: true,
@@ -184,9 +185,10 @@ describe("VideoGameBoxDetail", () => {
     const items = within(list).getAllByRole("listitem");
     expect(items).toHaveLength(2);
 
-    // Each row shows the box's system chip and one cell per videoGame field.
+    // Each row shows the game's own system chip (the box is SNES, but Mario
+    // Bros. is an NES game) and one cell per videoGame field.
     const [mario, mario3] = items;
-    expect(within(mario).getByText("SNES")).toBeInTheDocument();
+    expect(within(mario).getByText("NES")).toBeInTheDocument();
     expect(within(mario).getByText("Finished")).toBeInTheDocument();
     expect(within(mario).getByRole("img", { name: "Yes" })).toBeInTheDocument();
     expect(within(mario).getByText("Hours Played")).toBeInTheDocument();
@@ -268,7 +270,7 @@ describe("VideoGameBoxDetail", () => {
           ...box,
           videoGames: [
             ...box.videoGames,
-            { id: 73, title: "Super Mario World", customFieldValues: [], createdAt: "", updatedAt: "", deletedAt: null },
+            { id: 73, title: "Super Mario World", system: systems[1], customFieldValues: [], createdAt: "", updatedAt: "", deletedAt: null },
           ],
         },
       }),
@@ -309,6 +311,85 @@ describe("VideoGameBoxDetail", () => {
     expect(
       screen.getByRole("link", { name: "Super Mario World" }),
     ).toBeInTheDocument();
+  });
+
+  it("attaches an existing game through the Add Existing Game picker", async () => {
+    // The picker fetches the full game list from the search route, then the
+    // PUT response carries the box with the attached game.
+    const candidate = {
+      id: 73,
+      key: "videoGame",
+      title: "Super Mario World",
+      system: systems[1],
+      videoGameBoxes: [],
+      customFieldValues: [],
+      createdAt: "",
+      updatedAt: "",
+      deletedAt: null,
+    };
+    const updatedBox = {
+      ...box,
+      videoGames: [
+        ...box.videoGames,
+        { id: 73, title: "Super Mario World", system: systems[1], customFieldValues: [], createdAt: "", updatedAt: "", deletedAt: null },
+      ],
+    };
+    mockFetch.mockImplementation((url: string, init?: { method?: string }) => {
+      if (String(url).includes("/api/video-games/search")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({ status: "ok", data: [candidate] }),
+          text: async () => "{}",
+        } as unknown as Response);
+      }
+      // The box PUT.
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ status: "ok", data: updatedBox }),
+        text: async () => "{}",
+      } as unknown as Response);
+    });
+    renderDetail();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add Existing Game" }));
+    const dialog = screen.getByRole("dialog", {
+      name: "Add Existing Video Game",
+    });
+
+    // Focusing the search loads the list; typing filters it client-side.
+    const search = within(dialog).getByRole("searchbox", {
+      name: "Add an existing video game",
+    });
+    fireEvent.focus(search);
+    fireEvent.change(search, { target: { value: "mario world" } });
+
+    const results = await within(dialog).findByRole("list", {
+      name: "Matching games",
+    });
+    fireEvent.click(
+      within(results).getByRole("button", { name: /Super Mario World/ }),
+    );
+
+    await waitFor(() =>
+      expect(
+        [...mockFetch.mock.calls].some(([, init]) => init?.method === "PUT"),
+      ).toBe(true),
+    );
+    // The PUT keeps the box's games and appends the picked id; nothing new is
+    // created.
+    expect(lastPutBody()).toMatchObject({
+      existingVideoGameIds: [71, 72, 73],
+      newVideoGames: [],
+    });
+
+    // The box adopts the response, so the new game appears in the chart.
+    await waitFor(() =>
+      expect(
+        screen.getByRole("link", { name: "Super Mario World" }),
+      ).toBeInTheDocument(),
+    );
   });
 
   it("shows an empty message when the box has no games", () => {

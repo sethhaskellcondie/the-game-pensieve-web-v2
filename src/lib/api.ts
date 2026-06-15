@@ -559,6 +559,7 @@ export function getVideoGameById(id: number): Promise<VideoGame | null> {
 export type SlimVideoGame = {
   id: number;
   title: string;
+  system: System;
   customFieldValues: CustomFieldValue[];
   createdAt: string;
   updatedAt: string;

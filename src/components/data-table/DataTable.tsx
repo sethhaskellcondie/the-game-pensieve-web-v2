@@ -14,6 +14,11 @@ export type ColumnDef<Row> = {
   min?: number;
   frozen?: boolean;
   seam?: boolean;
+  // When the cell content overflows a narrow column, the default is to truncate
+  // it with an ellipsis ("…"). Set `clip` to hard-clip instead (no ellipsis) —
+  // used for chip/editor columns (dropdown, radio, progress, system) where the
+  // "…" marker is reserved for free-text columns.
+  clip?: boolean;
   render: (row: Row) => ReactNode;
 };
 
@@ -260,6 +265,7 @@ export default function DataTable<Row>({
                 {columns.map((c) => {
                   const cls = [
                     styles.cell,
+                    c.clip ? styles.clip : "",
                     c.frozen ? styles.frozen : "",
                     c.seam ? styles.seam : "",
                   ]

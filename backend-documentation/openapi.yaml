@@ -693,6 +693,24 @@ paths:
       tags:
         - Video Game Boxes
       summary: Update a video game box
+      description: |
+        Update a video game box and reconcile the set of games it contains. Game membership is
+        reconciled the same way it is created: `existingVideoGameIds` lists games already in the
+        database that should belong to this box, and `newVideoGames` creates additional games inline.
+
+        Reconciliation semantics:
+        - `existingVideoGameIds` is the **authoritative, full set** of pre-existing games for this
+          box — not a delta. Any game currently in the box but omitted from this array is removed
+          from this box.
+        - Removing a game from this box **only unlinks it from this box**. Video games can belong to
+          more than one box (multi-box membership); if a removed game still belongs to other boxes it
+          is preserved, and those other associations are left untouched.
+        - A game that ends up referenced by **no** box is deleted from the database. A subsequent
+          `GET /v1/videoGames/{id}` for that game then returns `404 Not Found` — the game is never
+          left in a boxless or malformed state.
+        - A box must always contain at least one game: across `existingVideoGameIds` and
+          `newVideoGames` at least one game must be present. An update that would empty the box is
+          rejected with `400 Bad Request`.
       parameters:
         - $ref: '#/components/parameters/EntityId'
       requestBody:
@@ -714,7 +732,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/VideoGameBoxDataResponse'
         '400':
-          description: Invalid input data
+          description: |
+            Invalid input data — for example a request that leaves the box with no games (no entries
+            across `existingVideoGameIds` and `newVideoGames`), or otherwise fails validation.
           content:
             application/json:
               schema:

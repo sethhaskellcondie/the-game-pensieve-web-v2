@@ -1,9 +1,25 @@
 import Image from "next/image";
 import Header from "@/components/Header";
 import Stats from "@/components/Stats";
+import {
+  searchVideoGames,
+  searchVideoGameBoxes,
+  searchBoardGames,
+  searchBoardGameBoxes,
+  searchToys,
+} from "@/lib/api";
 import styles from "./page.module.css";
 
-export default function Home() {
+export default async function Home() {
+  const [videoGameBoxes, videoGames, boardGameBoxes, boardGames, toys] =
+    await Promise.all([
+      searchVideoGameBoxes(),
+      searchVideoGames(),
+      searchBoardGameBoxes(),
+      searchBoardGames(),
+      searchToys(),
+    ]);
+
   return (
     <>
       <Header
@@ -14,11 +30,17 @@ export default function Home() {
       >
         <Stats
           stats={[
-            { value: "520", label: "Video Games on Shelf" },
-            { value: "612", label: "All Video Games" },
-            { value: "83", label: "Board Games on Shelf" },
-            { value: "97", label: "All Board Games" },
-            { value: "61", label: "Toys" },
+            {
+              value: String(videoGameBoxes.length),
+              label: "Video Games on Shelf",
+            },
+            { value: String(videoGames.length), label: "All Video Games" },
+            {
+              value: String(boardGameBoxes.length),
+              label: "Board Games on Shelf",
+            },
+            { value: String(boardGames.length), label: "All Board Games" },
+            { value: String(toys.length), label: "Toys" },
           ]}
         />
       </Header>

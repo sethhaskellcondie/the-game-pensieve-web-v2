@@ -2,12 +2,21 @@
   margin-top: 22px;
 }
 
-/* "+ New Video Game" in the card's blue header — a white-outlined pill the
-   header wash shows through. Its auto margin pushes itself and the count to
-   the right edge, button first. */
-.newBtn {
+/* The header's action buttons, grouped at the right edge of the blue header.
+   The wrapper's auto margin pushes the buttons (and the count after them) to
+   the right; the buttons sit side by side. */
+.headActions {
   flex: 0 0 auto;
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* "+ Add Existing Game" / "+ New Video Game" in the card's blue header —
+   white-outlined pills the header wash shows through. */
+.newBtn {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   gap: 6px;

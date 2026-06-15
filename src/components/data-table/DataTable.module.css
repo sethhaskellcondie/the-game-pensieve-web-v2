@@ -152,6 +152,13 @@
   white-space: nowrap;
 }
 
+/* Chip/editor columns (dropdown, radio, progress, system) opt out of the
+   ellipsis: a value that's wider than its column is hard-clipped instead, so
+   the "…" truncation marker stays exclusive to free-text columns. */
+.cell.clip {
+  text-overflow: clip;
+}
+
 .row:hover td {
   background: #f4f9ff;
 }

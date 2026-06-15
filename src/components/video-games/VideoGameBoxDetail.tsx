@@ -11,6 +11,7 @@ import {
   type NewVideoGameInput,
   type System,
   type UpdateVideoGameBoxInput,
+  type VideoGame,
   type VideoGameBox,
 } from "@/lib/api";
 import Header from "@/components/Header";
@@ -22,6 +23,7 @@ import {
   TrashIcon,
 } from "@/components/custom-fields/icons";
 import VideoGameCreateModal from "./VideoGameCreateModal";
+import VideoGameAddExistingModal from "./VideoGameAddExistingModal";
 import {
   FIELD_TYPE_META,
   KindGlyph,
@@ -71,6 +73,9 @@ export default function VideoGameBoxDetail({
   // Create-game dialog state: open flag + in-flight guard for its save button.
   const [creating, setCreating] = useState(false);
   const [savingCreate, setSavingCreate] = useState(false);
+  // Add-existing-game dialog state: open flag + in-flight guard for its picker.
+  const [addingExisting, setAddingExisting] = useState(false);
+  const [savingAddExisting, setSavingAddExisting] = useState(false);
 
   // Any click elsewhere (the menu and its trigger stop propagation) or Escape
   // dismisses the confirmation menu.
@@ -232,6 +237,54 @@ export default function VideoGameBoxDetail({
     }
   };
 
+  // Attach an existing game to this box: PUT the box with the picked game's id
+  // added to existingVideoGameIds (newVideoGames stays empty). Like
+  // handleCreateGame it isn't optimistic — the box state is replaced with the
+  // response so the new row arrives in the backend's slim shape. Returns whether
+  // it succeeded so the picker can clear its query and stay open for the next.
+  const handleAddExistingGame = async (
+    game: VideoGame,
+  ): Promise<boolean> => {
+    setSavingAddExisting(true);
+    try {
+      const body: UpdateVideoGameBoxInput = {
+        title: box.title,
+        systemId: box.system.id,
+        existingVideoGameIds: [...box.videoGames.map((g) => g.id), game.id],
+        newVideoGames: [],
+        isPhysical: box.isPhysical,
+        customFieldValues: box.customFieldValues,
+      };
+      const res = await fetch(`/api/video-game-boxes/${box.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const payload = (await res.json().catch(() => null)) as {
+        data?: VideoGameBox;
+        message?: string;
+      } | null;
+      if (!res.ok || !payload?.data) {
+        throw new Error(payload?.message ?? "Request failed");
+      }
+      setBox(payload.data);
+      showToast({ message: "Video game added.", variant: "success" });
+      return true;
+    } catch (error) {
+      console.error("Add existing video game failed", error);
+      showSnackbar({
+        message:
+          error instanceof Error
+            ? `Couldn't add the video game: ${error.message}`
+            : "Couldn't add the video game. Please try again.",
+        variant: "error",
+      });
+      return false;
+    } finally {
+      setSavingAddExisting(false);
+    }
+  };
+
   // The System row borrows the dropdown editor, with the systems list as its
   // options (committed by name, mapped back to a systemId on persist).
   const systemOptions: CustomFieldOption[] = systems.map((s, i) => ({
@@ -333,7 +386,7 @@ export default function VideoGameBoxDetail({
           </div>
 
           {/* The games inside this box as a slim read-only chart: title, the
-              box's system chip, and one cell per videoGame custom field. The
+              game's own system chip, and one cell per videoGame custom field. The
               whole row links to the game's detail page (the title is the
               anchor, stretched over the row via CSS); the trash button sits
               above the overlay. Games are edited on their own detail pages,
@@ -341,13 +394,22 @@ export default function VideoGameBoxDetail({
           <div className={`${styles.card} ${localStyles.gamesCard}`}>
             <div className={styles.caphdr}>
               <span className={styles.caphdrTitle}>Video Games</span>
-              <button
-                type="button"
-                className={localStyles.newBtn}
-                onClick={() => setCreating(true)}
-              >
-                <PlusIcon aria-hidden="true" /> New Video Game
-              </button>
+              <div className={localStyles.headActions}>
+                <button
+                  type="button"
+                  className={localStyles.newBtn}
+                  onClick={() => setAddingExisting(true)}
+                >
+                  <PlusIcon aria-hidden="true" /> Add Existing Game
+                </button>
+                <button
+                  type="button"
+                  className={localStyles.newBtn}
+                  onClick={() => setCreating(true)}
+                >
+                  <PlusIcon aria-hidden="true" /> New Video Game
+                </button>
+              </div>
               <span className={`${styles.caphdrCount} ${localStyles.count}`}>
                 <b>{games.length}</b> {games.length === 1 ? "game" : "games"}
               </span>
@@ -370,7 +432,7 @@ export default function VideoGameBoxDetail({
                         </Link>
                         <span className={localStyles.systemChip}>
                           <SystemsIcon aria-hidden="true" />
-                          {box.system?.name}
+                          {game.system?.name}
                         </span>
                       </div>
 
@@ -459,6 +521,15 @@ export default function VideoGameBoxDetail({
           saving={savingCreate}
           onCreate={handleCreateGame}
           onClose={() => setCreating(false)}
+        />
+      )}
+
+      {addingExisting && (
+        <VideoGameAddExistingModal
+          excludeIds={games.map((g) => g.id)}
+          saving={savingAddExisting}
+          onAdd={handleAddExistingGame}
+          onClose={() => setAddingExisting(false)}
         />
       )}
     </>
