@@ -1,0 +1,152 @@
+/* A saved-filter card: fixed width so a category scrolls horizontally through a
+   uniform row. position: relative anchors the title's stretched-link overlay. */
+.card {
+  position: relative;
+  flex: 0 0 232px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+  box-shadow: 0 1px 2px rgba(var(--ink-navy-rgb), 0.05);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.05s;
+}
+
+/* Whole-card hover, driven by the stretched link covering the card. */
+.card:hover {
+  border-color: var(--gray-300);
+  box-shadow: 0 10px 24px -14px rgba(var(--ink-navy-rgb), 0.4);
+}
+
+.card:active {
+  transform: translateY(1px);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.entityIcon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  color: var(--gray-500);
+}
+
+.entityIcon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.title {
+  min-width: 0;
+  font-size: var(--text-label);
+  font-weight: 800;
+  color: var(--ink-navy);
+  letter-spacing: 0.2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Stretched link: the title's hit area covers the whole card so a click
+   anywhere opens the target page. The pencil button re-establishes a higher
+   stacking context to stay clickable above it. */
+.title::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.title:focus-visible {
+  outline: 2px solid var(--primary-600);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.pills {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+/* One read-only condition pill — mirrors the filter-bar chip body, minus the
+   interactive affordances. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  height: 30px;
+  padding: 0 10px 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12px;
+  color: var(--ink-navy);
+}
+
+.pillLabel {
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.pillOp {
+  color: var(--gray-500);
+  font-weight: 700;
+}
+
+.pillVal {
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.count {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--gray-700);
+}
+
+.editBtn {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: 0.12s;
+}
+
+.editBtn:hover {
+  background: var(--paper);
+  border-color: var(--line);
+  color: var(--primary-600);
+}
+
+.editBtn:focus-visible {
+  outline: 2px solid var(--primary-600);
+  outline-offset: 2px;
+}

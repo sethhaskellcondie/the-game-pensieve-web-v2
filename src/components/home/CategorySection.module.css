@@ -1,0 +1,165 @@
+.category {
+  border-radius: 14px;
+  /* Soft seat under the whole block so it reads as one unit on the paper bg. */
+  box-shadow: 0 1px 3px rgba(var(--ink-navy-rgb), 0.06);
+}
+
+/* The retro blue-grid header bar — same surface as the data-grid table headers
+   (see globals.css), seated with a darker bottom border. */
+.head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px;
+  height: 44px;
+  background: var(--surface-blue-grid);
+  border-bottom: 1px solid #294e97;
+  border-radius: 14px 14px 0 0;
+  color: var(--white-pure);
+}
+
+.name {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Translucent-white pill so the action sits on the blue without competing with
+   the primary green "New Category" button up in the dashboard header. */
+.newFilterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid rgba(var(--white-rgb), 0.3);
+  border-radius: 8px;
+  background: rgba(var(--white-rgb), 0.16);
+  color: var(--white-pure);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.newFilterBtn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.newFilterBtn:hover {
+  background: rgba(var(--white-rgb), 0.26);
+  border-color: rgba(var(--white-rgb), 0.45);
+}
+
+.newFilterBtn:focus-visible {
+  outline: 2px solid var(--white-pure);
+  outline-offset: 2px;
+}
+
+.count {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: rgba(var(--white-rgb), 0.85);
+  white-space: nowrap;
+}
+
+/* The cards live in a white panel with rounded bottom corners; the row scrolls
+   horizontally when the cards overflow. */
+.body {
+  padding: 16px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-top: none;
+  border-radius: 0 0 14px 14px;
+  overflow-x: auto;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+/* Empty category: a centered prompt so a category without filters (a freshly
+   created one, or an empty Uncategorized bucket) still reads as intentional. */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 26px 16px;
+  text-align: center;
+}
+
+.emptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--field-blue-bg);
+  color: var(--primary-600);
+}
+
+.emptyIcon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.emptyText {
+  margin: 0;
+  font-size: var(--text-label);
+  color: var(--gray-500);
+}
+
+/* Outlined "Add a filter" action — the toolbar button style, so it reads as a
+   secondary affordance next to the header's "New filter". */
+.emptyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--ink-navy);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.emptyBtn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.emptyBtn:hover {
+  background: var(--paper);
+  border-color: var(--gray-300);
+}
+
+.emptyBtn:focus-visible {
+  outline: 2px solid var(--primary-600);
+  outline-offset: 2px;
+}

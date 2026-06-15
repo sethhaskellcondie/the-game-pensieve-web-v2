@@ -1,0 +1,50 @@
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.greeting {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-title);
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: var(--ink-navy);
+}
+
+.summary {
+  margin: 6px 0 0;
+  font-size: var(--text-label);
+  color: var(--gray-500);
+}
+
+/* Override the shared Button's blue with the success green from the design. */
+.newCategoryBtn {
+  flex: 0 0 auto;
+  background: var(--success);
+}
+
+.newCategoryBtn:hover:not(:disabled) {
+  background: #228a39;
+}
+
+.newCategoryBtn:active:not(:disabled) {
+  background: #1c7531;
+}
+
+.categories {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
