@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Header from "@/components/Header";
 import Stats from "@/components/Stats";
+import SavedFiltersDashboard from "@/components/home/SavedFiltersDashboard";
 import {
   searchVideoGames,
   searchVideoGameBoxes,
@@ -46,7 +47,9 @@ export default async function Home() {
       </Header>
 
       <main className={styles.content}>
-        {/* Page content */}
+        {/* Saved-filter shortcuts, grouped into categories. Seeded empty until
+            the metadata-backed store is wired up. */}
+        <SavedFiltersDashboard initialCategories={[]} />
       </main>
     </>
   );
