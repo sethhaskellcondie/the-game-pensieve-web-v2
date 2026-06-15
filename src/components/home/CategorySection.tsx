@@ -21,6 +21,7 @@ export default function CategorySection({
   category,
   onNewFilter,
   onEditFilter,
+  onMoveFilter,
   onRename,
   onDelete,
   onMove,
@@ -30,6 +31,8 @@ export default function CategorySection({
   category: FilterCategory;
   onNewFilter?: (category: FilterCategory) => void;
   onEditFilter?: (filter: SavedFilter) => void;
+  // Reorder a filter within this category (−1 = left, +1 = right).
+  onMoveFilter?: (category: FilterCategory, filter: SavedFilter, delta: -1 | 1) => void;
   onRename?: (category: FilterCategory, name: string) => void;
   onDelete?: (category: FilterCategory) => void;
   // Reorder this category among its siblings (−1 = up, +1 = down). The flags say
@@ -113,11 +116,18 @@ export default function CategorySection({
           </div>
         ) : (
           <div className={styles.row}>
-            {category.filters.map((filter) => (
+            {category.filters.map((filter, i) => (
               <SavedFilterCard
                 key={filter.id}
                 filter={filter}
                 onEdit={onEditFilter}
+                onMove={
+                  onMoveFilter
+                    ? (f, delta) => onMoveFilter(category, f, delta)
+                    : undefined
+                }
+                canMoveLeft={i > 0}
+                canMoveRight={i < category.filters.length - 1}
               />
             ))}
           </div>

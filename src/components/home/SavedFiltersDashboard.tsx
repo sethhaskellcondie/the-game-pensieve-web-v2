@@ -6,8 +6,10 @@ import { PlusIcon } from "@/components/custom-fields/icons";
 import { newFilterId } from "@/components/filters/ids";
 import { useToast } from "@/components/ToastProvider";
 import { UNCATEGORIZED_ID } from "@/lib/savedFilterCategories.types";
+import type { StoredFilter } from "@/lib/savedFilters.types";
 import CategorySection from "./CategorySection";
-import type { FilterCategory } from "./types";
+import SavedFilterDialog from "./SavedFilterDialog";
+import type { FilterCategory, SavedFilter } from "./types";
 import styles from "./SavedFiltersDashboard.module.css";
 
 // The default name a freshly created category gets; renamed later on the edit
@@ -21,10 +23,36 @@ function summary(categoryCount: number, filterCount: number): string {
   return `${cats}, and ${filters}.`;
 }
 
-// Map the display rows to the stored { id, name, order } shape; order is the
-// array index, matching how the backend re-derives it.
-function toStored(rows: FilterCategory[]) {
+// The `rows` view (categories each holding an ordered filter list) is the single
+// in-session source of truth; both backend stores are derived from it. A
+// category's index is its order; a filter's category is the row it sits in and
+// its order is its index there.
+function toStoredCategories(rows: FilterCategory[]) {
   return rows.map((c, i) => ({ id: c.id, name: c.name, order: i }));
+}
+
+function toStoredFilters(rows: FilterCategory[]): StoredFilter[] {
+  return rows.flatMap((c) =>
+    c.filters.map((f, j) => ({
+      id: f.id,
+      name: f.name,
+      entity: f.entity,
+      categoryId: c.id,
+      order: j,
+      conditions: f.conditions.map((cond) => ({
+        id: cond.id,
+        field: cond.field,
+        label: cond.label,
+        kind: cond.kind,
+        source: cond.source,
+        operator: cond.operator,
+        operand: cond.operand,
+        ...(cond.operandLabel != null
+          ? { operandLabel: cond.operandLabel }
+          : {}),
+      })),
+    })),
+  );
 }
 
 // The home dashboard of saved filters: a greeting + counts, a "New Category"
@@ -41,28 +69,48 @@ export default function SavedFiltersDashboard({
   initialCategories: FilterCategory[];
 }) {
   const [rows, setRows] = useState<FilterCategory[]>(initialCategories);
+  // Which saved filter is being created or edited, plus its owning category.
+  // `filter` is set in edit mode, absent when creating a new one.
+  const [filterDialog, setFilterDialog] = useState<{
+    category: FilterCategory;
+    filter?: SavedFilter;
+  } | null>(null);
   const { showSnackbar } = useToast();
 
   const categoryCount = rows.length;
   const filterCount = rows.reduce((n, c) => n + c.filters.length, 0);
 
-  // Optimistically show the new ordering, then persist the whole list. On
-  // failure, revert to the previous rows and surface the error so the UI never
-  // silently diverges from the backend.
-  const persist = async (next: FilterCategory[]) => {
+  // Optimistically apply the new rows, then persist whichever store(s) the change
+  // touched. On failure, revert and surface the error so the UI never silently
+  // diverges from the backend.
+  const persist = async (
+    next: FilterCategory[],
+    stores: { categories?: boolean; filters?: boolean },
+  ) => {
     const prev = rows;
     setRows(next);
-    try {
-      const res = await fetch("/api/saved-filter-categories", {
+    const post = (path: string, body: unknown) =>
+      fetch(path, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(toStored(next)),
+        body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error("Request failed");
+    try {
+      const requests: Promise<Response>[] = [];
+      if (stores.categories) {
+        requests.push(
+          post("/api/saved-filter-categories", toStoredCategories(next)),
+        );
+      }
+      if (stores.filters) {
+        requests.push(post("/api/saved-filters", toStoredFilters(next)));
+      }
+      const results = await Promise.all(requests);
+      if (results.some((r) => !r.ok)) throw new Error("Request failed");
     } catch {
       setRows(prev);
       showSnackbar({
-        message: "Couldn't save categories. Please try again.",
+        message: "Couldn't save your changes. Please try again.",
         variant: "error",
       });
     }
@@ -80,15 +128,29 @@ export default function SavedFiltersDashboard({
     const next = [...rows];
     if (uIndex < 0) next.push(newCat);
     else next.splice(uIndex, 0, newCat);
-    void persist(next);
+    void persist(next, { categories: true });
   };
 
-  // Rename / remove a real category.
+  // Rename a real category.
   const onRenameCategory = (category: FilterCategory, name: string) => {
-    void persist(rows.map((c) => (c.id === category.id ? { ...c, name } : c)));
+    void persist(
+      rows.map((c) => (c.id === category.id ? { ...c, name } : c)),
+      { categories: true },
+    );
   };
+
+  // Delete a real category; its filters aren't lost — they fall back to the
+  // Uncategorized row (so both stores change when the category held filters).
   const onDeleteCategory = (category: FilterCategory) => {
-    void persist(rows.filter((c) => c.id !== category.id));
+    const orphaned = rows.find((c) => c.id === category.id)?.filters ?? [];
+    const next = rows
+      .filter((c) => c.id !== category.id)
+      .map((c) =>
+        c.id === UNCATEGORIZED_ID
+          ? { ...c, filters: [...c.filters, ...orphaned] }
+          : c,
+      );
+    void persist(next, { categories: true, filters: orphaned.length > 0 });
   };
 
   // Swap a row with its neighbor to reorder the displayed rows — works for any
@@ -99,12 +161,70 @@ export default function SavedFiltersDashboard({
     if (index < 0 || target < 0 || target >= rows.length) return;
     const next = [...rows];
     [next[index], next[target]] = [next[target], next[index]];
-    void persist(next);
+    void persist(next, { categories: true });
   };
 
-  // TODO(saved-filters wiring): open the create/edit flows and persist changes.
-  const onNewFilter = () => {};
-  const onEditFilter = () => {};
+  // Open the dialog to create a filter in this category, or to edit an existing
+  // one (found by walking the rows for its id).
+  const onNewFilter = (category: FilterCategory) => {
+    setFilterDialog({ category });
+  };
+  const onEditFilter = (filter: SavedFilter) => {
+    const category = rows.find((c) =>
+      c.filters.some((f) => f.id === filter.id),
+    );
+    if (category) setFilterDialog({ category, filter });
+  };
+
+  // Create, update, or move a saved filter. It's removed from any category it
+  // was in, then placed in `categoryId` — replaced in place if it already lived
+  // there (preserving its order), otherwise appended to that category's end.
+  const saveFilter = (saved: SavedFilter, categoryId: string) => {
+    const next = rows.map((c) => {
+      if (c.id === categoryId) {
+        const index = c.filters.findIndex((f) => f.id === saved.id);
+        if (index >= 0) {
+          const filters = [...c.filters];
+          filters[index] = saved;
+          return { ...c, filters };
+        }
+        return {
+          ...c,
+          filters: [...c.filters.filter((f) => f.id !== saved.id), saved],
+        };
+      }
+      return { ...c, filters: c.filters.filter((f) => f.id !== saved.id) };
+    });
+    void persist(next, { filters: true });
+  };
+
+  const deleteFilter = (filterId: string) => {
+    void persist(
+      rows.map((c) => ({
+        ...c,
+        filters: c.filters.filter((f) => f.id !== filterId),
+      })),
+      { filters: true },
+    );
+  };
+
+  // Reorder a filter within its category (cards run left→right).
+  const moveFilter = (
+    category: FilterCategory,
+    filter: SavedFilter,
+    delta: -1 | 1,
+  ) => {
+    const next = rows.map((c) => {
+      if (c.id !== category.id) return c;
+      const index = c.filters.findIndex((f) => f.id === filter.id);
+      const target = index + delta;
+      if (index < 0 || target < 0 || target >= c.filters.length) return c;
+      const filters = [...c.filters];
+      [filters[index], filters[target]] = [filters[target], filters[index]];
+      return { ...c, filters };
+    });
+    void persist(next, { filters: true });
+  };
 
   return (
     <div className={styles.dashboard}>
@@ -131,6 +251,7 @@ export default function SavedFiltersDashboard({
               category={category}
               onNewFilter={onNewFilter}
               onEditFilter={onEditFilter}
+              onMoveFilter={moveFilter}
               onRename={isUncategorized ? undefined : onRenameCategory}
               onDelete={isUncategorized ? undefined : onDeleteCategory}
               onMove={onMoveCategory}
@@ -140,6 +261,21 @@ export default function SavedFiltersDashboard({
           );
         })}
       </div>
+
+      {filterDialog && (
+        <SavedFilterDialog
+          initial={filterDialog.filter}
+          categories={rows.map((c) => ({ id: c.id, name: c.name }))}
+          initialCategoryId={filterDialog.category.id}
+          onSave={saveFilter}
+          onDelete={
+            filterDialog.filter
+              ? () => deleteFilter(filterDialog.filter!.id)
+              : undefined
+          }
+          onClose={() => setFilterDialog(null)}
+        />
+      )}
     </div>
   );
 }

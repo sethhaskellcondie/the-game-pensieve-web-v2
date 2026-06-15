@@ -2,7 +2,7 @@ import Image from "next/image";
 import Header from "@/components/Header";
 import Stats from "@/components/Stats";
 import SavedFiltersDashboard from "@/components/home/SavedFiltersDashboard";
-import type { FilterCategory } from "@/components/home/types";
+import type { FilterCategory, SavedFilter } from "@/components/home/types";
 import {
   searchVideoGames,
   searchVideoGameBoxes,
@@ -11,25 +11,67 @@ import {
   searchToys,
 } from "@/lib/api";
 import { loadSavedFilterCategories } from "@/lib/savedFilterCategories";
+import { UNCATEGORIZED_ID } from "@/lib/savedFilterCategories.types";
+import { loadSavedFilters } from "@/lib/savedFilters";
 import styles from "./page.module.css";
 
 export default async function Home() {
-  const [videoGameBoxes, videoGames, boardGameBoxes, boardGames, toys, categories] =
-    await Promise.all([
-      searchVideoGameBoxes(),
-      searchVideoGames(),
-      searchBoardGameBoxes(),
-      searchBoardGames(),
-      searchToys(),
-      loadSavedFilterCategories(),
-    ]);
+  const [
+    videoGameBoxes,
+    videoGames,
+    boardGameBoxes,
+    boardGames,
+    toys,
+    categories,
+    savedFilters,
+  ] = await Promise.all([
+    searchVideoGameBoxes(),
+    searchVideoGames(),
+    searchBoardGameBoxes(),
+    searchBoardGames(),
+    searchToys(),
+    loadSavedFilterCategories(),
+    loadSavedFilters(),
+  ]);
 
-  // The stored categories carry only { id, name, order }; saved filters aren't
-  // wired yet, so each row starts with an empty card list.
+  // Group the saved filters under their category, ordered within it. A filter
+  // whose category no longer exists falls back to Uncategorized (which the
+  // categories store always includes), so an orphan never disappears.
+  const knownCategoryIds = new Set(categories.map((c) => c.id));
+  const grouped = new Map<string, { order: number; filter: SavedFilter }[]>();
+  for (const f of savedFilters) {
+    const cid = knownCategoryIds.has(f.categoryId)
+      ? f.categoryId
+      : UNCATEGORIZED_ID;
+    const entry = grouped.get(cid) ?? [];
+    entry.push({
+      order: f.order,
+      filter: {
+        id: f.id,
+        name: f.name,
+        entity: f.entity,
+        count: null,
+        conditions: f.conditions.map((c) => ({
+          id: c.id,
+          field: c.field,
+          label: c.label,
+          kind: c.kind,
+          source: c.source,
+          operator: c.operator,
+          operand: c.operand,
+          operandLabel: c.operandLabel,
+        })),
+      },
+    });
+    grouped.set(cid, entry);
+  }
+
   const initialCategories: FilterCategory[] = categories.map((c) => ({
     id: c.id,
     name: c.name,
-    filters: [],
+    filters: (grouped.get(c.id) ?? [])
+      .sort((a, b) => a.order - b.order)
+      .map((e) => e.filter),
   }));
 
   return (

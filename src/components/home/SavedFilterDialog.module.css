@@ -1,0 +1,317 @@
+/* New / edit saved-filter dialog. Chrome mirrors the other home dialogs; the
+   filter chips + editor and the Add button reuse the collection-page filter
+   primitives. overflow is visible so the entity menu and filter editor popovers
+   can escape the modal box instead of being clipped. */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(var(--ink-navy-rgb), 0.42);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: saved-filter-fade 0.14s ease;
+}
+
+@keyframes saved-filter-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal {
+  width: 560px;
+  max-width: 100%;
+  overflow: visible;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 30px 80px -20px rgba(var(--ink-navy-rgb), 0.5);
+  padding: 22px 24px 20px;
+  animation: saved-filter-pop 0.16s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@keyframes saved-filter-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .modal {
+    animation: none;
+  }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink-navy);
+  letter-spacing: -0.01em;
+}
+
+.close {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--cannon-red);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.close:hover {
+  background: #fdecec;
+  color: var(--cannon-red);
+}
+
+/* Stacked form rows: Name, Applies to, Filters. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.field + .field {
+  margin-top: 16px;
+}
+
+.label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--gray-700);
+}
+
+.input {
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+  font-size: var(--text-label);
+  color: var(--ink-navy);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.input:focus-visible {
+  outline: none;
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 3px rgba(var(--ink-navy-rgb), 0.1);
+}
+
+/* The entity / category dropdowns size themselves; cap them so they don't
+   stretch full width. */
+.entity,
+.category {
+  max-width: 260px;
+}
+
+/* The conditions area: chips wrap, with the Add button trailing. */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Positioning context so the editor popover anchors under its chip / Add btn. */
+.anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+/* "+ Add filter" — the outlined toolbar style, matching the collection pages. */
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--ink-navy);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: 0.12s;
+}
+
+.addBtn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.addBtn:hover:not(:disabled) {
+  background: var(--paper);
+  border-color: #cad3e0;
+}
+
+.addBtn:disabled {
+  color: var(--gray-500);
+  cursor: not-allowed;
+}
+
+.addBtn:focus-visible {
+  outline: 2px solid var(--primary-600);
+  outline-offset: 2px;
+}
+
+.hint {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--gray-500);
+}
+
+/* Delete on the left, Cancel/Save on the right. */
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 24px;
+}
+
+.deleteWrap {
+  position: relative;
+}
+
+.del {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--field-red-text);
+  border-radius: 10px;
+  background: var(--field-red-text);
+  color: var(--white-pure);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.13s ease;
+}
+
+.del svg {
+  width: 15px;
+  height: 15px;
+}
+
+.del:hover,
+.del[aria-expanded="true"] {
+  background: #a93226;
+}
+
+.confirm {
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
+  white-space: nowrap;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 16px 36px -14px rgba(var(--ink-navy-rgb), 0.35);
+}
+
+.confirmText {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-navy);
+}
+
+.confirmDelete {
+  padding: 6px 13px;
+  border: 1px solid var(--field-red-text);
+  border-radius: 8px;
+  background: var(--field-red-text);
+  color: var(--white-pure);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.13s ease;
+}
+
+.confirmDelete:hover {
+  background: #a93226;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.cancel {
+  height: 42px;
+  min-width: 96px;
+  padding: 0 18px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink-navy);
+}
+
+.cancel:hover {
+  background: #f3f5f9;
+}
+
+.save {
+  height: 42px;
+  min-width: 110px;
+  padding: 0 22px;
+  border: none;
+  background: var(--primary-600);
+  color: #fff;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  transition: 0.12s;
+}
+
+.save:hover:not(:disabled) {
+  background: #205fd6;
+}
+
+.save:disabled {
+  background: #c6d4ea;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .del,
+  .confirmDelete,
+  .save {
+    transition: none;
+  }
+}

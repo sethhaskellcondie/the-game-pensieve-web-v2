@@ -124,9 +124,17 @@
   color: var(--gray-700);
 }
 
-.editBtn {
+/* The footer's right-side controls: reorder arrows (revealed on hover) plus the
+   always-visible edit pencil. Sits above the card's stretched link. */
+.actions {
   position: relative;
   z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.iconBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -140,13 +148,33 @@
   transition: 0.12s;
 }
 
-.editBtn:hover {
+.iconBtn:hover:not(:disabled) {
   background: var(--paper);
   border-color: var(--line);
   color: var(--primary-600);
 }
 
-.editBtn:focus-visible {
+.iconBtn:focus-visible {
   outline: 2px solid var(--primary-600);
   outline-offset: 2px;
+}
+
+/* The reorder arrows are the first two buttons; reveal them on card hover (or
+   keyboard focus), and dim them when disabled at a row end. */
+.actions .iconBtn:not(:last-child) {
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s, color 0.12s;
+}
+
+.card:hover .actions .iconBtn:not(:last-child),
+.actions .iconBtn:focus-visible {
+  opacity: 1;
+}
+
+.iconBtn:disabled {
+  cursor: default;
+}
+
+.card:hover .actions .iconBtn:disabled {
+  opacity: 0.4;
 }
