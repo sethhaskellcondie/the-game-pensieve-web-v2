@@ -34,7 +34,7 @@ export const ENTITY_ROUTES: Record<EntityKey, EntityRoute> = {
     route: "/video-games",
     view: "shelf",
     Icon: VideoGameBoxIcon,
-    countNoun: "games",
+    countNoun: "boxes",
   },
   boardGame: {
     route: "/board-games",
@@ -46,7 +46,7 @@ export const ENTITY_ROUTES: Record<EntityKey, EntityRoute> = {
     route: "/board-games",
     view: "shelf",
     Icon: BoardGameBoxIcon,
-    countNoun: "games",
+    countNoun: "boxes",
   },
   toy: { route: "/toys", Icon: ToysIcon, countNoun: "toys" },
   system: { route: "/systems", Icon: SystemsIcon, countNoun: "systems" },

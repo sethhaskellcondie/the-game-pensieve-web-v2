@@ -11,16 +11,15 @@ export type SavedFilterCondition = ActiveFilter & {
 };
 
 // A single saved filter — one card. It targets an entity page and pre-applies
-// `conditions` there when opened, exactly as if they'd been entered by hand.
+// `conditions` there when opened, exactly as if they'd been entered by hand. The
+// match count shown on the card is derived live from these conditions (see
+// useMatchCount), not stored.
 export type SavedFilter = {
   id: string;
   name: string;
   // Which collection page this opens (and whose icon/noun the card shows).
   entity: EntityKey;
   conditions: SavedFilterCondition[];
-  // Result count shown as "{count} {noun}". Null until computed against the
-  // backend (the count is derived data, not part of the saved definition).
-  count: number | null;
 };
 
 // A named group of saved filters — one labeled row on the dashboard.

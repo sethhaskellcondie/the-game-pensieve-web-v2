@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   ChevronLeftIcon,
@@ -9,6 +11,7 @@ import { operatorLabel } from "@/components/filters/operators";
 import { encodeFilterParam, FILTERS_PARAM } from "@/components/filters/urlFilters";
 import type { SavedFilterCondition, SavedFilter } from "./types";
 import { ENTITY_ROUTES } from "./entityRoutes";
+import { useMatchCount } from "./matchCount";
 import styles from "./SavedFilterCard.module.css";
 
 // The collection-page URL a card opens: its route, the list/shelf view for
@@ -78,6 +81,8 @@ export default function SavedFilterCard({
 }) {
   const { Icon, countNoun } = ENTITY_ROUTES[filter.entity];
   const href = hrefFor(filter);
+  // Live count of records this filter matches; "—" until it resolves.
+  const count = useMatchCount(filter.entity, filter.conditions);
 
   return (
     <article className={styles.card}>
@@ -98,7 +103,7 @@ export default function SavedFilterCard({
 
       <div className={styles.foot}>
         <span className={styles.count}>
-          {filter.count == null ? "—" : filter.count} {countNoun}
+          {count == null ? "—" : count} {countNoun}
         </span>
         <div className={styles.actions}>
           {onMove != null && (

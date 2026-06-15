@@ -34,7 +34,7 @@
 .entityIcon {
   flex: 0 0 auto;
   display: inline-flex;
-  color: var(--gray-500);
+  color: var(--primary-600);
 }
 
 .entityIcon svg {

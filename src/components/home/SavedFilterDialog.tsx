@@ -196,7 +196,6 @@ export default function SavedFilterDialog({
         name: trimmed,
         entity,
         conditions: savedConditions,
-        count: initial?.count ?? null,
       },
       categoryId,
     );

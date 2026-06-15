@@ -50,7 +50,6 @@ export default async function Home() {
         id: f.id,
         name: f.name,
         entity: f.entity,
-        count: null,
         conditions: f.conditions.map((c) => ({
           id: c.id,
           field: c.field,
