@@ -1,6 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  closestCorners,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import Button from "@/components/Button";
 import { PlusIcon } from "@/components/custom-fields/icons";
 import { newFilterId } from "@/components/filters/ids";
@@ -8,7 +21,12 @@ import { useToast } from "@/components/ToastProvider";
 import { UNCATEGORIZED_ID } from "@/lib/savedFilterCategories.types";
 import type { StoredFilter } from "@/lib/savedFilters.types";
 import CategorySection from "./CategorySection";
+import SavedFilterCard from "./SavedFilterCard";
 import SavedFilterDialog from "./SavedFilterDialog";
+import {
+  findCategoryIndex,
+  moveFilter as moveFilterTo,
+} from "./dragReorder";
 import type { FilterCategory, SavedFilter } from "./types";
 import styles from "./SavedFiltersDashboard.module.css";
 
@@ -55,6 +73,22 @@ function toStoredFilters(rows: FilterCategory[]): StoredFilter[] {
   );
 }
 
+// Whether two row lists place the same filters in the same order under the same
+// categories — used to skip a save when a drag ends where it began.
+function sameArrangement(a: FilterCategory[], b: FilterCategory[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].id !== b[i].id) return false;
+    const fa = a[i].filters;
+    const fb = b[i].filters;
+    if (fa.length !== fb.length) return false;
+    for (let j = 0; j < fa.length; j++) {
+      if (fa[j].id !== fb[j].id) return false;
+    }
+  }
+  return true;
+}
+
 // The home dashboard of saved filters: a greeting + counts, a "New Category"
 // action, and one horizontally-scrolling row of cards per category. Owns the
 // ordered row list as state and persists every change to the metadata-backed
@@ -75,7 +109,21 @@ export default function SavedFiltersDashboard({
     category: FilterCategory;
     filter?: SavedFilter;
   } | null>(null);
+  // The card riding the cursor (rendered in the DragOverlay), and the rows as
+  // they were when the drag began — restored verbatim if the save fails.
+  const [activeFilter, setActiveFilter] = useState<SavedFilter | null>(null);
+  const dragSnapshot = useRef<FilterCategory[] | null>(null);
   const { showSnackbar } = useToast();
+
+  // A click on a card opens its link; a real drag has to clear an 8px threshold
+  // first, so the two never collide. Keyboard dragging follows the horizontal
+  // sortable order.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   // The summary counts only real categories — the always-present Uncategorized
   // row is a catch-all bucket, not a category the user created.
@@ -210,22 +258,85 @@ export default function SavedFiltersDashboard({
     );
   };
 
-  // Reorder a filter within its category (cards run left→right).
-  const moveFilter = (
-    category: FilterCategory,
-    filter: SavedFilter,
-    delta: -1 | 1,
+  // Optimistically keep `next` (already applied to state by the drag handlers)
+  // and persist only the filters store — a drag never touches the category list.
+  // On failure, roll the whole board back to where the drag started.
+  const commitFilters = async (
+    next: FilterCategory[],
+    snapshot: FilterCategory[],
   ) => {
-    const next = rows.map((c) => {
-      if (c.id !== category.id) return c;
-      const index = c.filters.findIndex((f) => f.id === filter.id);
-      const target = index + delta;
-      if (index < 0 || target < 0 || target >= c.filters.length) return c;
-      const filters = [...c.filters];
-      [filters[index], filters[target]] = [filters[target], filters[index]];
-      return { ...c, filters };
+    try {
+      const res = await fetch("/api/saved-filters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(toStoredFilters(next)),
+      });
+      if (!res.ok) throw new Error("Request failed");
+    } catch {
+      setRows(snapshot);
+      showSnackbar({
+        message: "Couldn't save your changes. Please try again.",
+        variant: "error",
+      });
+    }
+  };
+
+  // Drag lifecycle. A card is dragged to reorder it within its category or to
+  // drop it into another one. We snapshot the board on start, shift the card
+  // live across categories as it's dragged over them (within a category the
+  // sortable strategy animates the gap on its own), and finalize its position on
+  // drop. The save runs once on drop, only when something actually moved, and a
+  // failed save rolls the board back to the snapshot.
+  const onDragStart = (event: DragStartEvent) => {
+    dragSnapshot.current = rows;
+    const id = String(event.active.id);
+    const filter = rows
+      .flatMap((c) => c.filters)
+      .find((f) => f.id === id);
+    setActiveFilter(filter ?? null);
+  };
+
+  const onDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    setRows((prev) => {
+      const from = findCategoryIndex(prev, activeId);
+      const to = findCategoryIndex(prev, overId);
+      // Cross-category hops are applied here; same-category shifting is left to
+      // the sortable strategy so the two don't fight over the same frame.
+      if (from < 0 || to < 0 || from === to) return prev;
+      return moveFilterTo(prev, activeId, overId);
     });
-    void persist(next, { filters: true });
+  };
+
+  const onDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveFilter(null);
+    const snapshot = dragSnapshot.current;
+    dragSnapshot.current = null;
+    // Dropped outside any target: undo any live cross-category shift.
+    if (!over) {
+      if (snapshot) setRows(snapshot);
+      return;
+    }
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    let committed: FilterCategory[] | null = null;
+    setRows((prev) => {
+      committed = moveFilterTo(prev, activeId, overId);
+      return committed;
+    });
+    if (committed && snapshot && !sameArrangement(committed, snapshot)) {
+      void commitFilters(committed, snapshot);
+    }
+  };
+
+  const onDragCancel = () => {
+    setActiveFilter(null);
+    if (dragSnapshot.current) setRows(dragSnapshot.current);
+    dragSnapshot.current = null;
   };
 
   return (
@@ -242,27 +353,43 @@ export default function SavedFiltersDashboard({
         </Button>
       </div>
 
-      <div className={styles.categories}>
-        {rows.map((category, i) => {
-          // Uncategorized is reorderable like the rest, but never renamed or
-          // deleted — so it gets onMove but no onRename/onDelete (no pencil).
-          const isUncategorized = category.id === UNCATEGORIZED_ID;
-          return (
-            <CategorySection
-              key={category.id}
-              category={category}
-              onNewFilter={onNewFilter}
-              onEditFilter={onEditFilter}
-              onMoveFilter={moveFilter}
-              onRename={isUncategorized ? undefined : onRenameCategory}
-              onDelete={isUncategorized ? undefined : onDeleteCategory}
-              onMove={onMoveCategory}
-              canMoveUp={i > 0}
-              canMoveDown={i < rows.length - 1}
-            />
-          );
-        })}
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDragEnd={onDragEnd}
+        onDragCancel={onDragCancel}
+      >
+        <div className={styles.categories}>
+          {rows.map((category, i) => {
+            // Uncategorized is reorderable like the rest, but never renamed or
+            // deleted — so it gets onMove but no onRename/onDelete (no pencil).
+            const isUncategorized = category.id === UNCATEGORIZED_ID;
+            return (
+              <CategorySection
+                key={category.id}
+                category={category}
+                onNewFilter={onNewFilter}
+                onEditFilter={onEditFilter}
+                onRename={isUncategorized ? undefined : onRenameCategory}
+                onDelete={isUncategorized ? undefined : onDeleteCategory}
+                onMove={onMoveCategory}
+                canMoveUp={i > 0}
+                canMoveDown={i < rows.length - 1}
+              />
+            );
+          })}
+        </div>
+        {/* The card clone that rides the cursor — no sortable wiring, just the
+            lifted `overlay` look. (It re-resolves its own match count for the
+            life of the drag, an abortable request that ends when it's dropped.) */}
+        <DragOverlay>
+          {activeFilter ? (
+            <SavedFilterCard filter={activeFilter} overlay />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {filterDialog && (
         <SavedFilterDialog

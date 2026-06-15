@@ -1,11 +1,8 @@
 "use client";
 
+import type { CSSProperties, HTMLAttributes, Ref } from "react";
 import Link from "next/link";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  PencilIcon,
-} from "@/components/custom-fields/icons";
+import { PencilIcon } from "@/components/custom-fields/icons";
 import FieldGlyph from "@/components/filters/FieldGlyph";
 import { operatorLabel } from "@/components/filters/operators";
 import { encodeFilterParam, FILTERS_PARAM } from "@/components/filters/urlFilters";
@@ -64,20 +61,31 @@ function ConditionPill({ condition }: { condition: SavedFilterCondition }) {
 // stretched over the whole card). The trailing pencil floats above that link
 // and opens the edit screen instead — the only place a saved filter is renamed,
 // re-scoped, or deleted.
+//
+// The whole card is also the drag handle: SortableFilterCard threads the dnd-kit
+// node ref, transform style, and pointer listeners through `nodeRef`, `style`,
+// and `handleProps`. A short drag-activation distance keeps a plain click on the
+// title working as a link. The same card renders statically in the DragOverlay
+// (no drag props), so all of those are optional.
 export default function SavedFilterCard({
   filter,
   onEdit,
-  onMove,
-  canMoveLeft = false,
-  canMoveRight = false,
+  nodeRef,
+  style,
+  handleProps,
+  dragging = false,
+  overlay = false,
 }: {
   filter: SavedFilter;
   onEdit?: (filter: SavedFilter) => void;
-  // Reorder this filter within its category (−1 = earlier/left, +1 = later/
-  // right). The flags disable each arrow at the row's ends.
-  onMove?: (filter: SavedFilter, delta: -1 | 1) => void;
-  canMoveLeft?: boolean;
-  canMoveRight?: boolean;
+  // dnd-kit wiring, supplied only by the sortable wrapper.
+  nodeRef?: Ref<HTMLElement>;
+  style?: CSSProperties;
+  handleProps?: HTMLAttributes<HTMLElement>;
+  // The original card while its clone rides the cursor (hidden); the floating
+  // clone itself reads `overlay`.
+  dragging?: boolean;
+  overlay?: boolean;
 }) {
   const { Icon, countNoun } = ENTITY_ROUTES[filter.entity];
   const href = hrefFor(filter);
@@ -85,12 +93,19 @@ export default function SavedFilterCard({
   const count = useMatchCount(filter.entity, filter.conditions);
 
   return (
-    <article className={styles.card}>
+    <article
+      ref={nodeRef}
+      style={style}
+      className={`${styles.card}${dragging ? ` ${styles.dragging}` : ""}${
+        overlay ? ` ${styles.overlay}` : ""
+      }`}
+      {...handleProps}
+    >
       <div className={styles.head}>
         <span className={styles.entityIcon} aria-hidden="true">
           <Icon />
         </span>
-        <Link href={href} className={styles.title}>
+        <Link href={href} className={styles.title} draggable={false}>
           {filter.name}
         </Link>
       </div>
@@ -106,33 +121,14 @@ export default function SavedFilterCard({
           {count == null ? "—" : count} {countNoun}
         </span>
         <div className={styles.actions}>
-          {onMove != null && (
-            <>
-              <button
-                type="button"
-                className={styles.iconBtn}
-                aria-label={`Move ${filter.name} left`}
-                disabled={!canMoveLeft}
-                onClick={() => onMove(filter, -1)}
-              >
-                <ChevronLeftIcon />
-              </button>
-              <button
-                type="button"
-                className={styles.iconBtn}
-                aria-label={`Move ${filter.name} right`}
-                disabled={!canMoveRight}
-                onClick={() => onMove(filter, 1)}
-              >
-                <ChevronRightIcon />
-              </button>
-            </>
-          )}
           <button
             type="button"
             className={styles.iconBtn}
             aria-label={`Edit ${filter.name}`}
             onClick={() => onEdit?.(filter)}
+            // The card is a drag handle; keep the pencil a plain click, not a
+            // drag start, and keep it off the stretched title link.
+            onPointerDown={(e) => e.stopPropagation()}
           >
             <PencilIcon />
           </button>
