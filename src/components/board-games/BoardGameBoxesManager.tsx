@@ -20,6 +20,8 @@ import DataTable, {
 import { PlusIcon } from "@/components/custom-fields/icons";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
+import BeginnerHint from "@/components/BeginnerHint";
+import { BEGINNER_HINTS } from "@/components/beginnerHints";
 import FilterBar from "@/components/filters/FilterBar";
 import {
   fetchDefaultSortOptions,
@@ -590,12 +592,15 @@ export default function BoardGameBoxesManager() {
     <div className={styles.page}>
       <div className={styles.head}>
         <div className={styles.titleWrap}>
-          <h2 className={styles.entName}><b>{boxes.length}</b> {boxes.length === 1 ? "Board Game Box" : "Board Game Boxes"}</h2>
-          {massEditMode && (
-            <div className={styles.crumb}>
-              <span>Mass edit mode is on.</span>
-            </div>
-          )}
+          <div className={styles.titleRow}>
+            <h2 className={styles.entName}><b>{boxes.length}</b> {boxes.length === 1 ? "Board Game Box" : "Board Game Boxes"}</h2>
+            {massEditMode && (
+              <BeginnerHint
+                placement="bottom-start"
+                text={BEGINNER_HINTS.massEdit}
+              />
+            )}
+          </div>
         </div>
         <FilterBar
           entityKey="boardGameBox"
@@ -606,6 +611,7 @@ export default function BoardGameBoxesManager() {
           onSearchChange={setQuery}
           searchPlaceholder="Search board game boxes…"
           searchAriaLabel="Search board game boxes"
+          searchHint={BEGINNER_HINTS.boardGameSearch}
           sorts={canSort ? sorts : undefined}
           onSortsChange={canSort ? setSorts : undefined}
         />

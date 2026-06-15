@@ -7,4 +7,27 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--paper);
+  /* Own stacking context below the header (its .content is z-index 2) so the
+     DataTable's sticky cells (z-index up to 50) stay trapped here and can't
+     paint over a header beginner-hint tooltip overflowing into this area.
+     Fixed-position modals/toasts escape to the viewport root, so they're
+     unaffected and still render on top. */
+  position: relative;
+  z-index: 0;
+}
+
+/* The view toggle and its beginner hint, pinned to the header's right edge. */
+.viewControls {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* The seedling sits on the dark header, so lighten its color to read there. */
+.viewHint {
+  --beginner-hint-color: var(--field-green-bg);
 }

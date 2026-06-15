@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   toCustomFieldValue,
   type BoardGameBox,
@@ -19,6 +20,8 @@ import {
 } from "@/components/custom-fields/registry";
 import { PlusIcon, XIcon } from "@/components/custom-fields/icons";
 import { useUiSettings } from "@/components/UiSettingsProvider";
+import BeginnerHint from "@/components/BeginnerHint";
+import { BEGINNER_HINTS } from "@/components/beginnerHints";
 import FieldEditor from "@/components/toys/toyFieldEditors";
 import BoardGameCreateModal from "./BoardGameCreateModal";
 import {
@@ -375,7 +378,12 @@ export default function BoardGameBoxCreateModal({
     }
   };
 
-  return (
+  // Portal to <body> so the fixed backdrop escapes the page content's stacking
+  // context (board-games.module.css .content is z-index 0). Rendered inline, the
+  // backdrop's z-index 60 is trapped below the Header's z-index-2 .content and
+  // the hero logo/title would paint over the modal. document is always defined
+  // here — the modal only mounts on a client-side open.
+  return createPortal(
     <>
       <div
         className={styles.backdrop}
@@ -487,7 +495,7 @@ export default function BoardGameBoxCreateModal({
                 <input
                   type="search"
                   className={gameStyles.pickerInput}
-                  placeholder="Pick the base set box — type to search…"
+                  placeholder="Change the base set box..."
                   aria-label="Pick a base set"
                   value={baseQuery}
                   onFocus={loadBoxes}
@@ -602,7 +610,7 @@ export default function BoardGameBoxCreateModal({
                 <input
                   type="search"
                   className={gameStyles.pickerInput}
-                  placeholder="Pick an existing game — type to search…"
+                  placeholder="Change the board game..."
                   aria-label="Pick an existing game"
                   value={pickerQuery}
                   onFocus={loadGames}
@@ -673,6 +681,18 @@ export default function BoardGameBoxCreateModal({
                   ? "Create And Add Another"
                   : "Create"}
             </button>
+            {!massInputMode && (
+              <BeginnerHint
+                placement="top-end"
+                text={BEGINNER_HINTS.massInputOff}
+              />
+            )}
+            {massInputMode && (
+              <BeginnerHint
+                placement="top-end"
+                text={BEGINNER_HINTS.massInputOn}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -693,6 +713,7 @@ export default function BoardGameBoxCreateModal({
           onClose={() => setAddingGame(false)}
         />
       )}
-    </>
+    </>,
+    document.body,
   );
 }

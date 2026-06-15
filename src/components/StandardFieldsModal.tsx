@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import BooleanBadge from "./BooleanBadge";
 import { ENTITY_META, ENTITY_ORDER } from "./custom-fields/registry";
 import { XIcon } from "./custom-fields/icons";
@@ -81,7 +82,12 @@ export default function StandardFieldsModal({
     else setFailed(true);
   };
 
-  return (
+  // Portal to <body> so the fixed backdrop escapes the page content's stacking
+  // context (the entity pages' .content is z-index 0). Rendered inline, the
+  // backdrop's z-index 60 is trapped below the Header's z-index-2 .content and
+  // the hero logo/title would paint over the modal. document is always defined
+  // here — the modal only mounts on a client-side open.
+  return createPortal(
     <div className={styles.backdrop} onMouseDown={onClose}>
       <div
         className={styles.modal}
@@ -155,6 +161,7 @@ export default function StandardFieldsModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

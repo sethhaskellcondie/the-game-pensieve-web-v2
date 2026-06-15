@@ -23,6 +23,13 @@
   flex: 0 0 auto;
 }
 
+/* The entity count and its (mass-edit) beginner hint, sitting inline. */
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .entName {
   margin: 0;
   font-size: 18px;

@@ -14,7 +14,7 @@ import {
 } from "@/lib/api";
 import Header from "@/components/Header";
 import Button from "@/components/Button";
-import { VideoGamesIcon } from "@/components/icons";
+import { VideoGamesIcon, SystemsIcon } from "@/components/icons";
 import { ChevronLeftIcon } from "@/components/custom-fields/icons";
 import {
   FIELD_TYPE_META,
@@ -23,11 +23,14 @@ import {
   StandardFieldGlyph,
 } from "@/components/custom-fields/registry";
 import { useToast } from "@/components/ToastProvider";
+// Aliased: CustomFieldValue (the type) is already imported from the API types.
+import CustomFieldValueDisplay from "@/components/toys/CustomFieldValue";
 import FieldEditor, {
   normalizeFieldValue,
 } from "@/components/toys/toyFieldEditors";
 import styles from "@/components/toys/ToyDetail.module.css";
-import localStyles from "./VideoGameDetail.module.css";
+// The chart styles are the box-detail chart's — same slim read-only rows.
+import chartStyles from "@/components/video-games/VideoGameBoxDetail.module.css";
 
 // One rendered field: the fixed Title/System rows and every custom field share
 // this shape so a single row renderer drives them all. `kind` reuses the
@@ -47,10 +50,14 @@ type Row = {
 export default function VideoGameDetail({
   game: initialGame,
   definitions,
+  boxDefinitions,
   systems,
 }: {
   game: VideoGame;
   definitions: CustomField[];
+  // The videoGameBox entity's custom-field definitions — they drive the columns
+  // of the read-only boxes chart.
+  boxDefinitions: CustomField[];
   systems: System[];
 }) {
   const { showToast, showSnackbar } = useToast();
@@ -229,9 +236,12 @@ export default function VideoGameDetail({
             })}
           </div>
 
-          {/* The boxes this game belongs to, each linking to its detail page.
-              The membership itself is managed through video game boxes. */}
-          <div className={styles.card}>
+          {/* The boxes this game belongs to as a slim read-only chart: title,
+              the box's system chip, its physical/collection flags, and one cell
+              per videoGameBox custom field. The whole row links to the box's
+              detail page. Boxes are edited (and the membership managed) on their
+              own detail pages, not here. */}
+          <div className={`${styles.card} ${chartStyles.gamesCard}`}>
             <div className={styles.caphdr}>
               <span className={styles.caphdrTitle}>Video Game Boxes</span>
               <span className={styles.caphdrCount}>
@@ -243,15 +253,60 @@ export default function VideoGameDetail({
                 <span className={styles.vText}>No boxes yet.</span>
               </div>
             ) : (
-              <ul aria-label="Video game boxes" className={localStyles.boxList}>
+              <ul aria-label="Video game boxes" className={chartStyles.gameList}>
                 {boxes.map((box) => (
-                  <li className={styles.row} key={box.id}>
-                    <Link
-                      href={`/video-game-boxes/${box.id}`}
-                      className={styles.vText}
-                    >
-                      {box.title}
-                    </Link>
+                  <li className={chartStyles.game} key={box.id}>
+                    <div>
+                      <div className={chartStyles.gameHead}>
+                        <Link
+                          href={`/video-game-boxes/${box.id}`}
+                          className={chartStyles.gameTitle}
+                        >
+                          {box.title}
+                        </Link>
+                        {box.system && (
+                          <span className={chartStyles.systemChip}>
+                            <SystemsIcon aria-hidden="true" />
+                            {box.system.name}
+                          </span>
+                        )}
+                        {box.collection && (
+                          <span className={chartStyles.systemChip}>
+                            Collection
+                          </span>
+                        )}
+                      </div>
+
+                      <div className={chartStyles.fieldGrid}>
+                        <div>
+                          <div className={chartStyles.fieldLabel}>Physical</div>
+                          <div className={chartStyles.fieldValue}>
+                            <CustomFieldValueDisplay
+                              type="boolean"
+                              value={box.physical ? "true" : "false"}
+                            />
+                          </div>
+                        </div>
+                        {boxDefinitions.map((def) => (
+                          <div key={def.id}>
+                            <div className={chartStyles.fieldLabel}>
+                              {def.name}
+                            </div>
+                            <div className={chartStyles.fieldValue}>
+                              <CustomFieldValueDisplay
+                                type={def.type}
+                                value={
+                                  box.customFieldValues.find(
+                                    (v) => v.customFieldId === def.id,
+                                  )?.value
+                                }
+                                options={def.options}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </li>
                 ))}
               </ul>

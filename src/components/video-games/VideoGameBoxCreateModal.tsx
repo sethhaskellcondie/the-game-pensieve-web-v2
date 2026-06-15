@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   toCustomFieldValue,
   type CustomField,
@@ -20,6 +21,8 @@ import {
 } from "@/components/custom-fields/registry";
 import { PlusIcon, XIcon } from "@/components/custom-fields/icons";
 import { useUiSettings } from "@/components/UiSettingsProvider";
+import BeginnerHint from "@/components/BeginnerHint";
+import { BEGINNER_HINTS } from "@/components/beginnerHints";
 import FieldEditor from "@/components/toys/toyFieldEditors";
 import VideoGameCreateModal from "./VideoGameCreateModal";
 import { searchVideoGamesClient } from "./searchClient";
@@ -316,7 +319,12 @@ export default function VideoGameBoxCreateModal({
     }
   };
 
-  return (
+  // Portal to <body> so the fixed backdrop escapes the page content's stacking
+  // context (video-games.module.css .content is z-index 0). Rendered inline, the
+  // backdrop's z-index 60 is trapped below the Header's z-index-2 .content and
+  // the hero logo/title would paint over the modal. document is always defined
+  // here — the modal only mounts on a client-side open.
+  return createPortal(
     <>
       <div
         className={styles.backdrop}
@@ -443,7 +451,7 @@ export default function VideoGameBoxCreateModal({
               <input
                 type="search"
                 className={gameStyles.pickerInput}
-                placeholder="Add an existing game — type to search…"
+                placeholder="Add an existing game..."
                 aria-label="Add an existing game"
                 value={pickerQuery}
                 onFocus={loadGames}
@@ -518,6 +526,18 @@ export default function VideoGameBoxCreateModal({
                   ? "Create And Add Another"
                   : "Create"}
             </button>
+            {!massInputMode && (
+              <BeginnerHint
+                placement="top-end"
+                text={BEGINNER_HINTS.massInputOff}
+              />
+            )}
+            {massInputMode && (
+              <BeginnerHint
+                placement="top-end"
+                text={BEGINNER_HINTS.massInputOn}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -543,6 +563,7 @@ export default function VideoGameBoxCreateModal({
           onClose={() => setAddingGame(false)}
         />
       )}
-    </>
+    </>,
+    document.body,
   );
 }

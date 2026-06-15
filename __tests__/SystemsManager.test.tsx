@@ -154,11 +154,17 @@ function routedFetch(url: string, init?: RequestInit) {
 function renderManager(
   massEditMode = false,
   standardFields = DEFAULT_UI_SETTINGS.standardFields,
+  beginnerMode = false,
 ) {
   return render(
     <ToastProvider>
       <UiSettingsProvider
-        initial={{ ...DEFAULT_UI_SETTINGS, massEditMode, standardFields }}
+        initial={{
+          ...DEFAULT_UI_SETTINGS,
+          massEditMode,
+          standardFields,
+          beginnerMode,
+        }}
       >
         <SystemsManager />
       </UiSettingsProvider>
@@ -291,12 +297,17 @@ describe("SystemsManager", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("omits the mass-edit crumb when mass edit mode is off", async () => {
-    renderManager(false);
+  it("omits the mass-edit hint when mass edit mode is off", async () => {
+    renderManager(false, DEFAULT_UI_SETTINGS.standardFields, true);
     await screen.findByText("NES");
 
+    screen
+      .queryAllByRole("button", { name: "Beginner hint" })
+      .forEach((h) => fireEvent.click(h));
     expect(
-      screen.queryByText("Mass edit mode is on."),
+      screen.queryByText(
+        /Mass Edit Mode is on, this allows you to make in-line edits/,
+      ),
     ).not.toBeInTheDocument();
     // Name stays plain text, not an inline-edit trigger button.
     expect(
@@ -304,13 +315,27 @@ describe("SystemsManager", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows the mass-edit crumb when mass edit mode is on", async () => {
+  it("shows the mass-edit hint when mass edit and beginner mode are on", async () => {
+    renderManager(true, DEFAULT_UI_SETTINGS.standardFields, true);
+    await screen.findByText("NES");
+
+    screen
+      .getAllByRole("button", { name: "Beginner hint" })
+      .forEach((h) => fireEvent.click(h));
+    expect(
+      screen.getByText(
+        /Mass Edit Mode is on, this allows you to make in-line edits/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("hides the mass-edit hint when beginner mode is off", async () => {
     renderManager(true);
     await screen.findByText("NES");
 
     expect(
-      screen.getByText("Mass edit mode is on."),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "Beginner hint" }),
+    ).not.toBeInTheDocument();
   });
 
   it("omits the open-details column when mass edit mode is off", async () => {

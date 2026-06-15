@@ -16,6 +16,7 @@ import DataTable, {
   type ColumnDef,
 } from "@/components/data-table/DataTable";
 import BeginnerHint from "@/components/BeginnerHint";
+import { BEGINNER_HINTS } from "@/components/beginnerHints";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import FilterBar from "@/components/filters/FilterBar";
@@ -430,12 +431,15 @@ export default function BoardGamesManager() {
     <div className={styles.page}>
       <div className={styles.head}>
         <div className={styles.titleWrap}>
-          <h2 className={styles.entName}><b>{games.length}</b> {games.length === 1 ? "Board Game" : "Board Games"}</h2>
-          {massEditMode && (
-            <div className={styles.crumb}>
-              <span>Mass edit mode is on.</span>
-            </div>
-          )}
+          <div className={styles.titleRow}>
+            <h2 className={styles.entName}><b>{games.length}</b> {games.length === 1 ? "Board Game" : "Board Games"}</h2>
+            {massEditMode && (
+              <BeginnerHint
+                placement="bottom-start"
+                text={BEGINNER_HINTS.massEdit}
+              />
+            )}
+          </div>
         </div>
         <FilterBar
           entityKey="boardGame"
@@ -446,6 +450,7 @@ export default function BoardGamesManager() {
           onSearchChange={setQuery}
           searchPlaceholder="Search board games…"
           searchAriaLabel="Search board games"
+          searchHint={BEGINNER_HINTS.boardGameSearch}
           sorts={canSort ? sorts : undefined}
           onSortsChange={canSort ? setSorts : undefined}
         />

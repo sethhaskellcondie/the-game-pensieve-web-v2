@@ -1,6 +1,8 @@
 import "@testing-library/jest-dom";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import FilterBar from "@/components/filters/FilterBar";
+import { UiSettingsProvider } from "@/components/UiSettingsProvider";
+import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
 import type { ActiveFilter, FilterFieldDef } from "@/components/filters/types";
 
 const fields: FilterFieldDef[] = [
@@ -370,6 +372,49 @@ describe("FilterBar", () => {
       .map((o) => o.textContent);
     expect(labels).toContain("Year");
     expect(labels).not.toContain("Series");
+  });
+
+  describe("searchHint beginner hint", () => {
+    const HINT =
+      "When searching with text all searches are case sensitive so Settlers of Catan is different from settlers of catan.";
+
+    function renderWithHint(beginnerMode: boolean) {
+      render(
+        <UiSettingsProvider initial={{ ...DEFAULT_UI_SETTINGS, beginnerMode }}>
+          <FilterBar
+            entityKey="boardGame"
+            fields={fields}
+            filters={[]}
+            onChange={jest.fn()}
+            searchValue=""
+            onSearchChange={jest.fn()}
+            searchAriaLabel="Search board games"
+            searchHint={HINT}
+          />
+        </UiSettingsProvider>,
+      );
+    }
+
+    it("discloses the case-sensitivity hint beside the search box in beginner mode", () => {
+      renderWithHint(true);
+      const button = screen.getByRole("button", { name: "Beginner hint" });
+      fireEvent.click(button);
+      expect(screen.getByRole("tooltip")).toHaveTextContent(HINT);
+    });
+
+    it("hides the hint while beginner mode is off", () => {
+      renderWithHint(false);
+      expect(
+        screen.queryByRole("button", { name: "Beginner hint" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("renders no hint when searchHint is omitted", () => {
+      setup();
+      expect(
+        screen.queryByRole("button", { name: "Beginner hint" }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it("removes a filter via its ✕", () => {

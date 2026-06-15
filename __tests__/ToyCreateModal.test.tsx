@@ -11,15 +11,19 @@ const definitions: CustomField[] = [];
 
 function renderModal({
   massInputMode = false,
+  beginnerMode = false,
   onCreate = jest.fn().mockResolvedValue(true),
   onClose = jest.fn(),
 }: {
   massInputMode?: boolean;
+  beginnerMode?: boolean;
   onCreate?: jest.Mock;
   onClose?: jest.Mock;
 } = {}) {
   render(
-    <UiSettingsProvider initial={{ ...DEFAULT_UI_SETTINGS, massInputMode }}>
+    <UiSettingsProvider
+      initial={{ ...DEFAULT_UI_SETTINGS, massInputMode, beginnerMode }}
+    >
       <ToyCreateModal
         definitions={definitions}
         saving={false}
@@ -61,6 +65,40 @@ describe("ToyCreateModal", () => {
       expect(onCreate).toHaveBeenCalledWith(
         expect.objectContaining({ name: "R2-D2" }),
       );
+    });
+  });
+
+  describe("beginner hint by the Create button", () => {
+    const HINT = /turn on "Mass Input Mode" in the options/;
+
+    it("shows the hint when beginner mode is on and mass input mode is off", () => {
+      renderModal({ beginnerMode: true, massInputMode: false });
+      const button = screen.getByRole("button", { name: "Beginner hint" });
+      fireEvent.click(button);
+      expect(screen.getByRole("tooltip")).toHaveTextContent(HINT);
+    });
+
+    it("swaps to the mass-input-on hint when mass input mode is on", () => {
+      renderModal({ beginnerMode: true, massInputMode: true });
+      const button = screen.getByRole("button", { name: "Beginner hint" });
+      fireEvent.click(button);
+      expect(screen.getByRole("tooltip")).toHaveTextContent(
+        /Mass Input Mode is on, this create form will loop through inputs/,
+      );
+    });
+
+    it("hides both hints while beginner mode is off", () => {
+      renderModal({ beginnerMode: false, massInputMode: false });
+      expect(
+        screen.queryByRole("button", { name: "Beginner hint" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("hides both hints while beginner mode is off even in mass input mode", () => {
+      renderModal({ beginnerMode: false, massInputMode: true });
+      expect(
+        screen.queryByRole("button", { name: "Beginner hint" }),
+      ).not.toBeInTheDocument();
     });
   });
 

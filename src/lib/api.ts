@@ -485,13 +485,23 @@ export function getSystemById(id: number): Promise<System | null> {
 // ---------- Video Games ----------
 // Shapes mirror the VideoGame schemas in backend-documentation/openapi.yaml,
 // with one divergence: the live API also returns a videoGameBoxes array on
-// each game (the spec omits it). Only the fields the UI uses are typed here.
+// each game (the spec omits it), and those nested boxes carry the box's system,
+// its physical/collection flags, custom field values, and timestamps. Note the
+// nested flags arrive as `physical`/`collection` (no `is` prefix), unlike the
+// `isPhysical`/`isCollection` on a directly-fetched VideoGameBox.
 // Video games have no create or delete endpoints — they are created (and
 // removed) through video game boxes.
 
 export type SlimVideoGameBox = {
   id: number;
   title: string;
+  system: System;
+  physical: boolean;
+  collection: boolean;
+  customFieldValues: CustomFieldValue[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
 };
 
 export type VideoGame = {

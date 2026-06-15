@@ -29,7 +29,10 @@ import CustomFieldValueDisplay from "@/components/toys/CustomFieldValue";
 import FieldEditor, {
   normalizeFieldValue,
 } from "@/components/toys/toyFieldEditors";
-import { searchBoardGamesClient } from "./searchClient";
+import {
+  searchBoardGamesClient,
+  searchBoardGameBoxesClient,
+} from "./searchClient";
 import styles from "@/components/toys/ToyDetail.module.css";
 // The chart styles are the box-detail chart's — same slim read-only rows —
 // and the picker styles are the create dialog's search-and-pick pattern.
@@ -62,14 +65,21 @@ export default function BoardGameBoxDetail({
   // The boardGame entity's custom-field definitions — they render the linked
   // game's value grid (and provide the options for option-bearing values).
   gameDefinitions: CustomField[];
-  // Every box, fetched server-side: the base-set picker's options and the
-  // current base set's title resolution.
+  // Every box, fetched server-side: the initial seed for the base-set picker's
+  // options and the current base set's title resolution. Refreshed client-side
+  // on picker focus (see loadBoxes).
   allBoxes: BoardGameBox[];
 }) {
   const { showToast, showSnackbar } = useToast();
   const [box, setBox] = useState<BoardGameBox>(initialBox);
-  // Base-set picker query (its options come from the server-fetched allBoxes).
+  // Base-set picker: seeded from the server snapshot so the card renders
+  // instantly, then refreshed client-side on focus. The backend never tells the
+  // client when a box is created or deleted elsewhere, so the snapshot can go
+  // stale; refetching on focus keeps a dead box from lingering as an option.
   const [baseQuery, setBaseQuery] = useState("");
+  const [boxes, setBoxes] = useState<BoardGameBox[]>(allBoxes);
+  const [loadingBoxes, setLoadingBoxes] = useState(false);
+  const [boxesError, setBoxesError] = useState(false);
   // Linked-game picker: the game list is fetched once on first focus and
   // filtered client-side, like the create dialog's pickers.
   const [gameQuery, setGameQuery] = useState("");
@@ -177,12 +187,18 @@ export default function BoardGameBoxDetail({
   const commitGame = (game: SlimBoardGame) => {
     setGameQuery("");
     if (game.id === box.boardGame.id) return;
-    void persist({ ...box, boardGame: game });
+    void persist({ ...box, boardGame: game }).then(() => {
+      // Reassigning can leave the previous game with no boxes, which the
+      // backend silently deletes — it never tells the client. Refetch so the
+      // now-dead game drops out of the picker's cached list (only worth doing
+      // if that list was already loaded).
+      if (allGames !== null) fetchGames();
+    });
   };
 
-  // Fetch the full game list once, on the picker's first focus.
-  const loadGames = () => {
-    if (allGames !== null || loadingGames) return;
+  // Fetch the full game list, replacing any cached copy. Drives both the
+  // picker's lazy first load and the post-reassignment refresh above.
+  const fetchGames = () => {
     setLoadingGames(true);
     setGamesError(false);
     searchBoardGamesClient([])
@@ -192,6 +208,34 @@ export default function BoardGameBoxDetail({
         setGamesError(true);
       })
       .finally(() => setLoadingGames(false));
+  };
+
+  // Fetch the full game list once, on the picker's first focus.
+  const loadGames = () => {
+    if (allGames !== null || loadingGames) return;
+    fetchGames();
+  };
+
+  // Refetch the box list, replacing the seeded copy. A failed refresh keeps the
+  // last-good list (so the picker still works) and surfaces a note.
+  const fetchBoxes = () => {
+    setLoadingBoxes(true);
+    setBoxesError(false);
+    searchBoardGameBoxesClient([])
+      .then(setBoxes)
+      .catch((error) => {
+        console.error("Load board game boxes failed", error);
+        setBoxesError(true);
+      })
+      .finally(() => setLoadingBoxes(false));
+  };
+
+  // Refresh the box list whenever the base-set picker is focused, skipping a
+  // fetch already in flight — so reopening the picker always reflects boxes
+  // added or removed since the page loaded.
+  const loadBoxes = () => {
+    if (loadingBoxes) return;
+    fetchBoxes();
   };
 
   // Title + the expansion flags first, then the custom fields in their
@@ -221,14 +265,14 @@ export default function BoardGameBoxDetail({
   const baseSet =
     box.baseSetId == null
       ? null
-      : (allBoxes.find((b) => b.id === box.baseSetId) ?? null);
+      : (boxes.find((b) => b.id === box.baseSetId) ?? null);
 
   const baseSearch = baseQuery.trim().toLowerCase();
   // The box can't be its own base set; the current pick is hidden too.
   const baseMatches =
     baseSearch === ""
       ? []
-      : allBoxes.filter(
+      : boxes.filter(
           (b) =>
             b.id !== box.id &&
             b.id !== box.baseSetId &&
@@ -328,27 +372,86 @@ export default function BoardGameBoxDetail({
                   </span>
                 </div>
               ) : (
-                <ul aria-label="Base set" className={pickerStyles.list}>
-                  <li className={pickerStyles.item}>
-                    <Link
-                      href={`/board-game-boxes/${baseSet.id}`}
-                      className={pickerStyles.itemTitle}
-                    >
-                      {baseSet.title}
-                    </Link>
-                    {baseSet.boardGame && (
-                      <span className={pickerStyles.itemSystem}>
-                        {baseSet.boardGame.title}
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      className={pickerStyles.remove}
-                      aria-label={`Remove ${baseSet.title}`}
-                      onClick={() => commitBaseSet(null)}
-                    >
-                      <XIcon />
-                    </button>
+                <ul aria-label="Base set" className={chartStyles.gameList}>
+                  <li className={chartStyles.game}>
+                    <div>
+                      <div className={chartStyles.gameHead}>
+                        <Link
+                          href={`/board-game-boxes/${baseSet.id}`}
+                          className={chartStyles.gameTitle}
+                        >
+                          {baseSet.title}
+                        </Link>
+                      </div>
+
+                      {/* The base set's own fields, read-only — the same grid
+                          the Board Game card uses, so the two cards read alike.
+                          Board Game / Expansion / Stand Alone first, then the
+                          box's custom fields in their defined order. */}
+                      <div className={chartStyles.fieldGrid}>
+                        <div>
+                          <div className={chartStyles.fieldLabel}>
+                            Board Game
+                          </div>
+                          <div className={chartStyles.fieldValue}>
+                            {baseSet.boardGame?.title ?? "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className={chartStyles.fieldLabel}>
+                            Expansion
+                          </div>
+                          <div className={chartStyles.fieldValue}>
+                            <CustomFieldValueDisplay
+                              type="boolean"
+                              value={String(baseSet.isExpansion)}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <div className={chartStyles.fieldLabel}>
+                            Stand Alone
+                          </div>
+                          <div className={chartStyles.fieldValue}>
+                            <CustomFieldValueDisplay
+                              type="boolean"
+                              value={String(baseSet.isStandAlone)}
+                            />
+                          </div>
+                        </div>
+                        {definitions.map((def) => (
+                          <div key={def.id}>
+                            <div className={chartStyles.fieldLabel}>
+                              {def.name}
+                            </div>
+                            <div className={chartStyles.fieldValue}>
+                              <CustomFieldValueDisplay
+                                type={def.type}
+                                value={
+                                  baseSet.customFieldValues.find(
+                                    (v) => v.customFieldId === def.id,
+                                  )?.value
+                                }
+                                options={def.options}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Raised above the row's stretched title link so the
+                        clear control still receives the click. */}
+                    <div className={chartStyles.delwrap}>
+                      <button
+                        type="button"
+                        className={pickerStyles.remove}
+                        aria-label={`Remove ${baseSet.title}`}
+                        onClick={() => commitBaseSet(null)}
+                      >
+                        <XIcon />
+                      </button>
+                    </div>
                   </li>
                 </ul>
               )}
@@ -357,11 +460,18 @@ export default function BoardGameBoxDetail({
                 <input
                   type="search"
                   className={pickerStyles.pickerInput}
-                  placeholder="Pick the base set box — type to search…"
+                  placeholder="Edit the base set..."
                   aria-label="Pick a base set"
                   value={baseQuery}
+                  onFocus={loadBoxes}
                   onChange={(e) => setBaseQuery(e.target.value)}
                 />
+                {boxesError && (
+                  <div className={pickerStyles.pickerNote}>
+                    Couldn&apos;t refresh the box list. Showing the last loaded
+                    copy.
+                  </div>
+                )}
                 {baseSearch !== "" && (
                   <ul
                     aria-label="Matching boxes"
@@ -449,8 +559,8 @@ export default function BoardGameBoxDetail({
               <input
                 type="search"
                 className={pickerStyles.pickerInput}
-                placeholder="Change the linked game — type to search…"
-                aria-label="Change the linked game"
+                placeholder="Edit the board game..."
+                aria-label="Edit the board game"
                 value={gameQuery}
                 onFocus={loadGames}
                 onChange={(e) => setGameQuery(e.target.value)}

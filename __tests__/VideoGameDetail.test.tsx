@@ -47,14 +47,42 @@ const definitions: CustomField[] = [
   { id: 3, name: "Favorite", type: "boolean", entityKey: "videoGame", order: 2, options: [] },
 ];
 
+const boxDefinitions: CustomField[] = [
+  { id: 91, name: "Region", type: "text", entityKey: "videoGameBox", order: 0, options: [] },
+  { id: 92, name: "Sealed", type: "boolean", entityKey: "videoGameBox", order: 1, options: [] },
+];
+
 const game: VideoGame = {
   id: 7,
   key: "videoGame",
   title: "Secret of Mana",
   system: systems[1],
   videoGameBoxes: [
-    { id: 41, title: "Secret of Mana (Box)" },
-    { id: 42, title: "SNES Classics Collection" },
+    {
+      id: 41,
+      title: "Secret of Mana (Box)",
+      system: systems[1],
+      physical: true,
+      collection: false,
+      customFieldValues: [
+        { customFieldId: 91, customFieldName: "Region", customFieldType: "text", value: "NTSC", valueOptionId: null },
+        { customFieldId: 92, customFieldName: "Sealed", customFieldType: "boolean", value: "false", valueOptionId: null },
+      ],
+      createdAt: "",
+      updatedAt: "",
+      deletedAt: null,
+    },
+    {
+      id: 42,
+      title: "SNES Classics Collection",
+      system: systems[1],
+      physical: false,
+      collection: true,
+      customFieldValues: [],
+      createdAt: "",
+      updatedAt: "",
+      deletedAt: null,
+    },
   ],
   customFieldValues: [
     { customFieldId: 1, customFieldName: "Developer", customFieldType: "text", value: "Square", valueOptionId: null },
@@ -84,6 +112,7 @@ function renderDetail(override?: VideoGame) {
         <VideoGameDetail
           game={override ?? game}
           definitions={definitions}
+          boxDefinitions={boxDefinitions}
           systems={systems}
         />
       </UiSettingsProvider>
@@ -138,15 +167,26 @@ describe("VideoGameDetail", () => {
       screen.getByRole("button", { name: "Favorite: No" }),
     ).toBeInTheDocument();
 
-    // The boxes card lists each box title with a count.
+    // The boxes card lists each box (title links to its detail page) with a count.
     expect(
       screen.getByText((_, el) => el?.textContent === "2 boxes"),
     ).toBeInTheDocument();
     const list = screen.getByRole("list", { name: "Video game boxes" });
-    expect(within(list).getByText("Secret of Mana (Box)")).toBeInTheDocument();
     expect(
-      within(list).getByText("SNES Classics Collection"),
-    ).toBeInTheDocument();
+      within(list).getByRole("link", { name: "Secret of Mana (Box)" }),
+    ).toHaveAttribute("href", "/video-game-boxes/41");
+    expect(
+      within(list).getByRole("link", { name: "SNES Classics Collection" }),
+    ).toHaveAttribute("href", "/video-game-boxes/42");
+
+    // Each box is fleshed out: its system chip, the Physical flag, a Collection
+    // chip for the multi-game box, and a cell per videoGameBox custom field.
+    expect(within(list).getAllByText("SNES")).toHaveLength(2);
+    expect(within(list).getByText("Collection")).toBeInTheDocument();
+    expect(within(list).getAllByText("Physical")).toHaveLength(2);
+    expect(within(list).getAllByText("Region")).toHaveLength(2);
+    expect(within(list).getByText("NTSC")).toBeInTheDocument();
+    expect(within(list).getAllByText("Sealed")).toHaveLength(2);
   });
 
   it("shows an empty message when the game has no boxes", () => {

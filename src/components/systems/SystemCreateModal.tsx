@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   toCustomFieldValue,
   type CustomField,
@@ -17,6 +18,8 @@ import {
 } from "@/components/custom-fields/registry";
 import { XIcon } from "@/components/custom-fields/icons";
 import { useUiSettings } from "@/components/UiSettingsProvider";
+import BeginnerHint from "@/components/BeginnerHint";
+import { BEGINNER_HINTS } from "@/components/beginnerHints";
 import FieldEditor from "@/components/toys/toyFieldEditors";
 import rowStyles from "@/components/toys/ToyDetail.module.css";
 import styles from "@/components/toys/ToyCreateModal.module.css";
@@ -217,7 +220,12 @@ export default function SystemCreateModal({
     }
   };
 
-  return (
+  // Portal to <body> so the fixed backdrop escapes the page content's stacking
+  // context (systems.module.css .content is z-index 0). Rendered inline, the
+  // backdrop's z-index 60 is trapped below the Header's z-index-2 .content and
+  // the hero logo/title would paint over the modal. document is always defined
+  // here — the modal only mounts on a client-side open.
+  return createPortal(
     <div
       className={styles.backdrop}
       // Mass-input mode disables accidental backdrop-to-close; exit via X/Cancel.
@@ -305,8 +313,21 @@ export default function SystemCreateModal({
                 ? "Create And Add Another"
                 : "Create"}
           </button>
+          {!massInputMode && (
+            <BeginnerHint
+              placement="top-end"
+              text={BEGINNER_HINTS.massInputOff}
+            />
+          )}
+          {massInputMode && (
+            <BeginnerHint
+              placement="top-end"
+              text={BEGINNER_HINTS.massInputOn}
+            />
+          )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

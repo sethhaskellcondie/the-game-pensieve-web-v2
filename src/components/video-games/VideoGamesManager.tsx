@@ -19,6 +19,8 @@ import DataTable, {
 } from "@/components/data-table/DataTable";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
+import BeginnerHint from "@/components/BeginnerHint";
+import { BEGINNER_HINTS } from "@/components/beginnerHints";
 import FilterBar from "@/components/filters/FilterBar";
 import {
   fetchDefaultSortOptions,
@@ -497,12 +499,15 @@ export default function VideoGamesManager() {
     <div className={styles.page}>
       <div className={styles.head}>
         <div className={styles.titleWrap}>
-          <h2 className={styles.entName}><b>{games.length}</b> {games.length === 1 ? "Video Game" : "Video Games"}</h2>
-          {massEditMode && (
-            <div className={styles.crumb}>
-              <span>Mass edit mode is on.</span>
-            </div>
-          )}
+          <div className={styles.titleRow}>
+            <h2 className={styles.entName}><b>{games.length}</b> {games.length === 1 ? "Video Game" : "Video Games"}</h2>
+            {massEditMode && (
+              <BeginnerHint
+                placement="bottom-start"
+                text={BEGINNER_HINTS.massEdit}
+              />
+            )}
+          </div>
         </div>
         <FilterBar
           entityKey="videoGame"
@@ -513,10 +518,18 @@ export default function VideoGamesManager() {
           onSearchChange={setQuery}
           searchPlaceholder="Search video games…"
           searchAriaLabel="Search video games"
+          searchHint={BEGINNER_HINTS.videoGameSearch}
           sorts={canSort ? sorts : undefined}
           onSortsChange={canSort ? setSorts : undefined}
         />
-        {/* No New button: video games are created through video game boxes. */}
+        {/* No New button: video games are created through video game boxes.
+            A beginner hint sits where that button would be to explain why. */}
+        <div className={styles.actions}>
+          <BeginnerHint
+            placement="bottom-end"
+            text="Video Games can only be created and deleted through Video Game Boxes, (How they appear on your shelf) Go to the Shelf View and create a new box to create a new video game inside that box!"
+          />
+        </div>
       </div>
 
       <DataTable

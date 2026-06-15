@@ -164,12 +164,21 @@ function YesNoEditor({ field, onCommit }: EditorProps) {
 // `overflow:hidden` ancestors — it must show even when the editor lives in a
 // clipped, scrollable grid cell. It stays a DOM child of the wrapper, so the
 // outside-click check still recognizes clicks inside it.
+//
+// The menu is viewport-aware (mirroring filters/Listbox): its height is clamped
+// to the room on its side of the trigger and it flips above the trigger when
+// there's more space there — otherwise a trigger near the bottom edge (common
+// in mass-edit mode) leaves the menu's tail and its last options off-screen.
 function DropdownEditor({ field, onCommit, openOnFocus }: EditorProps) {
   const options = field.options ?? [];
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(
-    null,
-  );
+  const [pos, setPos] = useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+    width: number;
+    maxHeight: number;
+  } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   // With openOnFocus, a mouse press delivers focus (which opens the menu) and
@@ -177,9 +186,37 @@ function DropdownEditor({ field, onCommit, openOnFocus }: EditorProps) {
   // toggle would immediately close what the focus just opened.
   const justOpenedByFocus = useRef(false);
 
+  // The menu's natural height cap and the gap to the trigger / breathing room
+  // kept from the viewport edge.
+  const MENU_MAX = 280;
+  const GAP = 6;
+  const MARGIN = 8;
+
   const openMenu = () => {
     const r = triggerRef.current?.getBoundingClientRect();
-    if (r) setPos({ top: r.bottom + 6, left: r.left, width: r.width });
+    if (r) {
+      const below = window.innerHeight - r.bottom - GAP - MARGIN;
+      const above = r.top - GAP - MARGIN;
+      // Open downward when the full menu fits (or down is the roomier side),
+      // clamped to the available space; otherwise flip above the trigger. The
+      // floor keeps the menu usable even in a pathologically short viewport.
+      const fit = (space: number) => Math.min(MENU_MAX, Math.max(120, space));
+      if (below >= MENU_MAX || below >= above) {
+        setPos({
+          top: r.bottom + GAP,
+          left: r.left,
+          width: r.width,
+          maxHeight: fit(below),
+        });
+      } else {
+        setPos({
+          bottom: window.innerHeight - r.top + GAP,
+          left: r.left,
+          width: r.width,
+          maxHeight: fit(above),
+        });
+      }
+    }
     setOpen(true);
   };
 
@@ -193,16 +230,24 @@ function DropdownEditor({ field, onCommit, openOnFocus }: EditorProps) {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
+    // Close when an outer container scrolls (the fixed menu would otherwise
+    // detach from its trigger), but NOT when the menu scrolls its own option
+    // list — that's how the user reaches options below the fold. The capture
+    // listener sees inner scrolls too, so guard on the event target.
+    const onScroll = (e: Event) => {
+      if (wrapRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
     const close = () => setOpen(false);
     document.addEventListener("mousedown", onDocMouseDown);
     document.addEventListener("keydown", onKeyDown);
     // Capture-phase catches scrolling on any inner container (e.g. the grid).
-    window.addEventListener("scroll", close, true);
+    window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", close);
     return () => {
       document.removeEventListener("mousedown", onDocMouseDown);
       document.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", close);
     };
   }, [open]);
@@ -263,7 +308,13 @@ function DropdownEditor({ field, onCommit, openOnFocus }: EditorProps) {
           className={styles.dropMenu}
           role="listbox"
           aria-label={field.name}
-          style={{ top: pos.top, left: pos.left, minWidth: pos.width }}
+          style={{
+            top: pos.top,
+            bottom: pos.bottom,
+            left: pos.left,
+            minWidth: pos.width,
+            maxHeight: pos.maxHeight,
+          }}
         >
           {options.map((o) => {
             const selected = o.name === field.value;

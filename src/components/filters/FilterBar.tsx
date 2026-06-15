@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PlusIcon } from "@/components/custom-fields/icons";
 import { FilterIcon, SearchIcon } from "@/components/toys/icons";
+import BeginnerHint from "@/components/BeginnerHint";
 import FilterChip from "./FilterChip";
 import FilterEditor from "./FilterEditor";
 import SortControl from "./SortControl";
@@ -36,6 +37,7 @@ export default function FilterBar({
   onSearchChange,
   searchPlaceholder = "Search…",
   searchAriaLabel = "Search",
+  searchHint,
   sorts,
   onSortsChange,
 }: {
@@ -47,6 +49,9 @@ export default function FilterBar({
   onSearchChange: (value: string) => void;
   searchPlaceholder?: string;
   searchAriaLabel?: string;
+  // Optional beginner hint shown beside the search box (only ever visible while
+  // beginner mode is on). Opt-in so pages without search guidance stay clean.
+  searchHint?: string;
   // Sort state, enabling the Sort button next to the Filter button. Optional so
   // entity pages adopt sorting one at a time (currently only Systems).
   sorts?: ActiveSort[];
@@ -134,6 +139,10 @@ export default function FilterBar({
             onKeyDown={onSearchKeyDown}
           />
         </div>
+
+        {searchHint != null && (
+          <BeginnerHint placement="bottom-end" text={searchHint} />
+        )}
 
         {sorts != null && onSortsChange != null && (
           <SortControl

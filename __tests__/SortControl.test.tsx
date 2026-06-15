@@ -61,7 +61,7 @@ describe("SortControl", () => {
     const { onChange } = setup();
     const dialog = openPopover();
     expect(
-      within(dialog).getByText(/Not sorted/, { exact: false }),
+      within(dialog).getByText(/Add sort criteria/, { exact: false }),
     ).toBeInTheDocument();
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Add sort" }));

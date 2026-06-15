@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { VideoGameBoxIcon, VideoGamesIcon } from "@/components/icons";
+import BeginnerHint from "@/components/BeginnerHint";
 import Header from "@/components/Header";
 import VideoGamesManager from "@/components/video-games/VideoGamesManager";
 import VideoGameBoxesManager from "@/components/video-games/VideoGameBoxesManager";
@@ -37,7 +38,14 @@ export default async function VideoGamesPage({
             : "Every single game in your collection in one single list!"
         }
       >
-        <ViewToggle view={view} />
+        <div className={styles.viewControls}>
+          <BeginnerHint
+            className={styles.viewHint}
+            placement="bottom-end"
+            text={'Video Games can be viewed in two different ways the the shelf view shows all of the games as they appear on your shelf, but some games are compliations or collections of games there could be multiple games in a single cart, or disc. In the pensieve games appear in a "box" when listed on a shelf. The shelf view shows all of the video game boxes, and the list view shows all of your video games excluding repeats, and including all of the games that are in compliations or collections.'}
+          />
+          <ViewToggle view={view} pinned={false} />
+        </div>
       </Header>
 
       <main className={styles.content}>

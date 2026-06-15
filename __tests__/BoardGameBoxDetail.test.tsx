@@ -194,6 +194,30 @@ describe("BoardGameBoxDetail", () => {
     );
   });
 
+  it("shows the base set's own fields in a grid, like the board game card", () => {
+    renderDetail();
+
+    const baseList = screen.getByRole("list", { name: "Base set" });
+    // The base set (Set-A-Watch Base Box) renders its standard fields...
+    expect(within(baseList).getByText("Board Game")).toBeInTheDocument();
+    expect(within(baseList).getByText("Set-A-Watch")).toBeInTheDocument();
+    expect(within(baseList).getByText("Expansion")).toBeInTheDocument();
+    expect(within(baseList).getByText("Stand Alone")).toBeInTheDocument();
+    // ...with Yes/No badges (it's a non-expansion, stand-alone base box)...
+    expect(within(baseList).getByRole("img", { name: "No" })).toBeInTheDocument();
+    expect(
+      within(baseList).getByRole("img", { name: "Yes" }),
+    ).toBeInTheDocument();
+    // ...and its custom field (empty here, so the muted dash).
+    expect(within(baseList).getByText("Notes")).toBeInTheDocument();
+    // The clear control still works through the new layout.
+    expect(
+      within(baseList).getByRole("button", {
+        name: "Remove Set-A-Watch Base Box",
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("hides the base set card for non-expansions", () => {
     renderDetail(baseBox);
     expect(
@@ -287,11 +311,50 @@ describe("BoardGameBoxDetail", () => {
     ).toHaveAttribute("href", "/board-game-boxes/33");
   });
 
+  it("refreshes the base set picker on focus, dropping a box deleted elsewhere", async () => {
+    // The picker is seeded from the allBoxes prop (which includes Jekyll Box);
+    // the refetch on focus reflects that Jekyll Box was deleted elsewhere.
+    mockFetch.mockImplementation((url: string, init?: RequestInit) => {
+      if (url.includes("/api/board-game-boxes/search")) {
+        const data = allBoxes.filter((b) => b.id !== 33);
+        return Promise.resolve(jsonResponse({ status: "ok", data }));
+      }
+      return routedFetch(url, init);
+    });
+    renderDetail();
+
+    const picker = screen.getByRole("searchbox", { name: "Pick a base set" });
+
+    // Before focus, the seeded list still offers Jekyll Box.
+    fireEvent.change(picker, { target: { value: "jekyll" } });
+    expect(
+      within(screen.getByRole("list", { name: "Matching boxes" })).getByRole(
+        "button",
+        { name: /^Jekyll Box/ },
+      ),
+    ).toBeInTheDocument();
+
+    // Focusing triggers the refresh; the deleted box then drops out.
+    fireEvent.focus(picker);
+    await waitFor(() =>
+      expect(
+        mockFetch.mock.calls.some(([url]) =>
+          String(url).includes("/api/board-game-boxes/search"),
+        ),
+      ).toBe(true),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: /^Jekyll Box/ }),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
   it("relinks the box to another game through the lazy-loaded picker", async () => {
     renderDetail();
 
     const picker = screen.getByRole("searchbox", {
-      name: "Change the linked game",
+      name: "Edit the board game",
     });
     fireEvent.focus(picker);
     // The game list loads once, lazily.
@@ -319,6 +382,47 @@ describe("BoardGameBoxDetail", () => {
     expect(
       within(gameList).getByRole("link", { name: "Jekyll vs Hyde" }),
     ).toHaveAttribute("href", "/board-games/42");
+  });
+
+  it("refetches the game list after a reassignment so a deleted game drops out", async () => {
+    // The first search returns both games; the next (after the reassignment
+    // orphans and the backend deletes Set-A-Watch) returns only Jekyll.
+    let searches = 0;
+    mockFetch.mockImplementation((url: string, init?: RequestInit) => {
+      if (url.includes("/api/board-games/search")) {
+        searches += 1;
+        const data = searches === 1 ? games : games.filter((g) => g.id === 42);
+        return Promise.resolve(jsonResponse({ status: "ok", data }));
+      }
+      return routedFetch(url, init);
+    });
+    // Start on a non-expansion box linked to Set-A-Watch so reassigning to
+    // Jekyll could orphan Set-A-Watch.
+    renderDetail(baseBox);
+
+    const picker = screen.getByRole("searchbox", {
+      name: "Edit the board game",
+    });
+    fireEvent.focus(picker);
+    await waitFor(() => expect(searches).toBe(1));
+
+    fireEvent.change(picker, { target: { value: "jekyll" } });
+    const results = await screen.findByRole("list", { name: "Matching games" });
+    fireEvent.click(
+      within(results).getByRole("button", { name: "Jekyll vs Hyde" }),
+    );
+
+    // The reassignment persists and triggers a second search.
+    await waitFor(() => expect(lastPut()).toMatchObject({ boardGameId: 42 }));
+    await waitFor(() => expect(searches).toBe(2));
+
+    // The refreshed list no longer offers the now-deleted Set-A-Watch.
+    fireEvent.change(picker, { target: { value: "watch" } });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Set-A-Watch" }),
+      ).not.toBeInTheDocument(),
+    );
   });
 
   it("rolls back the optimistic edit when the PUT fails", async () => {
