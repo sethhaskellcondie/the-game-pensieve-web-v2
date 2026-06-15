@@ -30,6 +30,7 @@ import {
 } from "@/components/filters/defaultSorts";
 import { buildFieldList, supportsSorting } from "@/components/filters/fieldList";
 import { toFilterRequest, toSortRequest } from "@/components/filters/serialize";
+import { decodeFilterParam } from "@/components/filters/urlFilters";
 import type { ActiveFilter, ActiveSort } from "@/components/filters/types";
 import CustomFieldValue from "@/components/toys/CustomFieldValue";
 import FieldEditor, {
@@ -133,7 +134,17 @@ function loadErrorMessage(error: unknown): string {
 // The shelf view of the board games page: the same table treatment as the
 // list view, but each row is a board game box (a base set, an extra copy, or
 // an expansion) searched through the boardGameBox endpoints.
-export default function BoardGameBoxesManager() {
+export default function BoardGameBoxesManager({
+  initialFiltersParam,
+}: {
+  // The `filters` URL param when opened from a home saved-filter card; seeds the
+  // filter bar so the page loads already filtered. Editable/removable afterward.
+  initialFiltersParam?: string | string[];
+}) {
+  const initialFilters = useMemo(
+    () => decodeFilterParam(initialFiltersParam),
+    [initialFiltersParam],
+  );
   const router = useRouter();
   const { showToast, showSnackbar } = useToast();
   const { settings } = useUiSettings();
@@ -157,7 +168,7 @@ export default function BoardGameBoxesManager() {
   // The quick-search text (folded into a title-contains filter) and the explicit
   // filter chips. Both feed the server-side search.
   const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState<ActiveFilter[]>([]);
+  const [filters, setFilters] = useState<ActiveFilter[]>(initialFilters);
   // The sort levels the user entered on this page (the Sort button's state).
   // Starts empty even when a default sort is stored — the default never shows
   // here; it is folded into the search request only while this is empty. The
@@ -187,7 +198,9 @@ export default function BoardGameBoxesManager() {
   // The last search payload sent (and a sequence counter for last-write-wins),
   // shared by the mount load and the search effect below so neither repeats
   // the other's query.
-  const lastDto = useRef("[]");
+  const lastDto = useRef(
+    JSON.stringify(toFilterRequest("boardGameBox", initialFilters)),
+  );
   const searchSeq = useRef(0);
 
   // Load the field definitions for both entities, the filter spec, and the
@@ -218,7 +231,10 @@ export default function BoardGameBoxesManager() {
               buildFieldList(loadedSpec, loadedDefs),
             )
           : [];
-        const dto = toSortRequest("boardGameBox", seeded);
+        const dto = [
+          ...toFilterRequest("boardGameBox", initialFilters),
+          ...toSortRequest("boardGameBox", seeded),
+        ];
         lastDto.current = JSON.stringify(dto);
         const loadedBoxes = await searchBoardGameBoxesClient(
           dto,
@@ -247,7 +263,7 @@ export default function BoardGameBoxesManager() {
       active = false;
       controller.abort();
     };
-  }, [showSnackbar]);
+  }, [showSnackbar, initialFilters]);
 
   // Re-run the server search whenever the filter chips or sort levels change.
   // The sort filters sent are the page's own levels, or the stored defaults

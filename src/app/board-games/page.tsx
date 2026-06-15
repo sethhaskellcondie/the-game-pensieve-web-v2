@@ -23,8 +23,11 @@ export default async function BoardGamesPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const explicit = parseVideoGamesViewParam((await searchParams).view);
+  const resolvedParams = await searchParams;
+  const explicit = parseVideoGamesViewParam(resolvedParams.view);
   const view = explicit ?? (await loadUiSettings()).boardGamesDefaultView;
+  // Pre-applied filters from a home saved-filter card, if any.
+  const initialFiltersParam = resolvedParams.filters;
 
   return (
     <>
@@ -49,7 +52,11 @@ export default async function BoardGamesPage({
       </Header>
 
       <main className={styles.content}>
-        {view === "shelf" ? <BoardGameBoxesManager /> : <BoardGamesManager />}
+        {view === "shelf" ? (
+          <BoardGameBoxesManager initialFiltersParam={initialFiltersParam} />
+        ) : (
+          <BoardGamesManager initialFiltersParam={initialFiltersParam} />
+        )}
       </main>
     </>
   );

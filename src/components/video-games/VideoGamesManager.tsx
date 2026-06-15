@@ -29,6 +29,7 @@ import {
 } from "@/components/filters/defaultSorts";
 import { buildFieldList, supportsSorting } from "@/components/filters/fieldList";
 import { toFilterRequest, toSortRequest } from "@/components/filters/serialize";
+import { decodeFilterParam } from "@/components/filters/urlFilters";
 import type { ActiveFilter, ActiveSort } from "@/components/filters/types";
 import CustomFieldValue from "@/components/toys/CustomFieldValue";
 import {
@@ -129,7 +130,17 @@ function loadErrorMessage(error: unknown): string {
     : "Couldn't load video games. Please try again.";
 }
 
-export default function VideoGamesManager() {
+export default function VideoGamesManager({
+  initialFiltersParam,
+}: {
+  // The `filters` URL param when opened from a home saved-filter card; seeds the
+  // filter bar so the page loads already filtered. Editable/removable afterward.
+  initialFiltersParam?: string | string[];
+}) {
+  const initialFilters = useMemo(
+    () => decodeFilterParam(initialFiltersParam),
+    [initialFiltersParam],
+  );
   const router = useRouter();
   const { showToast, showSnackbar } = useToast();
   const { settings } = useUiSettings();
@@ -143,7 +154,7 @@ export default function VideoGamesManager() {
   // The quick-search text (folded into a title-contains filter) and the explicit
   // filter chips. Both feed the server-side search.
   const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState<ActiveFilter[]>([]);
+  const [filters, setFilters] = useState<ActiveFilter[]>(initialFilters);
   // The sort levels the user entered on this page (the Sort button's state).
   // Starts empty even when a default sort is stored — the default never shows
   // here; it is folded into the search request only while this is empty. The
@@ -195,7 +206,9 @@ export default function VideoGamesManager() {
   // The last search payload sent (and a sequence counter for last-write-wins),
   // shared by the mount load and the search effect below so neither repeats
   // the other's query.
-  const lastDto = useRef("[]");
+  const lastDto = useRef(
+    JSON.stringify(toFilterRequest("videoGame", initialFilters)),
+  );
   const searchSeq = useRef(0);
 
   // Load the systems for the dropdowns, the field definitions, the filter
@@ -226,7 +239,10 @@ export default function VideoGamesManager() {
               buildFieldList(loadedSpec, loadedDefs),
             )
           : [];
-        const dto = toSortRequest("videoGame", seeded);
+        const dto = [
+          ...toFilterRequest("videoGame", initialFilters),
+          ...toSortRequest("videoGame", seeded),
+        ];
         lastDto.current = JSON.stringify(dto);
         const loadedGames = await searchVideoGamesClient(dto, controller.signal);
         if (!active) return;
@@ -249,7 +265,7 @@ export default function VideoGamesManager() {
       active = false;
       controller.abort();
     };
-  }, [showSnackbar]);
+  }, [showSnackbar, initialFilters]);
 
   // Re-run the server search whenever the filter chips or sort levels change.
   // The sort filters sent are the page's own levels, or the stored defaults

@@ -77,7 +77,9 @@ export default function SavedFiltersDashboard({
   } | null>(null);
   const { showSnackbar } = useToast();
 
-  const categoryCount = rows.length;
+  // The summary counts only real categories — the always-present Uncategorized
+  // row is a catch-all bucket, not a category the user created.
+  const categoryCount = rows.filter((c) => c.id !== UNCATEGORIZED_ID).length;
   const filterCount = rows.reduce((n, c) => n + c.filters.length, 0);
 
   // Optimistically apply the new rows, then persist whichever store(s) the change

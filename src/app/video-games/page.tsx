@@ -23,8 +23,11 @@ export default async function VideoGamesPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const explicit = parseVideoGamesViewParam((await searchParams).view);
+  const resolvedParams = await searchParams;
+  const explicit = parseVideoGamesViewParam(resolvedParams.view);
   const view = explicit ?? (await loadUiSettings()).videoGamesDefaultView;
+  // Pre-applied filters from a home saved-filter card, if any.
+  const initialFiltersParam = resolvedParams.filters;
 
   return (
     <>
@@ -49,7 +52,11 @@ export default async function VideoGamesPage({
       </Header>
 
       <main className={styles.content}>
-        {view === "shelf" ? <VideoGameBoxesManager /> : <VideoGamesManager />}
+        {view === "shelf" ? (
+          <VideoGameBoxesManager initialFiltersParam={initialFiltersParam} />
+        ) : (
+          <VideoGamesManager initialFiltersParam={initialFiltersParam} />
+        )}
       </main>
     </>
   );

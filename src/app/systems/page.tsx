@@ -8,7 +8,14 @@ export const metadata: Metadata = {
   title: "Systems · The Game Pensieve",
 };
 
-export default function SystemsPage() {
+export default async function SystemsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  // Pre-applied filters from a home saved-filter card, if any.
+  const initialFiltersParam = (await searchParams).filters;
+
   return (
     <>
       <Header
@@ -19,7 +26,7 @@ export default function SystemsPage() {
       />
 
       <main className={styles.content}>
-        <SystemsManager />
+        <SystemsManager initialFiltersParam={initialFiltersParam} />
       </main>
     </>
   );

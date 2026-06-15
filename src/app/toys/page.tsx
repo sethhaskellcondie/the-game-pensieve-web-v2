@@ -8,7 +8,14 @@ export const metadata: Metadata = {
   title: "Toys · The Game Pensieve",
 };
 
-export default function ToysPage() {
+export default async function ToysPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  // Pre-applied filters from a home saved-filter card, if any.
+  const initialFiltersParam = (await searchParams).filters;
+
   return (
     <>
       <Header
@@ -20,7 +27,7 @@ export default function ToysPage() {
       />
 
       <main className={styles.content}>
-        <ToysManager />
+        <ToysManager initialFiltersParam={initialFiltersParam} />
       </main>
     </>
   );

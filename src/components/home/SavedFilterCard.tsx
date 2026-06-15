@@ -6,9 +6,23 @@ import {
 } from "@/components/custom-fields/icons";
 import FieldGlyph from "@/components/filters/FieldGlyph";
 import { operatorLabel } from "@/components/filters/operators";
+import { encodeFilterParam, FILTERS_PARAM } from "@/components/filters/urlFilters";
 import type { SavedFilterCondition, SavedFilter } from "./types";
 import { ENTITY_ROUTES } from "./entityRoutes";
 import styles from "./SavedFilterCard.module.css";
+
+// The collection-page URL a card opens: its route, the list/shelf view for
+// shared pages, and the conditions pre-applied via the `filters` param.
+function hrefFor(filter: SavedFilter): string {
+  const { route, view } = ENTITY_ROUTES[filter.entity];
+  const params = new URLSearchParams();
+  if (view) params.set("view", view);
+  if (filter.conditions.length > 0) {
+    params.set(FILTERS_PARAM, encodeFilterParam(filter.conditions));
+  }
+  const query = params.toString();
+  return query ? `${route}?${query}` : route;
+}
 
 // How a condition's value reads on its pill: an id operand shows its
 // snapshotted label, a boolean reads Yes/No, everything else shows raw.
@@ -62,10 +76,8 @@ export default function SavedFilterCard({
   canMoveLeft?: boolean;
   canMoveRight?: boolean;
 }) {
-  const { Icon, countNoun, route } = ENTITY_ROUTES[filter.entity];
-  // TODO(saved-filters wiring): append the serialized conditions to the route
-  // so the target page opens pre-filtered. For now it links to the bare page.
-  const href = route;
+  const { Icon, countNoun } = ENTITY_ROUTES[filter.entity];
+  const href = hrefFor(filter);
 
   return (
     <article className={styles.card}>
