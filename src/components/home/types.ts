@@ -30,7 +30,6 @@ export type FilterCategory = {
   filters: SavedFilter[];
 };
 
-// The id of the always-present "Uncategorized" row — the home for saved filters
-// not assigned to any category. It's a synthetic bucket, not a stored category,
-// so it's keyed by this sentinel rather than a real record id.
-export const UNCATEGORIZED_ID = "__uncategorized__";
+// Re-exported from the persistence layer so the UI and the metadata store agree
+// on the Uncategorized row's reserved id.
+export { UNCATEGORIZED_ID } from "@/lib/savedFilterCategories.types";

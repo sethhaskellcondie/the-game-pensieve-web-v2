@@ -18,9 +18,19 @@
   color: var(--white-pure);
 }
 
+/* Holds the name and its hover-revealed edit pencil, sized to the row so the
+   pencil sits immediately after the (truncating) name rather than far right. */
+.titleWrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .name {
   margin: 0;
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
   font-family: var(--font-jetbrains-mono), monospace;
   font-size: 13px;
@@ -30,6 +40,59 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Hover-revealed header controls (reorder arrows + edit pencil): hidden until
+   the header is hovered (or a button is focused for keyboard users), sitting
+   just right of the category name on the blue bar. */
+.headBtn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--white-pure);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s;
+}
+
+.headBtn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.head:hover .headBtn,
+.headBtn:focus-visible {
+  opacity: 1;
+}
+
+.headBtn:hover:not(:disabled) {
+  background: rgba(var(--white-rgb), 0.18);
+}
+
+.headBtn:focus-visible {
+  outline: 2px solid var(--white-pure);
+  outline-offset: 1px;
+}
+
+/* A reorder arrow at the end of the list (first/last category): stays dimmed
+   even on hover, and isn't actionable. */
+.headBtn:disabled {
+  cursor: default;
+}
+
+.head:hover .headBtn:disabled {
+  opacity: 0.4;
+}
+
+/* CaretIcon points down; the up arrow is the same glyph flipped. */
+.caretUp {
+  transform: rotate(180deg);
 }
 
 .actions {
