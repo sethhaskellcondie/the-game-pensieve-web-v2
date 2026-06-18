@@ -170,7 +170,7 @@ test.beforeEach(async ({ page }) => {
 
 test("is reachable from the sidebar and lists the toys", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: "Toys" }).click();
+  await page.getByRole("link", { name: "Toys", exact: true }).click();
 
   await expect(page).toHaveURL("/toys");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("TOYS");

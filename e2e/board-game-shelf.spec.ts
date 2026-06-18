@@ -537,7 +537,7 @@ test("the box detail page shows the Fields and Board Game cards and links back t
     page.getByRole("main").getByText("Board Game", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("searchbox", { name: "Change the linked game" }),
+    page.getByRole("searchbox", { name: "Edit the board game" }),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "Back" }).click();

@@ -332,13 +332,15 @@ test.describe("Systems page application", () => {
 
     // Sorted by Release Year descending (1990, 1989, 1985) — not the backend's
     // natural order. The default rides along in the request only; the Sort
-    // button stays empty (no level-count bubble, "Not sorted" popover).
+    // button stays empty (no level-count bubble, empty-state popover).
     await expect(names(page)).toHaveText(["SNES", "Game Boy", "NES"]);
     const sortButton = page.getByRole("button", { name: "Sort", exact: true });
     await expect(sortButton).not.toContainText("1");
     await sortButton.click();
     await expect(
-      page.getByRole("dialog", { name: "Sort options" }).getByText(/Not sorted/),
+      page
+        .getByRole("dialog", { name: "Sort options" })
+        .getByText("Add sort criteria to override default sort."),
     ).toBeVisible();
   });
 

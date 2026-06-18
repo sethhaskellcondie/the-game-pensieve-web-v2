@@ -1,3 +1,11 @@
+# Running the Playwright tests
+
+The E2E specs assert against the sample data, so they assume the backend holds an
+unmodified copy of it. Earlier specs mutate state (creating/deleting toys, boxes,
+etc.), and a partial or stale import can leave records that throw off later
+assertions. If the Playwright tests start failing for data-related reasons, delete
+the database and import a fresh copy of the sample data before running them again.
+
 # Backend Communication Architecture
 
 Next.js (App Router) is full-stack. This project effectively has three layers:

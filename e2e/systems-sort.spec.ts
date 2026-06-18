@@ -301,7 +301,9 @@ test("clearing sorting restores the default order", async ({ page }) => {
   await dialog.getByRole("button", { name: "Clear sorting" }).click();
 
   await expect(names(page)).toHaveText(["NES", "SNES", "Game Boy"]);
-  await expect(dialog.getByText(/Not sorted/)).toBeVisible();
+  await expect(
+    dialog.getByText("Add sort criteria to override default sort."),
+  ).toBeVisible();
 });
 
 test("sorting composes with an active filter", async ({ page }) => {
