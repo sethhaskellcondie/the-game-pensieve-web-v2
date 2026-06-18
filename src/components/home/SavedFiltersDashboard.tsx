@@ -5,10 +5,13 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
+  MeasuringStrategy,
   PointerSensor,
   closestCorners,
+  pointerWithin,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
@@ -34,7 +37,19 @@ import styles from "./SavedFiltersDashboard.module.css";
 // screen.
 const NEW_CATEGORY_NAME = "New Category";
 
-// "3 categories, and 16 saved filters." — pluralized, with 0 reading naturally.
+// Detect drops by where the pointer is, not by which droppable's corners sit
+// closest to the dragged card. An empty category's drop zone is short, so
+// closestCorners tends to hand the drop to a neighbouring category's cards even
+// when the cursor is squarely inside the empty one — pointerWithin makes the
+// empty zone a first-class target. closestCorners is kept as the fallback for
+// keyboard dragging, which has no pointer for pointerWithin to resolve.
+const collisionDetection: CollisionDetection = (args) => {
+  const pointerCollisions = pointerWithin(args);
+  return pointerCollisions.length > 0
+    ? pointerCollisions
+    : closestCorners(args);
+};
+
 function summary(categoryCount: number, filterCount: number): string {
   const cats = `${categoryCount} ${categoryCount === 1 ? "category" : "categories"}`;
   const filters = `${filterCount} saved ${filterCount === 1 ? "filter" : "filters"}`;
@@ -354,8 +369,19 @@ export default function SavedFiltersDashboard({
       </div>
 
       <DndContext
+        // A stable id keeps dnd-kit's generated accessibility ids (the cards'
+        // aria-describedby) deterministic, so the server and client agree on
+        // them and the tree hydrates without a mismatch. Without it dnd-kit
+        // falls back to an internal mount-order counter that differs per render.
+        id="saved-filters-dnd"
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={collisionDetection}
+        // Re-measure drop zones continuously through the drag. The default
+        // (measure once at drag start) leaves an empty category's small
+        // empty-state rect cached, so after a card is shifted in during
+        // onDragOver the layout grows but the stale rect no longer sits under
+        // the cursor — onDragEnd then sees no `over` and snaps the card back.
+        measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
         onDragStart={onDragStart}
         onDragOver={onDragOver}
         onDragEnd={onDragEnd}
