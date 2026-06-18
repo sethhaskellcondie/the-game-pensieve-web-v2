@@ -194,5 +194,11 @@ test("deletes a field from its row", async ({ page }) => {
   await row.hover();
   await row.getByRole("button", { name: "Delete Designers" }).click();
 
+  // The trash opens an "Are you sure?" confirmation; the field is only removed
+  // once its Delete is confirmed.
+  const menu = page.getByRole("menu", { name: "Delete Designers?" });
+  await expect(menu.getByText("Are you sure?")).toBeVisible();
+  await menu.getByRole("menuitem", { name: "Delete" }).click();
+
   await expect(page.getByText("Designers", { exact: true })).toHaveCount(0);
 });

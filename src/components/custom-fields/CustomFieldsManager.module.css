@@ -387,6 +387,52 @@
   background: #fdecec;
 }
 
+/* Keep the hover-revealed trash visible while its confirmation menu is open
+   (the pointer is on the menu, not the row). */
+.del[aria-expanded="true"] {
+  opacity: 1;
+  background: #fdecec;
+}
+
+/* Small "Are you sure?" menu anchored under a row's trash button — the same
+   confirmation the data tables use. position:fixed (set inline from the
+   button's rect) so the table's scroll container can't clip it. */
+.confirm {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
+  white-space: nowrap;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 16px 36px -14px rgba(var(--ink-navy-rgb), 0.35);
+}
+
+.confirmText {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-navy);
+}
+
+.confirmDelete {
+  padding: 6px 13px;
+  border: 1px solid var(--field-red-text);
+  border-radius: 8px;
+  background: var(--field-red-text);
+  color: var(--white-pure);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.13s ease;
+}
+
+.confirmDelete:hover {
+  background: #a93226;
+}
+
 .emptyState {
   color: var(--gray-500);
   font-size: 13px;

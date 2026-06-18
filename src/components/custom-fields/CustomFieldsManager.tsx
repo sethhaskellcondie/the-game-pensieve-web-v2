@@ -110,6 +110,14 @@ export default function CustomFieldsManager() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<ModalState | null>(null);
   const [saving, setSaving] = useState(false);
+  // Which row's "Are you sure?" delete menu is open, and where to anchor it.
+  // position:fixed (from the trash button's rect) so the table's scroll
+  // container can't clip it — the same confirmation the data tables use.
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    id: number;
+    top: number;
+    right: number;
+  } | null>(null);
   const [dragId, setDragId] = useState<number | null>(null);
   const [overInfo, setOverInfo] = useState<OverInfo | null>(null);
   // The row whose name is being edited inline, plus its working draft.
@@ -158,6 +166,26 @@ export default function CustomFieldsManager() {
       controller.abort();
     };
   }, [entityKey, showSnackbar]);
+
+  // Any click elsewhere (the menu and its trigger stop propagation), Escape,
+  // scroll, or resize dismisses the delete confirmation menu.
+  useEffect(() => {
+    if (!deleteConfirm) return;
+    const close = () => setDeleteConfirm(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("click", close);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [deleteConfirm]);
 
   const handleSave = async (payload: FieldModalSave) => {
     setSaving(true);
@@ -358,6 +386,7 @@ export default function CustomFieldsManager() {
     setLoading(true);
     setFields([]);
     cancelEditName();
+    setDeleteConfirm(null);
     setEntityKey(key);
   };
 
@@ -537,10 +566,51 @@ export default function CustomFieldsManager() {
                         type="button"
                         className={styles.del}
                         aria-label={`Delete ${field.name}`}
-                        onClick={() => handleDelete(field)}
+                        aria-haspopup="menu"
+                        aria-expanded={deleteConfirm?.id === field.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (deleteConfirm?.id === field.id) {
+                            setDeleteConfirm(null);
+                            return;
+                          }
+                          const r = e.currentTarget.getBoundingClientRect();
+                          setDeleteConfirm({
+                            id: field.id,
+                            top: r.bottom + 7,
+                            right: window.innerWidth - r.right,
+                          });
+                        }}
                       >
                         <TrashIcon />
                       </button>
+                      {deleteConfirm?.id === field.id && (
+                        <div
+                          role="menu"
+                          aria-label={`Delete ${field.name}?`}
+                          className={styles.confirm}
+                          style={{
+                            top: deleteConfirm.top,
+                            right: deleteConfirm.right,
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <span className={styles.confirmText}>
+                            Are you sure?
+                          </span>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className={styles.confirmDelete}
+                            onClick={() => {
+                              setDeleteConfirm(null);
+                              void handleDelete(field);
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
                     </td>
                     <td className={styles.filler} />
                   </tr>

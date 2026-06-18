@@ -41,6 +41,13 @@ function humanize(field: string): string {
     .join(" ");
 }
 
+// Display label for a standard (non-custom) spec field. The system field is
+// keyed "system_id" but filters/sorts by the system itself, so it reads as
+// "System" rather than the humanized "System Id" everywhere it surfaces.
+function standardLabel(field: string, kind: FilterFieldKind): string {
+  return kind === "system" ? "System" : humanize(field);
+}
+
 // Build the user-facing filter field list from the backend spec, which is the
 // single source of truth: it lists every filterable field (standard AND custom,
 // keyed by name) with the operators each accepts. The custom-field definitions
@@ -65,7 +72,7 @@ export function buildFieldList(
       specOps && specOps.length > 0 ? specOps : operatorsForKind(kind);
     const entry: FilterFieldDef = {
       field,
-      label: def ? def.name : humanize(field),
+      label: def ? def.name : standardLabel(field, kind),
       kind,
       source: def ? "custom" : "standard",
       operators,

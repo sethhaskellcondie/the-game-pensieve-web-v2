@@ -105,6 +105,11 @@ describe("CustomFieldsManager", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Delete Designers" }));
 
+    // The trash opens an "Are you sure?" confirmation; the DELETE only fires
+    // once its Delete is confirmed.
+    const menu = screen.getByRole("menu", { name: "Delete Designers?" });
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Delete" }));
+
     await waitFor(() => {
       expect(
         mockFetch.mock.calls.some(
