@@ -29,6 +29,13 @@
   color: var(--gray-500);
 }
 
+.newCategoryWrap {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* Override the shared Button's blue with the success green from the design. */
 .newCategoryBtn {
   flex: 0 0 auto;

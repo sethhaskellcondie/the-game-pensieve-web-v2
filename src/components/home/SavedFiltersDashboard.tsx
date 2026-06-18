@@ -17,6 +17,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import BeginnerHint from "@/components/BeginnerHint";
 import Button from "@/components/Button";
 import { PlusIcon } from "@/components/custom-fields/icons";
 import { newFilterId } from "@/components/filters/ids";
@@ -363,9 +364,15 @@ export default function SavedFiltersDashboard({
             {summary(categoryCount, filterCount)}
           </p>
         </div>
-        <Button className={styles.newCategoryBtn} onClick={onNewCategory}>
-          <PlusIcon /> New Category
-        </Button>
+        <div className={styles.newCategoryWrap}>
+          <Button className={styles.newCategoryBtn} onClick={onNewCategory}>
+            <PlusIcon /> New Category
+          </Button>
+          <BeginnerHint
+            placement="bottom-end"
+            text="Here you can save filters to be shortcuts to different pages in the pensieve. These filters can be sorted in categories, after filters are created click and drag them to be in the categories and order that you like."
+          />
+        </div>
       </div>
 
       <DndContext
