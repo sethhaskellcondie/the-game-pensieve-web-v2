@@ -528,7 +528,7 @@ export default function VideoGamesManager({
       <div className={styles.head}>
         <div className={styles.titleWrap}>
           <div className={styles.titleRow}>
-            <h2 className={styles.entName}><b>{games.length}</b> {games.length === 1 ? "Video Game" : "Video Games"}</h2>
+            <h2 className={styles.entName}>{loading ? "Loading…" : <><b>{games.length}</b> {games.length === 1 ? "Video Game" : "Video Games"}</>}</h2>
             {massEditMode && (
               <BeginnerHint
                 placement="bottom-start"

@@ -577,7 +577,7 @@ export default function ToysManager({
       <div className={styles.head}>
         <div className={styles.titleWrap}>
           <div className={styles.titleRow}>
-            <h2 className={styles.entName}><b>{toys.length}</b> {toys.length === 1 ? "Toy" : "Toys"}</h2>
+            <h2 className={styles.entName}>{loading ? "Loading…" : <><b>{toys.length}</b> {toys.length === 1 ? "Toy" : "Toys"}</>}</h2>
             {massEditMode && (
               <BeginnerHint
                 placement="bottom-start"

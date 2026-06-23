@@ -595,7 +595,7 @@ export default function SystemsManager({
       <div className={styles.head}>
         <div className={styles.titleWrap}>
           <div className={styles.titleRow}>
-            <h2 className={styles.entName}><b>{systems.length}</b> {systems.length === 1 ? "System" : "Systems"}</h2>
+            <h2 className={styles.entName}>{loading ? "Loading…" : <><b>{systems.length}</b> {systems.length === 1 ? "System" : "Systems"}</>}</h2>
             {massEditMode && (
               <BeginnerHint
                 placement="bottom-start"

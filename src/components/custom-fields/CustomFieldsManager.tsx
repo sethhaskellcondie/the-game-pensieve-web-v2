@@ -399,7 +399,13 @@ export default function CustomFieldsManager() {
           <h2 className={styles.entName}>{entityLabel}</h2>
           <div className={styles.crumb}>
             <span>
-              <b>{fields.length}</b> {fields.length === 1 ? "field" : "fields"}
+              {loading ? (
+                "Loading…"
+              ) : (
+                <>
+                  <b>{fields.length}</b> {fields.length === 1 ? "field" : "fields"}
+                </>
+              )}
             </span>
           </div>
         </div>
