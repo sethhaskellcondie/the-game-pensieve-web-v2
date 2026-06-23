@@ -161,6 +161,10 @@ export default function VideoGameBoxesManager({
   const [gameDefinitions, setGameDefinitions] = useState<CustomField[]>([]);
   const [spec, setSpec] = useState<FilterSpecification | null>(null);
   const [loading, setLoading] = useState(true);
+  // True while a filter/sort re-search is pending or in flight (distinct from
+  // `loading`, which only covers the initial mount load). Drives the "Loading…"
+  // count without blanking the table the way the DataTable `loading` prop would.
+  const [searching, setSearching] = useState(false);
   // Create-box dialog state: open flag + in-flight guard for its save button.
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -319,16 +323,21 @@ export default function VideoGameBoxesManager({
     const dtoJson = JSON.stringify(dto);
     if (dtoJson === lastDto.current) return;
     lastDto.current = dtoJson;
+    setSearching(true);
     const controller = new AbortController();
     const seq = ++searchSeq.current;
     const timer = setTimeout(() => {
       searchVideoGameBoxesClient(dto, controller.signal)
         .then((rows) => {
-          if (seq === searchSeq.current) setBoxes(rows);
+          if (seq === searchSeq.current) {
+            setBoxes(rows);
+            setSearching(false);
+          }
         })
         .catch((error) => {
           if (controller.signal.aborted) return;
           console.error("Search video game boxes failed", error);
+          if (seq === searchSeq.current) setSearching(false);
           showSnackbar({ message: loadErrorMessage(error), variant: "error" });
         });
     }, 250);
@@ -640,7 +649,7 @@ export default function VideoGameBoxesManager({
       <div className={styles.head}>
         <div className={styles.titleWrap}>
           <div className={styles.titleRow}>
-            <h2 className={styles.entName}>{loading ? "Loading…" : <><b>{boxes.length}</b> {boxes.length === 1 ? "Video Game Box" : "Video Game Boxes"}</>}</h2>
+            <h2 className={styles.entName}>{loading || searching ? "Loading…" : <><b>{boxes.length}</b> {boxes.length === 1 ? "Video Game Box" : "Video Game Boxes"}</>}</h2>
             {massEditMode && (
               <BeginnerHint
                 placement="bottom-start"

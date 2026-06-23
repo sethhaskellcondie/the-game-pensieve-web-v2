@@ -193,6 +193,10 @@ export default function ToysManager({
   const [definitions, setDefinitions] = useState<CustomField[]>([]);
   const [spec, setSpec] = useState<FilterSpecification | null>(null);
   const [loading, setLoading] = useState(true);
+  // True while a filter/sort re-search is pending or in flight (distinct from
+  // `loading`, which only covers the initial mount load). Drives the "Loading…"
+  // count without blanking the table the way the DataTable `loading` prop would.
+  const [searching, setSearching] = useState(false);
   // The quick-search text (folded into a name-contains filter) and the explicit
   // filter chips. Both feed the server-side search.
   const [query, setQuery] = useState("");
@@ -305,16 +309,21 @@ export default function ToysManager({
     const dtoJson = JSON.stringify(dto);
     if (dtoJson === lastDto.current) return;
     lastDto.current = dtoJson;
+    setSearching(true);
     const controller = new AbortController();
     const seq = ++searchSeq.current;
     const timer = setTimeout(() => {
       searchToysClient(dto, controller.signal)
         .then((rows) => {
-          if (seq === searchSeq.current) setToys(rows);
+          if (seq === searchSeq.current) {
+            setToys(rows);
+            setSearching(false);
+          }
         })
         .catch((error) => {
           if (controller.signal.aborted) return;
           console.error("Search toys failed", error);
+          if (seq === searchSeq.current) setSearching(false);
           showSnackbar({ message: loadErrorMessage(error), variant: "error" });
         });
     }, 250);
@@ -577,7 +586,7 @@ export default function ToysManager({
       <div className={styles.head}>
         <div className={styles.titleWrap}>
           <div className={styles.titleRow}>
-            <h2 className={styles.entName}>{loading ? "Loading…" : <><b>{toys.length}</b> {toys.length === 1 ? "Toy" : "Toys"}</>}</h2>
+            <h2 className={styles.entName}>{loading || searching ? "Loading…" : <><b>{toys.length}</b> {toys.length === 1 ? "Toy" : "Toys"}</>}</h2>
             {massEditMode && (
               <BeginnerHint
                 placement="bottom-start"
