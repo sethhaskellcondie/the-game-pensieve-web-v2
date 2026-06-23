@@ -6,6 +6,7 @@ import ToysManager from "@/components/toys/ToysManager";
 import { ToastProvider } from "@/components/ToastProvider";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
+import { encodeFilterParam } from "@/components/filters/urlFilters";
 
 jest.mock("next/navigation", () => ({
   useRouter: jest.fn(),
@@ -192,6 +193,8 @@ function renderManager(
 
 describe("ToysManager", () => {
   beforeEach(() => {
+    // Filters now persist in localStorage; clear so tests don't leak filters.
+    localStorage.clear();
     mockFetch.mockImplementation(routedFetch);
     global.fetch = mockFetch as unknown as typeof fetch;
     mockPush.mockReset();
@@ -274,6 +277,43 @@ describe("ToysManager", () => {
         url.includes("/api/toys/search") && init?.method === "POST",
     );
     expect(search).toBeDefined();
+  });
+
+  it("applies persisted filters in the initial query without a second search", async () => {
+    // A previously-saved filter sitting in localStorage (no URL param).
+    localStorage.setItem(
+      "filters:toy",
+      encodeFilterParam([
+        {
+          field: "name",
+          label: "Name",
+          kind: "text",
+          operator: "contains",
+          operand: "Pikachu",
+        },
+      ]),
+    );
+
+    renderManager();
+
+    // The persisted filter is in effect from the first paint: Pikachu shows,
+    // R2-D2 never does, and the restored chip is present.
+    expect(await screen.findByText("Pikachu")).toBeInTheDocument();
+    expect(screen.queryByText("R2-D2")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Edit Name filter" }),
+    ).toBeInTheDocument();
+
+    // Exactly one search ran, and it already carried the persisted filter —
+    // no unfiltered base query followed by a filtered re-query.
+    const searches = mockFetch.mock.calls.filter(([url, init]) =>
+      url.includes("/api/toys/search") && init?.method === "POST",
+    );
+    expect(searches).toHaveLength(1);
+    const body = JSON.parse(searches[0][1].body as string);
+    expect(body.filters).toEqual([
+      expect.objectContaining({ field: "name", operand: "Pikachu" }),
+    ]);
   });
 
   it("shows an empty-filter message when nothing matches", async () => {

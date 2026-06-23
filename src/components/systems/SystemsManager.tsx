@@ -31,7 +31,8 @@ import {
 import { buildFieldList, supportsSorting } from "@/components/filters/fieldList";
 import { toFilterRequest, toSortRequest } from "@/components/filters/serialize";
 import { decodeFilterParam } from "@/components/filters/urlFilters";
-import type { ActiveFilter, ActiveSort } from "@/components/filters/types";
+import { usePersistentFilters } from "@/components/filters/usePersistentFilters";
+import type { ActiveSort } from "@/components/filters/types";
 import CustomFieldValue from "@/components/toys/CustomFieldValue";
 import FieldEditor, {
   normalizeFieldValue,
@@ -194,7 +195,10 @@ export default function SystemsManager({
   // The quick-search text (folded into a name-contains filter), the explicit
   // filter chips, and the ordered sort levels. All feed the server-side search.
   const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState<ActiveFilter[]>(initialFilters);
+  const [filters, setFilters, initialResolvedFilters] = usePersistentFilters(
+    "system",
+    initialFilters,
+  );
   // The sort levels the user entered on this page (the Sort button's state).
   // Starts empty even when a default sort is stored — the default never shows
   // here; it is folded into the search request only while this is empty.
@@ -253,7 +257,7 @@ export default function SystemsManager({
             )
           : [];
         const dto = [
-          ...toFilterRequest("system", initialFilters),
+          ...toFilterRequest("system", initialResolvedFilters),
           ...toSortRequest("system", seeded),
         ];
         lastDto.current = JSON.stringify(dto);
@@ -277,7 +281,7 @@ export default function SystemsManager({
       active = false;
       controller.abort();
     };
-  }, [showSnackbar, initialFilters]);
+  }, [showSnackbar, initialResolvedFilters]);
 
   // Re-run the server search whenever the filter chips or sort levels change.
   // The sort filters sent are the page's own levels, or the stored defaults
@@ -289,6 +293,10 @@ export default function SystemsManager({
   // The search box doesn't filter live — it adds a name-contains chip on
   // Enter, which flows through here.
   useEffect(() => {
+    // Wait for the initial load to finish. It already queried with the resolved
+    // (persisted) filters, so the post-mount restore that swaps them into state
+    // must not fire a second, redundant search here.
+    if (loading) return;
     const dto = [
       ...toFilterRequest("system", filters),
       ...toSortRequest("system", sortsOrDefault(sorts, defaultSorts)),
@@ -313,7 +321,7 @@ export default function SystemsManager({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [filters, sorts, defaultSorts, showSnackbar]);
+  }, [filters, sorts, defaultSorts, showSnackbar, loading]);
 
   // Apply `next` optimistically and PUT the whole system (name + generation +
   // handheld + values are all required by the backend), rolling the list back

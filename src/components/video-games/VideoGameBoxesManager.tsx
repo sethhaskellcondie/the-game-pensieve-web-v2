@@ -32,7 +32,8 @@ import {
 import { buildFieldList, supportsSorting } from "@/components/filters/fieldList";
 import { toFilterRequest, toSortRequest } from "@/components/filters/serialize";
 import { decodeFilterParam } from "@/components/filters/urlFilters";
-import type { ActiveFilter, ActiveSort } from "@/components/filters/types";
+import { usePersistentFilters } from "@/components/filters/usePersistentFilters";
+import type { ActiveSort } from "@/components/filters/types";
 import CustomFieldValue from "@/components/toys/CustomFieldValue";
 import FieldEditor, {
   normalizeFieldValue,
@@ -166,7 +167,10 @@ export default function VideoGameBoxesManager({
   // The quick-search text (folded into a title-contains filter) and the explicit
   // filter chips. Both feed the server-side search.
   const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState<ActiveFilter[]>(initialFilters);
+  const [filters, setFilters, initialResolvedFilters] = usePersistentFilters(
+    "video-game-box",
+    initialFilters,
+  );
   // The sort levels the user entered on this page (the Sort button's state).
   // Starts empty even when a default sort is stored — the default never shows
   // here; it is folded into the search request only while this is empty. The
@@ -261,7 +265,7 @@ export default function VideoGameBoxesManager({
               )
             : [];
           const dto = [
-            ...toFilterRequest("videoGameBox", initialFilters),
+            ...toFilterRequest("videoGameBox", initialResolvedFilters),
             ...toSortRequest("videoGameBox", seeded),
           ];
           lastDto.current = JSON.stringify(dto);
@@ -292,7 +296,7 @@ export default function VideoGameBoxesManager({
       active = false;
       controller.abort();
     };
-  }, [showSnackbar, initialFilters]);
+  }, [showSnackbar, initialResolvedFilters]);
 
   // Re-run the server search whenever the filter chips or sort levels change.
   // The sort filters sent are the page's own levels, or the stored defaults
@@ -304,6 +308,10 @@ export default function VideoGameBoxesManager({
   // The search box doesn't filter live — it adds a title-contains chip on
   // Enter, which flows through here.
   useEffect(() => {
+    // Wait for the initial load to finish. It already queried with the resolved
+    // (persisted) filters, so the post-mount restore that swaps them into state
+    // must not fire a second, redundant search here.
+    if (loading) return;
     const dto = [
       ...toFilterRequest("videoGameBox", filters),
       ...toSortRequest("videoGameBox", sortsOrDefault(sorts, defaultSorts)),
@@ -328,7 +336,7 @@ export default function VideoGameBoxesManager({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [filters, sorts, defaultSorts, showSnackbar]);
+  }, [filters, sorts, defaultSorts, showSnackbar, loading]);
 
   // Apply `next` optimistically and PUT the whole box — the backend's
   // VideoGameBoxRequest requires every field, so the box's current game ids

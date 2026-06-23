@@ -174,6 +174,8 @@ function renderManager(
 
 describe("SystemsManager", () => {
   beforeEach(() => {
+    // Filters now persist in localStorage; clear so tests don't leak filters.
+    localStorage.clear();
     mockFetch.mockImplementation(routedFetch);
     global.fetch = mockFetch as unknown as typeof fetch;
     mockPush.mockReset();

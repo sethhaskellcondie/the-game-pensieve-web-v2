@@ -31,9 +31,12 @@ function renderModal({
   return { onCreate, onClose };
 }
 
-// Drive the click-to-edit Name editor: open it, type, and commit with Enter.
+// Drive the Name editor: type and commit with Enter. The dialog opens with the
+// Name editor already focused/open for keyboard entry, so only click it open if
+// it happens to be closed.
 function typeName(value: string) {
-  fireEvent.click(screen.getByRole("button", { name: "Edit Name" }));
+  const editButton = screen.queryByRole("button", { name: "Edit Name" });
+  if (editButton) fireEvent.click(editButton);
   const input = screen.getByRole("textbox", { name: "Name" });
   fireEvent.change(input, { target: { value } });
   fireEvent.keyDown(input, { key: "Enter" });
@@ -61,7 +64,10 @@ describe("SystemCreateModal", () => {
 
     it("renders the Name, Generation, and Handheld standard rows", () => {
       renderModal();
-      expect(screen.getByRole("button", { name: "Edit Name" })).toBeInTheDocument();
+      // The Name editor opens automatically on mount, so it renders as a textbox.
+      expect(
+        screen.getByRole("textbox", { name: "Name" }),
+      ).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "Edit Generation" }),
       ).toBeInTheDocument();
@@ -69,6 +75,11 @@ describe("SystemCreateModal", () => {
       expect(
         screen.getByRole("button", { name: "Handheld: No" }),
       ).toBeInTheDocument();
+    });
+
+    it("focuses the open Name field on mount so it can be typed at once", () => {
+      renderModal();
+      expect(screen.getByRole("textbox", { name: "Name" })).toHaveFocus();
     });
 
     it("keeps Create disabled until both Name and Generation are entered", () => {
