@@ -107,7 +107,8 @@ export default function SystemCreateModal({
   }, [onClose, massInputMode]);
 
   // After a mass-input save, focus the (now blank) Name field — focusing its
-  // editor opens it ready to type. Skipped on first mount, which focuses the X.
+  // editor opens it ready to type. Skipped on first mount, where the on-open
+  // effect below already focuses Name.
   useEffect(() => {
     if (entryNonce === 0) return;
     nameCellRef.current
@@ -115,11 +116,15 @@ export default function SystemCreateModal({
       ?.focus();
   }, [entryNonce]);
 
-  // Move focus into the dialog on open so a keyboard user starts inside it, and
-  // return it to whatever opened the dialog (the New button) when it closes.
+  // Move focus into the dialog on open, landing on the Name field so a keyboard
+  // user can start typing immediately (focusing its editor opens it). Falls back
+  // to the first focusable, and returns focus to whatever opened the dialog (the
+  // New button) when it closes.
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
-    getFocusable(modalRef.current)[0]?.focus();
+    const nameEditor =
+      nameCellRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+    (nameEditor ?? getFocusable(modalRef.current)[0])?.focus();
     return () => opener?.focus?.();
   }, []);
 
