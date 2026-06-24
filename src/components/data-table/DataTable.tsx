@@ -19,6 +19,9 @@ export type ColumnDef<Row> = {
   // used for chip/editor columns (dropdown, radio, progress, system) where the
   // "…" marker is reserved for free-text columns.
   clip?: boolean;
+  // Horizontal alignment of the cell content. Defaults to left; set "right" for
+  // numeric columns so the values line up on their last digit.
+  align?: "left" | "right";
   render: (row: Row) => ReactNode;
 };
 
@@ -266,6 +269,7 @@ export default function DataTable<Row>({
                   const cls = [
                     styles.cell,
                     c.clip ? styles.clip : "",
+                    c.align === "right" ? styles.right : "",
                     c.frozen ? styles.frozen : "",
                     c.seam ? styles.seam : "",
                   ]

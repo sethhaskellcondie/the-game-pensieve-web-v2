@@ -560,6 +560,8 @@ export default function BoardGameBoxesManager({
       key: `cf-${def.id}`,
       label: def.name,
       width: def.type === "number" || def.type === "boolean" ? MIN_COL : 180,
+      // Numbers read better right-aligned so their digits line up down the column.
+      align: def.type === "number" ? "right" : undefined,
       render: (box) => renderFieldCell(box, def),
     }));
     // Drop the standard columns the user hid via Options → Show/Hide Standard

@@ -159,6 +159,12 @@
   text-overflow: clip;
 }
 
+/* Right-aligned cells (numeric columns) — written as `.table td.right` so it
+   outranks the blanket `.table td { text-align: left }` rule on specificity. */
+.table td.right {
+  text-align: right;
+}
+
 .row:hover td {
   background: #f4f9ff;
 }

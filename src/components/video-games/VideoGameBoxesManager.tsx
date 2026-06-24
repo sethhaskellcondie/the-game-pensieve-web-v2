@@ -502,6 +502,7 @@ export default function VideoGameBoxesManager({
         label: "Games",
         width: MIN_COL,
         clip: true,
+        align: "right",
         render: (box) => (
           <CustomFieldValue
             type="number"
@@ -585,6 +586,8 @@ export default function VideoGameBoxesManager({
       width: def.type === "number" || def.type === "boolean" ? MIN_COL : 180,
       // Only free text gets the ellipsis; every other type clips cleanly.
       clip: def.type !== "text",
+      // Numbers read better right-aligned so their digits line up down the column.
+      align: def.type === "number" ? "right" : undefined,
       render: (box) => renderFieldCell(box, def),
     }));
     // Drop the standard columns the user hid via Options → Show/Hide Standard

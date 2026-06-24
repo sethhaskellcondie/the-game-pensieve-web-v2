@@ -496,6 +496,7 @@ export default function SystemsManager({
         key: "generation",
         label: "Generation",
         width: MIN_COL,
+        align: "right",
         render: massEditMode
           ? (system) => (
               <FieldEditor
@@ -575,6 +576,8 @@ export default function SystemsManager({
       key: `cf-${def.id}`,
       label: def.name,
       width: def.type === "number" || def.type === "boolean" ? MIN_COL : 180,
+      // Numbers read better right-aligned so their digits line up down the column.
+      align: def.type === "number" ? "right" : undefined,
       render: (system) => renderFieldCell(system, def),
     }));
     // Drop the standard columns the user hid via Options → Show/Hide Standard
