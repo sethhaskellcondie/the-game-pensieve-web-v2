@@ -381,6 +381,9 @@ test("creates a box through the New dialog with a new game and an existing game"
   await gameDialog.getByRole("button", { name: "Create", exact: true }).click();
   await expect(gameDialog).toBeHidden();
 
+  // Creating the game returns focus to the box's Create button, ready to submit.
+  await expect(create).toBeFocused();
+
   // Attach an existing game via the picker; the one already shelved says so.
   const picker = dialog.getByRole("searchbox", { name: "Add an existing game" });
   await picker.fill("mega man");

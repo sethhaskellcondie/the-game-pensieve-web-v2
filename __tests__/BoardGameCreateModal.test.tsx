@@ -33,9 +33,11 @@ function renderModal({
   return { onCreate, onClose };
 }
 
-// Drive a click-to-edit text editor: open it, type, and commit with Enter.
+// Drive a text editor: open it (Title is already open on mount, so its Edit
+// button is absent), type, and commit with Enter.
 function typeField(name: string, value: string) {
-  fireEvent.click(screen.getByRole("button", { name: `Edit ${name}` }));
+  const editButton = screen.queryByRole("button", { name: `Edit ${name}` });
+  if (editButton) fireEvent.click(editButton);
   const input = screen.getByRole("textbox", { name });
   fireEvent.change(input, { target: { value } });
   fireEvent.keyDown(input, { key: "Enter" });
@@ -47,6 +49,11 @@ describe("BoardGameCreateModal", () => {
     expect(
       screen.queryByRole("button", { name: "System" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("focuses the open Title field on mount so it can be typed at once", () => {
+    renderModal();
+    expect(screen.getByRole("textbox", { name: "Title" })).toHaveFocus();
   });
 
   it("disables Create until a title is entered", () => {

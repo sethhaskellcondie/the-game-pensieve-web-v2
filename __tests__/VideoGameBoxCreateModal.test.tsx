@@ -170,6 +170,24 @@ describe("VideoGameBoxCreateModal", () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
+  it("moves focus to the box's Create button after creating a game in the stacked dialog", async () => {
+    renderModal();
+    typeTitle(boxDialog(), "Mega Man Collection");
+    pickSystem(boxDialog(), "NES");
+
+    addNewGame("Mega Man");
+
+    // The stacked dialog closes asynchronously after its create resolves.
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Create Video Game" }),
+      ).not.toBeInTheDocument(),
+    );
+    // A game is in the list and the title + system are set, so Create is
+    // enabled — and the user lands on it, one keystroke from submitting the box.
+    expect(screen.getByRole("button", { name: "Create" })).toHaveFocus();
+  });
+
   it("attaches existing games through the picker, hiding already-added ones and labeling shelved ones", async () => {
     renderModal();
 

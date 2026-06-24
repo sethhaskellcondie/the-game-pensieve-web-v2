@@ -201,6 +201,23 @@ describe("BoardGameBoxCreateModal", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("moves focus to the box's Create button after creating a game in the stacked dialog", async () => {
+    renderModal();
+    typeTitle(boxDialog(), "Wingspan Box");
+
+    addNewGame("Wingspan");
+
+    // The stacked dialog closes asynchronously after its create resolves.
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Create Board Game" }),
+      ).not.toBeInTheDocument(),
+    );
+    // The game is chosen and the title is set, so Create is enabled — and the
+    // user lands on it, one keystroke from submitting the box.
+    expect(screen.getByRole("button", { name: "Create" })).toHaveFocus();
+  });
+
   it("picks an existing game through the picker, with its shelf hint", async () => {
     renderModal();
 

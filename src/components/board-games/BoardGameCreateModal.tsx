@@ -103,7 +103,8 @@ export default function BoardGameCreateModal({
   }, [onClose, massInputMode]);
 
   // After a mass-input save, focus the (now blank) Title field — focusing its
-  // editor opens it ready to type. Skipped on first mount, which focuses the X.
+  // editor opens it ready to type. Skipped on first mount, where the open
+  // effect below already focuses Title.
   useEffect(() => {
     if (entryNonce === 0) return;
     titleCellRef.current
@@ -111,11 +112,15 @@ export default function BoardGameCreateModal({
       ?.focus();
   }, [entryNonce]);
 
-  // Move focus into the dialog on open so a keyboard user starts inside it, and
-  // return it to whatever opened the dialog (the New button) when it closes.
+  // Move focus into the dialog on open, landing on the Title field so a keyboard
+  // user can start typing immediately (focusing its editor opens it). Falls back
+  // to the first focusable, and returns focus to whatever opened the dialog (the
+  // Add New Game button) when it closes.
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
-    getFocusable(modalRef.current)[0]?.focus();
+    const titleEditor =
+      titleCellRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+    (titleEditor ?? getFocusable(modalRef.current)[0])?.focus();
     return () => opener?.focus?.();
   }, []);
 

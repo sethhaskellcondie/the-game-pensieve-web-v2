@@ -127,6 +127,11 @@ export default function VideoGameBoxCreateModal({
   const [entryNonce, setEntryNonce] = useState(0);
   const modalRef = useRef<HTMLDivElement>(null);
   const titleCellRef = useRef<HTMLDivElement>(null);
+  const createButtonRef = useRef<HTMLButtonElement>(null);
+  // Set when a game is created through the stacked dialog, so focus lands on
+  // this dialog's Create button once that dialog closes (see effect below). A
+  // ref, not state — it only steers a focus side effect, never a render.
+  const focusCreateAfterGameRef = useRef(false);
 
   useEffect(() => {
     // In mass-input mode the dialog only exits via a deliberate click (X or
@@ -149,6 +154,17 @@ export default function VideoGameBoxCreateModal({
       ?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
       ?.focus();
   }, [entryNonce]);
+
+  // Once the stacked create-game dialog closes after a successful create, move
+  // focus to this dialog's Create button. The child restores focus to its
+  // opener (the Add New Game button) on unmount; this runs after that and wins,
+  // leaving the user one keystroke from submitting the box. A game is now in the
+  // list, so Create is enabled (and focusable) as long as the title is set.
+  useEffect(() => {
+    if (addingGame || !focusCreateAfterGameRef.current) return;
+    focusCreateAfterGameRef.current = false;
+    createButtonRef.current?.focus();
+  }, [addingGame]);
 
   // Move focus into the dialog on open, landing on the Title field so a keyboard
   // user can start typing immediately (focusing its editor opens it). Falls back
@@ -519,6 +535,7 @@ export default function VideoGameBoxCreateModal({
               Cancel
             </button>
             <button
+              ref={createButtonRef}
               type="button"
               className={styles.save}
               disabled={!canCreate}
@@ -562,6 +579,7 @@ export default function VideoGameBoxCreateModal({
               ...p,
               { kind: "new", key: `new-${newGameSeq.current}`, input },
             ]);
+            focusCreateAfterGameRef.current = true;
             return true;
           }}
           onClose={() => setAddingGame(false)}

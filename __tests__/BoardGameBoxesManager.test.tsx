@@ -374,9 +374,7 @@ describe("BoardGameBoxesManager", () => {
     const gameDialog = screen.getByRole("dialog", {
       name: "Create Board Game",
     });
-    fireEvent.click(
-      within(gameDialog).getByRole("button", { name: "Edit Title" }),
-    );
+    // The game dialog auto-opens its Title editor on mount — no Edit button.
     const gameInput = within(gameDialog).getByRole("textbox", {
       name: "Title",
     });

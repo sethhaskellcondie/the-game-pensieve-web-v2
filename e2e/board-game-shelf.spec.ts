@@ -384,7 +384,7 @@ test("creates a box with a brand-new game through the stacked dialog", async ({
     name: "Create Board Game",
     exact: true,
   });
-  await gameDialog.getByRole("button", { name: "Edit Title" }).click();
+  // The game dialog auto-opens its Title editor on mount — type straight in.
   await gameDialog.getByRole("textbox", { name: "Title" }).fill("Wingspan");
   await gameDialog.getByRole("textbox", { name: "Title" }).press("Enter");
   await gameDialog.getByRole("button", { name: "Create", exact: true }).click();
@@ -394,6 +394,8 @@ test("creates a box with a brand-new game through the stacked dialog", async ({
   await expect(queued.getByText("Wingspan", { exact: true })).toBeVisible();
   await expect(queued.getByText("New", { exact: true })).toBeVisible();
 
+  // Creating the game returns focus to the box's Create button, ready to submit.
+  await expect(create).toBeFocused();
   await expect(create).toBeEnabled();
   await create.click();
 
