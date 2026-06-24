@@ -96,15 +96,13 @@ export default function BoardGameCreateModal({
   const titleCellRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // In mass-input mode the dialog only exits via a deliberate click (X or
-    // Cancel), so the accidental-prone Escape shortcut is inert.
-    if (massInputMode) return;
+    // Escape always closes the dialog, even in mass-input mode.
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose, massInputMode]);
+  }, [onClose]);
 
   // After a mass-input save, focus the (now blank) Title field — focusing its
   // editor opens it ready to type. Skipped on first mount, where the open

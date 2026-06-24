@@ -70,7 +70,7 @@ export default function ToyCreateModal({
 }: ToyCreateModalProps) {
   // Mass-input mode turns the dialog into a rapid data-entry loop: the button
   // becomes "Create And Add Another", each save clears the form and refocuses
-  // Name, and the dialog only closes via the X (no Escape, backdrop, or Cancel).
+  // Name, and the dialog closes via the X or Escape (no backdrop or Cancel).
   const { settings } = useUiSettings();
   const massInputMode = settings.massInputMode;
 
@@ -91,15 +91,13 @@ export default function ToyCreateModal({
   const nameCellRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // In mass-input mode the dialog only exits via a deliberate click (X or
-    // Cancel), so the accidental-prone Escape shortcut is inert.
-    if (massInputMode) return;
+    // Escape always closes the dialog, even in mass-input mode.
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose, massInputMode]);
+  }, [onClose]);
 
   // After a mass-input save, focus the (now blank) Name field — focusing its
   // editor opens it ready to type. Skipped on first mount, where the on-open

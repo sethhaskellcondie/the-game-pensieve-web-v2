@@ -476,12 +476,9 @@ describe("BoardGameBoxCreateModal", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("does not close on Escape; the close button still exits", () => {
+    it("closes on Escape even in mass-input mode", () => {
       const { onClose } = renderModal({ massInputMode: true });
       fireEvent.keyDown(document, { key: "Escape" });
-      expect(onClose).not.toHaveBeenCalled();
-
-      fireEvent.click(screen.getByRole("button", { name: "Close" }));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
   });

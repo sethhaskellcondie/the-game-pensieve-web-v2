@@ -104,7 +104,7 @@ export default function BoardGameBoxCreateModal({
 }: BoardGameBoxCreateModalProps) {
   // Mass-input mode turns the dialog into a rapid data-entry loop: the button
   // becomes "Create And Add Another", each save clears the form and refocuses
-  // Title, and the dialog only closes via the X (no Escape, backdrop, or Cancel).
+  // Title, and the dialog closes via the X or Escape (no backdrop or Cancel).
   const { settings } = useUiSettings();
   const massInputMode = settings.massInputMode;
 
@@ -154,17 +154,16 @@ export default function BoardGameBoxCreateModal({
   const focusCreateAfterGameRef = useRef(false);
 
   useEffect(() => {
-    // In mass-input mode the dialog only exits via a deliberate click (X or
-    // Cancel), so the accidental-prone Escape shortcut is inert. While the
+    // Escape always closes the dialog, even in mass-input mode. While the
     // stacked create-game dialog is open, this listener detaches so Escape
     // closes only the child (its own listener handles it).
-    if (massInputMode || addingGame) return;
+    if (addingGame) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose, massInputMode, addingGame]);
+  }, [onClose, addingGame]);
 
   // After a mass-input save, focus the (now blank) Title field — focusing its
   // editor opens it ready to type. Skipped on first mount, which focuses the X.
