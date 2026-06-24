@@ -223,7 +223,7 @@ describe("BoardGameDetail", () => {
       within(dialog).queryByRole("button", { name: "Add New Game" }),
     ).not.toBeInTheDocument();
 
-    fireEvent.click(within(dialog).getByRole("button", { name: "Edit Title" }));
+    // The box dialog auto-opens its Title editor on mount — no Edit button.
     const input = within(dialog).getByRole("textbox", { name: "Title" });
     fireEvent.change(input, { target: { value: "Set-A-Watch Travel Box" } });
     fireEvent.keyDown(input, { key: "Enter" });

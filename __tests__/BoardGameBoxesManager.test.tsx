@@ -363,7 +363,8 @@ describe("BoardGameBoxesManager", () => {
       name: "Create Board Game Box",
     });
 
-    fireEvent.click(within(dialog).getByRole("button", { name: "Edit Title" }));
+    // The box dialog auto-opens its Title editor on mount, so there's no Edit
+    // button to click — go straight to the input.
     const input = within(dialog).getByRole("textbox", { name: "Title" });
     fireEvent.change(input, { target: { value: "Wingspan" } });
     fireEvent.keyDown(input, { key: "Enter" });

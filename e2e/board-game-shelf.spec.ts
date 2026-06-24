@@ -371,7 +371,7 @@ test("creates a box with a brand-new game through the stacked dialog", async ({
   const create = dialog.getByRole("button", { name: "Create", exact: true });
 
   // A title alone doesn't satisfy the dialog — a box holds exactly one game.
-  await dialog.getByRole("button", { name: "Edit Title" }).click();
+  // The box dialog auto-opens its Title editor on mount, so type straight in.
   await dialog.getByRole("textbox", { name: "Title" }).fill("Wingspan");
   await dialog.getByRole("textbox", { name: "Title" }).press("Enter");
   await expect(dialog.getByText("Pick or create the game.")).toBeVisible();
@@ -445,7 +445,7 @@ test("creates an expansion whose base set auto-fills the linked game", async ({
   await page.getByRole("button", { name: "New" }).click();
 
   const dialog = page.getByRole("dialog", { name: "Create Board Game Box" });
-  await dialog.getByRole("button", { name: "Edit Title" }).click();
+  // The box dialog auto-opens its Title editor on mount — type straight in.
   await dialog
     .getByRole("textbox", { name: "Title" })
     .fill("Set-A-Watch Forsaken Isles");

@@ -275,8 +275,8 @@ test("creates a toy through the New dialog and shows it in the list", async ({
   // Create is disabled until a Name is entered.
   await expect(dialog.getByRole("button", { name: "Create" })).toBeDisabled();
 
-  // Name and Set reuse the detail page's click-to-edit editors.
-  await dialog.getByRole("button", { name: "Edit Name" }).click();
+  // Name auto-opens focused on mount; Set reuses the detail page's
+  // click-to-edit editor.
   await dialog.getByRole("textbox", { name: "Name" }).fill("Buzz Lightyear");
   await dialog.getByRole("textbox", { name: "Name" }).press("Enter");
 
@@ -303,12 +303,11 @@ test("the New dialog is keyboard-navigable", async ({ page }) => {
 
   const dialog = page.getByRole("dialog", { name: "Create Toy" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "Close" })).toBeFocused();
-
-  // Tab is trapped inside the dialog: Shift+Tab off the first control wraps to
-  // the last one (Cancel, since Create is disabled while Name is empty).
-  await page.keyboard.press("Shift+Tab");
-  await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
+  // Opening from the keyboard moves focus into the dialog, landing on the open
+  // Name field so the user can type immediately. (Field-to-field Tab trapping
+  // is covered by "auto-opens text fields on focus" below; WebKit won't Tab
+  // onto buttons natively, so that path isn't asserted here.)
+  await expect(dialog.getByRole("textbox", { name: "Name" })).toBeFocused();
 
   // Escape closes the dialog and returns focus to the New button that opened it.
   await page.keyboard.press("Escape");
@@ -323,9 +322,8 @@ test("auto-opens text fields on focus and selects their value to overwrite", asy
   await page.getByRole("button", { name: "New" }).click();
   const dialog = page.getByRole("dialog", { name: "Create Toy" });
 
-  // Tab off the Close button onto Name: it opens as a focused textbox, ready to
-  // type into — no Enter/click first.
-  await page.keyboard.press("Tab");
+  // On open, Name is already an open, focused textbox — type into it at once,
+  // no Tab/Enter/click first.
   const nameInput = dialog.getByRole("textbox", { name: "Name" });
   await expect(nameInput).toBeFocused();
   await page.keyboard.type("First");

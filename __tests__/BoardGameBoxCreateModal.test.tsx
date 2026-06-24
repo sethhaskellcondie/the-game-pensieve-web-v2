@@ -115,9 +115,12 @@ const boxDialog = () =>
 const gameDialog = () =>
   screen.getByRole("dialog", { name: "Create Board Game" });
 
-// Drive the click-to-edit Title editor inside `scope`.
+// Drive the Title editor inside `scope`. The box dialog auto-opens Title on
+// mount (no Edit button to click); the stacked game dialog still needs the
+// click — so open it only when the button is present.
 function typeTitle(scope: HTMLElement, value: string) {
-  fireEvent.click(within(scope).getByRole("button", { name: "Edit Title" }));
+  const editButton = within(scope).queryByRole("button", { name: "Edit Title" });
+  if (editButton) fireEvent.click(editButton);
   const input = within(scope).getByRole("textbox", { name: "Title" });
   fireEvent.change(input, { target: { value } });
   fireEvent.keyDown(input, { key: "Enter" });

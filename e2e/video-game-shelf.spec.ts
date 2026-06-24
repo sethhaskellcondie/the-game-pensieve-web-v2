@@ -360,7 +360,7 @@ test("creates a box through the New dialog with a new game and an existing game"
   const create = dialog.getByRole("button", { name: "Create", exact: true });
 
   // Title + System alone don't satisfy the dialog — a box needs ≥1 game.
-  await dialog.getByRole("button", { name: "Edit Title" }).click();
+  // The box dialog auto-opens its Title editor on mount — type straight in.
   await dialog.getByRole("textbox", { name: "Title" }).fill("Mega Man Collection");
   await dialog.getByRole("textbox", { name: "Title" }).press("Enter");
   await dialog.getByRole("button", { name: "System" }).click();

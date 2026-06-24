@@ -339,7 +339,7 @@ describe("VideoGameBoxesManager", () => {
     });
 
     // Title + System via the dialog's editors.
-    fireEvent.click(within(dialog).getByRole("button", { name: "Edit Title" }));
+    // The box dialog auto-opens its Title editor on mount — no Edit button.
     const input = within(dialog).getByRole("textbox", { name: "Title" });
     fireEvent.change(input, { target: { value: "Mega Man Collection" } });
     fireEvent.keyDown(input, { key: "Enter" });
@@ -398,7 +398,7 @@ describe("VideoGameBoxesManager", () => {
     const dialog = screen.getByRole("dialog", {
       name: "Create Video Game Box",
     });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Edit Title" }));
+    // The box dialog auto-opens its Title editor on mount — no Edit button.
     const input = within(dialog).getByRole("textbox", { name: "Title" });
     fireEvent.change(input, { target: { value: "Mega Man Collection" } });
     fireEvent.keyDown(input, { key: "Enter" });
