@@ -338,6 +338,29 @@ export function toCustomFieldValue(
   };
 }
 
+// Build the CustomFieldValue entries for a create from the editors' id→string
+// value map. A field left empty is omitted, since a create applies its values as
+// a partial upsert — EXCEPT boolean fields. A boolean editor reads "" as off and
+// shows "No", so an untouched boolean looks set to "No" in the dialog; omitting
+// it would create the entity with no value at all (a blank cell). We send it
+// explicitly as "false" so the saved data matches what the user saw. Each kept
+// field is shaped by toCustomFieldValue, exactly as the detail pages send.
+export function buildCustomFieldValues(
+  definitions: CustomField[],
+  values: Record<number, string>,
+): CustomFieldValue[] {
+  const out: CustomFieldValue[] = [];
+  for (const def of definitions) {
+    let raw = values[def.id] ?? "";
+    if (raw === "") {
+      if (def.type !== "boolean") continue;
+      raw = "false";
+    }
+    out.push(toCustomFieldValue(def, raw));
+  }
+  return out;
+}
+
 // Keep only the entries the backend accepts on write. Reads can return
 // placeholder entries for enum fields with no selection yet (`valueOptionId`
 // null), but a write containing one is rejected with a 400. Since an entity

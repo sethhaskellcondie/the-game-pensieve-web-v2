@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  toCustomFieldValue,
+  buildCustomFieldValues,
   type CustomField,
   type CustomFieldType,
   type CustomFieldOption,
@@ -201,11 +201,12 @@ export default function VideoGameCreateModal({
 
   const submit = async () => {
     if (!canCreate || !selectedSystem) return;
-    // Only fields with a non-empty value become CustomFieldValue entries, in
-    // the same shape the detail pages send.
-    const customFieldValues: CustomFieldValue[] = definitions
-      .filter((def) => (values[def.id] ?? "") !== "")
-      .map((def) => toCustomFieldValue(def, values[def.id]));
+    // Sends each set field plus every boolean (an untouched boolean shows "No"
+    // and is saved as "false"), in the shape the detail pages use.
+    const customFieldValues: CustomFieldValue[] = buildCustomFieldValues(
+      definitions,
+      values,
+    );
     const ok = await onCreate({
       title: title.trim(),
       systemId: selectedSystem.id,

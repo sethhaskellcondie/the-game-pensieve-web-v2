@@ -1,5 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
-import { usePersistentColumnWidths } from "@/components/data-table/usePersistentColumnWidths";
+import {
+  usePersistentColumnWidths,
+  __resetColumnWidthSessionCache,
+} from "@/components/data-table/usePersistentColumnWidths";
 
 const COLUMNS = [
   { key: "name", width: 200 },
@@ -10,6 +13,9 @@ const STORAGE_KEY = "colWidths:systems";
 
 beforeEach(() => {
   localStorage.clear();
+  // The session cache is module-global and intentionally long-lived; reset it
+  // so each test starts as if it were the first visit of a fresh session.
+  __resetColumnWidthSessionCache();
 });
 
 describe("usePersistentColumnWidths", () => {
@@ -58,6 +64,26 @@ describe("usePersistentColumnWidths", () => {
       generation: 110,
       "cf-99": 250,
     });
+  });
+
+  it("restores widths from the session cache on remount (navigation) even if localStorage was cleared", () => {
+    // First mount: resize a column, which seeds the session cache.
+    const first = renderHook(() =>
+      usePersistentColumnWidths("systems", COLUMNS),
+    );
+    act(() => {
+      first.result.current[1]((w) => ({ ...w, name: 360 }));
+    });
+    first.unmount();
+
+    // Simulate navigation away and back within the same session: the component
+    // remounts fresh and localStorage is unavailable, but the in-memory cache
+    // still holds the resized width.
+    localStorage.clear();
+    const second = renderHook(() =>
+      usePersistentColumnWidths("systems", COLUMNS),
+    );
+    expect(second.result.current[0]).toEqual({ name: 360, generation: 110 });
   });
 
   it("does not touch localStorage when no storage key is given", () => {

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  toCustomFieldValue,
+  buildCustomFieldValues,
   type CustomField,
   type CustomFieldType,
   type CustomFieldOption,
@@ -198,11 +198,12 @@ export default function SystemCreateModal({
 
   const submit = async () => {
     if (!canCreate) return;
-    // Only fields with a non-empty value become CustomFieldValue entries, in the
-    // same shape SystemDetail/SystemsManager send.
-    const customFieldValues: CustomFieldValue[] = definitions
-      .filter((def) => (values[def.id] ?? "") !== "")
-      .map((def) => toCustomFieldValue(def, values[def.id]));
+    // Sends each set field plus every boolean (an untouched boolean shows "No"
+    // and is saved as "false"), in the shape SystemDetail/SystemsManager use.
+    const customFieldValues: CustomFieldValue[] = buildCustomFieldValues(
+      definitions,
+      values,
+    );
     const ok = await onCreate({
       name: name.trim(),
       generation: Number(generation),

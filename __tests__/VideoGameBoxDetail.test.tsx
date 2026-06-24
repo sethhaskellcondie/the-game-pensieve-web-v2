@@ -298,7 +298,21 @@ describe("VideoGameBoxDetail", () => {
       systemId: 2,
       existingVideoGameIds: [71, 72],
       newVideoGames: [
-        { title: "Super Mario World", systemId: 2, customFieldValues: [] },
+        {
+          title: "Super Mario World",
+          systemId: 2,
+          // The Finished boolean defaults to "No"/false in the dialog, so the
+          // create sends it explicitly rather than leaving the game blank.
+          customFieldValues: [
+            {
+              customFieldId: 11,
+              customFieldName: "Finished",
+              customFieldType: "boolean",
+              value: "false",
+              valueOptionId: null,
+            },
+          ],
+        },
       ],
     });
 
@@ -334,7 +348,7 @@ describe("VideoGameBoxDetail", () => {
         { id: 73, title: "Super Mario World", system: systems[1], customFieldValues: [], createdAt: "", updatedAt: "", deletedAt: null },
       ],
     };
-    mockFetch.mockImplementation((url: string, init?: { method?: string }) => {
+    mockFetch.mockImplementation((url: string) => {
       if (String(url).includes("/api/video-games/search")) {
         return Promise.resolve({
           ok: true,
