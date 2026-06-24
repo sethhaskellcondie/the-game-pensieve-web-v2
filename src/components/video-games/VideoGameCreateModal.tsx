@@ -61,6 +61,9 @@ type VideoGameCreateModalProps = {
   systems: System[];
   // The box's system — the System row's starting value.
   defaultSystemId: number | undefined;
+  // Seeds the Title field — the box dialog passes its own title so a game
+  // created from it starts from the same name. Defaults to empty.
+  initialTitle?: string;
   saving: boolean;
   // Persists the game and resolves to whether it succeeded, so the dialog can
   // close (normal) or reset for another entry (mass-input mode) accordingly.
@@ -72,6 +75,7 @@ export default function VideoGameCreateModal({
   definitions,
   systems,
   defaultSystemId,
+  initialTitle = "",
   saving,
   onCreate,
   onClose,
@@ -93,7 +97,7 @@ export default function VideoGameCreateModal({
     return initial;
   }
 
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(initialTitle);
   const [systemName, setSystemName] = useState(defaultSystemName);
   const [values, setValues] = useState<Record<number, string>>(makeInitialValues);
   // Bumped after each mass-input save to drive the "refocus Title" effect.
@@ -212,10 +216,10 @@ export default function VideoGameCreateModal({
     // Keep the form (and the user's input) on failure so they can retry.
     if (!ok) return;
     if (massInputMode) {
-      // Clear the form for the next entry (the system keeps its default); the
-      // entryNonce effect refocuses Title.
+      // Clear the form for the next entry, but keep the chosen System — rapid
+      // entry usually stays on one system, so re-picking it every time would be
+      // tedious. The entryNonce effect refocuses Title.
       setTitle("");
-      setSystemName(defaultSystemName);
       setValues(makeInitialValues());
       setEntryNonce((n) => n + 1);
     } else {

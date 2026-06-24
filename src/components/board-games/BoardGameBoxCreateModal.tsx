@@ -726,6 +726,7 @@ export default function BoardGameBoxCreateModal({
       {addingGame && (
         <BoardGameCreateModal
           definitions={gameDefinitions}
+          initialTitle={title}
           saving={false}
           onCreate={async (input) => {
             setGameTouched(true);

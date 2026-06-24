@@ -90,16 +90,19 @@ describe("VideoGameCreateModal", () => {
       ).toBeInTheDocument();
     });
 
-    it("clears the form and stays open after a successful create", async () => {
+    it("clears the form but keeps the chosen System after a successful create", async () => {
       const { onCreate, onClose } = renderModal({ massInputMode: true });
       typeTitle("Super Mario World");
+      // Pick a system other than the SNES default to prove the choice survives.
+      fireEvent.click(screen.getByRole("button", { name: "System" }));
+      fireEvent.click(screen.getByRole("option", { name: "NES" }));
+
       fireEvent.click(
         screen.getByRole("button", { name: "Create And Add Another" }),
       );
 
       await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
-      // The dialog is still open, the title cleared, the system back on its
-      // default.
+      // The dialog is still open and the title cleared...
       expect(onClose).not.toHaveBeenCalled();
       expect(
         screen.getByRole("dialog", { name: "Create Video Game" }),
@@ -109,8 +112,9 @@ describe("VideoGameCreateModal", () => {
           screen.queryByText("Super Mario World"),
         ).not.toBeInTheDocument(),
       );
+      // ...but the System stays on the picked NES, not back to the default.
       expect(screen.getByRole("button", { name: "System" })).toHaveTextContent(
-        "SNES",
+        "NES",
       );
     });
 

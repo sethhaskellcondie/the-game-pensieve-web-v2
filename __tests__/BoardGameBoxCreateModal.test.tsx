@@ -201,6 +201,19 @@ describe("BoardGameBoxCreateModal", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("seeds the stacked game dialog's Title from the box's title", () => {
+    renderModal();
+    typeTitle(boxDialog(), "Wingspan Box");
+
+    fireEvent.click(screen.getByRole("button", { name: "Add New Game" }));
+
+    // The game dialog auto-opens its Title, prefilled with the box's title so
+    // the user can tweak rather than retype it.
+    expect(
+      within(gameDialog()).getByRole("textbox", { name: "Title" }),
+    ).toHaveValue("Wingspan Box");
+  });
+
   it("moves focus to the box's Create button after creating a game in the stacked dialog", async () => {
     renderModal();
     typeTitle(boxDialog(), "Wingspan Box");

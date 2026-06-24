@@ -325,10 +325,10 @@ export default function VideoGameBoxCreateModal({
     // Keep the form (and the user's input) on failure so they can retry.
     if (!ok) return;
     if (massInputMode) {
-      // Clear the form — games included — for the next entry; the entryNonce
-      // effect refocuses Title.
+      // Clear the form — games included — for the next entry, but keep the
+      // chosen System: rapid entry usually stays on one system, so re-picking
+      // it every time would be tedious. The entryNonce effect refocuses Title.
       setTitle("");
-      setSystemName("");
       setPhysical("false");
       setValues(makeInitialValues());
       setPending([]);
@@ -572,6 +572,7 @@ export default function VideoGameBoxCreateModal({
           definitions={gameDefinitions}
           systems={systems}
           defaultSystemId={selectedSystem?.id}
+          initialTitle={title}
           saving={false}
           onCreate={async (input) => {
             newGameSeq.current += 1;

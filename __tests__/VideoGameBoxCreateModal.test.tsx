@@ -170,6 +170,21 @@ describe("VideoGameBoxCreateModal", () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
+  it("seeds the stacked game dialog's Title from the box's title", () => {
+    renderModal();
+    typeTitle(boxDialog(), "Mega Man Collection");
+
+    fireEvent.click(screen.getByRole("button", { name: "Add New Game" }));
+
+    // The stacked dialog keeps Title closed; opening it reveals the seed — the
+    // box's title — prefilled so the user can tweak rather than retype it.
+    const dialog = gameDialog();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Edit Title" }));
+    expect(
+      within(dialog).getByRole("textbox", { name: "Title" }),
+    ).toHaveValue("Mega Man Collection");
+  });
+
   it("moves focus to the box's Create button after creating a game in the stacked dialog", async () => {
     renderModal();
     typeTitle(boxDialog(), "Mega Man Collection");
@@ -268,7 +283,7 @@ describe("VideoGameBoxCreateModal", () => {
   });
 
   describe("mass-input mode", () => {
-    it("labels the button Create And Add Another and resets the games list after a create", async () => {
+    it("labels the button Create And Add Another, resets the games list, but keeps the System after a create", async () => {
       const { onCreate, onClose } = renderModal({ massInputMode: true });
       typeTitle(boxDialog(), "Mega Man Collection");
       pickSystem(boxDialog(), "NES");
@@ -298,6 +313,10 @@ describe("VideoGameBoxCreateModal", () => {
       expect(
         screen.queryByText("Mega Man Collection"),
       ).not.toBeInTheDocument();
+      // The System stays on the picked NES so the next box keeps the console.
+      expect(screen.getByRole("button", { name: "System" })).toHaveTextContent(
+        "NES",
+      );
     });
 
     it("does not close on Escape; the close button still exits", () => {

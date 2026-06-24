@@ -56,6 +56,9 @@ function getFocusable(root: HTMLElement | null): HTMLElement[] {
 
 type BoardGameCreateModalProps = {
   definitions: CustomField[];
+  // Seeds the Title field — the box dialog passes its own title so a game
+  // created from it starts from the same name. Defaults to empty.
+  initialTitle?: string;
   saving: boolean;
   // Persists the game and resolves to whether it succeeded, so the dialog can
   // close (normal) or reset for another entry (mass-input mode) accordingly.
@@ -65,6 +68,7 @@ type BoardGameCreateModalProps = {
 
 export default function BoardGameCreateModal({
   definitions,
+  initialTitle = "",
   saving,
   onCreate,
   onClose,
@@ -84,7 +88,7 @@ export default function BoardGameCreateModal({
     return initial;
   }
 
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(initialTitle);
   const [values, setValues] = useState<Record<number, string>>(makeInitialValues);
   // Bumped after each mass-input save to drive the "refocus Title" effect.
   const [entryNonce, setEntryNonce] = useState(0);

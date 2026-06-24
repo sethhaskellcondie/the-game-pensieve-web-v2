@@ -376,6 +376,10 @@ test("creates a box through the New dialog with a new game and an existing game"
     exact: true,
   });
   await gameDialog.getByRole("button", { name: "Edit Title" }).click();
+  // The Title is seeded from the box's title; overwrite it for this game.
+  await expect(
+    gameDialog.getByRole("textbox", { name: "Title" }),
+  ).toHaveValue("Mega Man Collection");
   await gameDialog.getByRole("textbox", { name: "Title" }).fill("Mega Man");
   await gameDialog.getByRole("textbox", { name: "Title" }).press("Enter");
   await gameDialog.getByRole("button", { name: "Create", exact: true }).click();

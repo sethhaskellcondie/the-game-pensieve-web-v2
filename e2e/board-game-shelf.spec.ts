@@ -384,8 +384,11 @@ test("creates a box with a brand-new game through the stacked dialog", async ({
     name: "Create Board Game",
     exact: true,
   });
-  // The game dialog auto-opens its Title editor on mount — type straight in.
-  await gameDialog.getByRole("textbox", { name: "Title" }).fill("Wingspan");
+  // The game dialog auto-opens its Title editor, seeded from the box's title —
+  // here that's already "Wingspan", so just commit it rather than retyping.
+  await expect(
+    gameDialog.getByRole("textbox", { name: "Title" }),
+  ).toHaveValue("Wingspan");
   await gameDialog.getByRole("textbox", { name: "Title" }).press("Enter");
   await gameDialog.getByRole("button", { name: "Create", exact: true }).click();
   await expect(gameDialog).toBeHidden();
