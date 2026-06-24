@@ -84,43 +84,33 @@ describe("BoardGameCreateModal", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  describe("mass-input mode", () => {
-    it("labels the button Create And Add Another and keeps Cancel", () => {
+  // This dialog only ever supplies the single game a box needs, so it opts out
+  // of the global mass-input rapid-entry loop: even with massInputMode on it
+  // stays a plain single-create dialog (button "Create", create closes,
+  // Escape closes) rather than repeating.
+  describe("ignores mass-input mode (never repeats)", () => {
+    it("still labels the button Create, not Create And Add Another", () => {
       renderModal({ massInputMode: true });
       expect(
-        screen.getByRole("button", { name: "Create And Add Another" }),
+        screen.getByRole("button", { name: "Create" }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: "Cancel" }),
-      ).toBeInTheDocument();
+        screen.queryByRole("button", { name: "Create And Add Another" }),
+      ).not.toBeInTheDocument();
     });
 
-    it("clears the form and stays open after a successful create", async () => {
+    it("closes after a successful create instead of staying open", async () => {
       const { onCreate, onClose } = renderModal({ massInputMode: true });
       typeField("Title", "Settlers of Catan");
-      fireEvent.click(
-        screen.getByRole("button", { name: "Create And Add Another" }),
-      );
+      fireEvent.click(screen.getByRole("button", { name: "Create" }));
 
       await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
-      // The dialog is still open with the title cleared.
-      expect(onClose).not.toHaveBeenCalled();
-      expect(
-        screen.getByRole("dialog", { name: "Create Board Game" }),
-      ).toBeVisible();
-      await waitFor(() =>
-        expect(
-          screen.queryByText("Settlers of Catan"),
-        ).not.toBeInTheDocument(),
-      );
+      await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     });
 
-    it("does not close on Escape; the close button still exits", () => {
+    it("still closes on Escape", () => {
       const { onClose } = renderModal({ massInputMode: true });
       fireEvent.keyDown(document, { key: "Escape" });
-      expect(onClose).not.toHaveBeenCalled();
-
-      fireEvent.click(screen.getByRole("button", { name: "Close" }));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
   });

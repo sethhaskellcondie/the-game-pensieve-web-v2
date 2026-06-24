@@ -17,7 +17,6 @@ import {
   StandardFieldGlyph,
 } from "@/components/custom-fields/registry";
 import { XIcon } from "@/components/custom-fields/icons";
-import { useUiSettings } from "@/components/UiSettingsProvider";
 import BeginnerHint from "@/components/BeginnerHint";
 import { BEGINNER_HINTS } from "@/components/beginnerHints";
 import FieldEditor from "@/components/toys/toyFieldEditors";
@@ -70,11 +69,12 @@ export default function BoardGameCreateModal({
   onCreate,
   onClose,
 }: BoardGameCreateModalProps) {
-  // Mass-input mode turns the dialog into a rapid data-entry loop: the button
-  // becomes "Create And Add Another", each save clears the form and refocuses
-  // Title, and the dialog only closes via the X (no Escape, backdrop, or Cancel).
-  const { settings } = useUiSettings();
-  const massInputMode = settings.massInputMode;
+  // This dialog only ever supplies the single game a box needs, so it never
+  // joins the global mass-input rapid-entry loop: creating a game always
+  // returns to the box dialog rather than repeating, even when massInputMode
+  // is on. Pinned false so the close/Escape/backdrop/button logic below all
+  // take their normal single-create path.
+  const massInputMode = false;
 
   // Option fields start on their configured default; everything else empty.
   // Shared by the initial state and the post-save reset.
