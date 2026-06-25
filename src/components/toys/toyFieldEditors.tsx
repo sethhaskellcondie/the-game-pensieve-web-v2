@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import type { CustomFieldOption, CustomFieldType } from "@/lib/api";
 import {
   CaretIcon,
@@ -160,6 +161,11 @@ function YesNoEditor({ field, onCommit }: EditorProps) {
 // the custom-fields scope picker. Picking a different option commits it. Closes
 // on outside click, Escape, or scroll.
 //
+// A filter input sits at the top of the menu and is focused when it opens: the
+// option list narrows to a case-insensitive substring match, ArrowUp/ArrowDown
+// move a highlight, and Enter commits the highlighted option. This keeps long
+// option lists (and the System picker) usable from the keyboard.
+//
 // The menu is position:fixed (placed from the trigger's rect) so it escapes
 // `overflow:hidden` ancestors — it must show even when the editor lives in a
 // clipped, scrollable grid cell. It stays a DOM child of the wrapper, so the
@@ -172,6 +178,9 @@ function YesNoEditor({ field, onCommit }: EditorProps) {
 function DropdownEditor({ field, onCommit, openOnFocus }: EditorProps) {
   const options = field.options ?? [];
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  // Index into the *filtered* list of the keyboard-highlighted option.
+  const [active, setActive] = useState(0);
   const [pos, setPos] = useState<{
     top?: number;
     bottom?: number;
@@ -181,10 +190,16 @@ function DropdownEditor({ field, onCommit, openOnFocus }: EditorProps) {
   } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const filterRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   // With openOnFocus, a mouse press delivers focus (which opens the menu) and
   // then a click on the same interaction — without this latch the click's
   // toggle would immediately close what the focus just opened.
   const justOpenedByFocus = useRef(false);
+
+  const filtered = options.filter((o) =>
+    o.name.toLowerCase().includes(query.trim().toLowerCase()),
+  );
 
   // The menu's natural height cap and the gap to the trigger / breathing room
   // kept from the viewport edge.
@@ -192,7 +207,21 @@ function DropdownEditor({ field, onCommit, openOnFocus }: EditorProps) {
   const GAP = 6;
   const MARGIN = 8;
 
+  const close = () => {
+    setOpen(false);
+    setQuery("");
+  };
+
+  const select = (name: string) => {
+    if (name !== field.value) onCommit(name);
+    close();
+  };
+
   const openMenu = () => {
+    setQuery("");
+    // Highlight the current value (or the first option) when the menu opens.
+    const cur = options.findIndex((o) => o.name === field.value);
+    setActive(cur < 0 ? 0 : cur);
     const r = triggerRef.current?.getBoundingClientRect();
     if (r) {
       const below = window.innerHeight - r.bottom - GAP - MARGIN;
@@ -220,15 +249,27 @@ function DropdownEditor({ field, onCommit, openOnFocus }: EditorProps) {
     setOpen(true);
   };
 
+  // Move focus into the filter input as soon as the menu opens so the user can
+  // type immediately. Runs after the click/focus that opened it has settled.
+  useEffect(() => {
+    if (open) filterRef.current?.focus();
+  }, [open]);
+
+  // Keep the highlighted option scrolled into view as the filter narrows or the
+  // arrow keys move the highlight.
+  useEffect(() => {
+    if (!open) return;
+    const el = listRef.current?.children[active] as HTMLElement | undefined;
+    // Guarded: jsdom (unit tests) doesn't implement scrollIntoView.
+    el?.scrollIntoView?.({ block: "nearest" });
+  }, [active, open]);
+
   useEffect(() => {
     if (!open) return;
     const onDocMouseDown = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false);
+        close();
       }
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
     };
     // Close when an outer container scrolls (the fixed menu would otherwise
     // detach from its trigger), but NOT when the menu scrolls its own option
@@ -236,37 +277,60 @@ function DropdownEditor({ field, onCommit, openOnFocus }: EditorProps) {
     // listener sees inner scrolls too, so guard on the event target.
     const onScroll = (e: Event) => {
       if (wrapRef.current?.contains(e.target as Node)) return;
-      setOpen(false);
+      close();
     };
-    const close = () => setOpen(false);
     document.addEventListener("mousedown", onDocMouseDown);
-    document.addEventListener("keydown", onKeyDown);
     // Capture-phase catches scrolling on any inner container (e.g. the grid).
     window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", close);
     return () => {
       document.removeEventListener("mousedown", onDocMouseDown);
-      document.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", close);
     };
   }, [open]);
 
+  const onFilterKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    switch (e.key) {
+      case "Escape":
+        // Swallow it so the surrounding dialog's Escape-to-close doesn't also
+        // fire — only the dropdown should close.
+        e.preventDefault();
+        e.stopPropagation();
+        close();
+        triggerRef.current?.focus();
+        break;
+      case "ArrowDown":
+        e.preventDefault();
+        setActive((a) => Math.min(a + 1, filtered.length - 1));
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setActive((a) => Math.max(a - 1, 0));
+        break;
+      case "Enter": {
+        e.preventDefault();
+        const o = filtered[active];
+        if (o) {
+          select(o.name);
+          triggerRef.current?.focus();
+        }
+        break;
+      }
+    }
+  };
+
   return (
     <div
       className={styles.vDrop}
       ref={wrapRef}
-      // With openOnFocus, the menu opens on focus; close it again once focus
-      // leaves the wrapper entirely (Tab past the options) so it isn't orphaned.
-      onBlur={
-        openOnFocus
-          ? (e) => {
-              if (!wrapRef.current?.contains(e.relatedTarget as Node | null)) {
-                setOpen(false);
-              }
-            }
-          : undefined
-      }
+      // Focus moves into the filter input while the menu is open; close it again
+      // once focus leaves the wrapper entirely (Tab away) so it isn't orphaned.
+      onBlur={(e) => {
+        if (!wrapRef.current?.contains(e.relatedTarget as Node | null)) {
+          close();
+        }
+      }}
     >
       <button
         ref={triggerRef}
@@ -288,7 +352,7 @@ function DropdownEditor({ field, onCommit, openOnFocus }: EditorProps) {
             justOpenedByFocus.current = false;
             return;
           }
-          if (open) setOpen(false);
+          if (open) close();
           else openMenu();
         }}
       >
@@ -306,8 +370,6 @@ function DropdownEditor({ field, onCommit, openOnFocus }: EditorProps) {
       {open && pos && (
         <div
           className={styles.dropMenu}
-          role="listbox"
-          aria-label={field.name}
           style={{
             top: pos.top,
             bottom: pos.bottom,
@@ -316,29 +378,58 @@ function DropdownEditor({ field, onCommit, openOnFocus }: EditorProps) {
             maxHeight: pos.maxHeight,
           }}
         >
-          {options.map((o) => {
-            const selected = o.name === field.value;
-            return (
-              <button
-                type="button"
-                key={o.id}
-                role="option"
-                aria-selected={selected}
-                className={`${styles.dropOption}${selected ? ` ${styles.dropOptionSelected}` : ""}`}
-                onClick={() => {
-                  if (o.name !== field.value) onCommit(o.name);
-                  setOpen(false);
-                }}
-              >
-                <span className={styles.dropOptionLabel}>{o.name}</span>
-                {selected && (
-                  <span className={styles.dropOptionCheck}>
-                    <CheckIcon />
-                  </span>
-                )}
-              </button>
-            );
-          })}
+          <input
+            ref={filterRef}
+            className={styles.dropFilter}
+            type="text"
+            aria-label={`Filter ${field.name} options`}
+            placeholder="Type to filter…"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setActive(0);
+            }}
+            onKeyDown={onFilterKeyDown}
+          />
+          <div
+            className={styles.dropList}
+            role="listbox"
+            aria-label={field.name}
+            ref={listRef}
+          >
+            {filtered.length === 0 ? (
+              <div className={styles.dropEmpty}>No matches</div>
+            ) : (
+              filtered.map((o, i) => {
+                const selected = o.name === field.value;
+                const highlighted = i === active;
+                return (
+                  <button
+                    type="button"
+                    key={o.id}
+                    role="option"
+                    aria-selected={selected}
+                    // Not a tab stop: the filter input owns keyboard focus and
+                    // drives selection via Arrow/Enter.
+                    tabIndex={-1}
+                    className={`${styles.dropOption}${selected ? ` ${styles.dropOptionSelected}` : ""}${highlighted ? ` ${styles.dropOptionActive}` : ""}`}
+                    // Keep focus on the filter input so clicking an option
+                    // doesn't blur-close the menu before the click registers.
+                    onMouseDown={(e) => e.preventDefault()}
+                    onMouseEnter={() => setActive(i)}
+                    onClick={() => select(o.name)}
+                  >
+                    <span className={styles.dropOptionLabel}>{o.name}</span>
+                    {selected && (
+                      <span className={styles.dropOptionCheck}>
+                        <CheckIcon />
+                      </span>
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
       )}
     </div>

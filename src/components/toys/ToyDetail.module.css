@@ -318,16 +318,60 @@
 
 /* Placed via inline top/left/min-width from the trigger's rect (see
    DropdownEditor); position:fixed so it escapes any clipping/scrolling
-   ancestor, such as a grid cell. */
+   ancestor, such as a grid cell. A flex column so the filter input stays pinned
+   while .dropList scrolls within the remaining height. */
 .dropMenu {
   position: fixed;
   z-index: 50;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: #fff;
   border: 1px solid var(--field-gold-border);
   border-radius: 11px;
   box-shadow: 0 20px 48px -16px rgba(var(--ink-navy-rgb), 0.34);
   padding: 6px;
+}
+
+.dropFilter {
+  flex: 0 0 auto;
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 7px 10px;
+  border: 1px solid var(--field-gold-border);
+  border-radius: 8px;
+  background: var(--field-gold-bg);
+  color: var(--field-gold-text);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 13px;
+  font-weight: 700;
+  outline: none;
+}
+
+.dropFilter:focus {
+  border-color: var(--field-gold-border-strong);
+  box-shadow: 0 0 0 3px rgba(154, 111, 18, 0.14);
+}
+
+.dropFilter::placeholder {
+  color: var(--field-gold-text);
+  opacity: 0.5;
+  font-weight: 400;
+}
+
+.dropList {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.dropEmpty {
+  padding: 8px 10px;
+  color: var(--field-gold-text);
+  opacity: 0.6;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 13px;
+  font-weight: 400;
 }
 
 .dropOption {
@@ -349,7 +393,8 @@
   transition: 0.1s;
 }
 
-.dropOption:hover {
+.dropOption:hover,
+.dropOptionActive {
   background: var(--field-gold-option-hover);
 }
 

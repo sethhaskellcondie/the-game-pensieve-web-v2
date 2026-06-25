@@ -285,6 +285,45 @@ describe("VideoGameDetail", () => {
     expect(cf.valueOptionId).toBe(11);
   });
 
+  it("filters dropdown options as you type and commits the match on Enter", async () => {
+    renderDetail();
+
+    fireEvent.click(screen.getByRole("button", { name: "Genre" }));
+    const filter = screen.getByRole("textbox", {
+      name: "Filter Genre options",
+    });
+    fireEvent.change(filter, { target: { value: "act" } });
+
+    // Only the matching option remains in the listbox.
+    expect(screen.getByRole("option", { name: "Action" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: "RPG" }),
+    ).not.toBeInTheDocument();
+
+    // Enter commits the highlighted (first) match.
+    fireEvent.keyDown(filter, { key: "Enter" });
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+    const cf = lastPutBody().customFieldValues.find(
+      (v: { customFieldId: number }) => v.customFieldId === 2,
+    );
+    expect(cf.value).toBe("Action");
+    expect(cf.valueOptionId).toBe(11);
+  });
+
+  it("shows a no-matches message when the filter excludes every option", () => {
+    renderDetail();
+
+    fireEvent.click(screen.getByRole("button", { name: "Genre" }));
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Filter Genre options" }),
+      { target: { value: "zzz" } },
+    );
+
+    expect(screen.queryByRole("option")).not.toBeInTheDocument();
+    expect(screen.getByText("No matches")).toBeInTheDocument();
+  });
+
   it("rolls back the optimistic value when the PUT fails", async () => {
     mockFetch.mockResolvedValue({
       ok: false,
