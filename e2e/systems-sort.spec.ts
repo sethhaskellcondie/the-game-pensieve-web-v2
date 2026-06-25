@@ -29,6 +29,21 @@ const FIELDS = [
     order: 0,
     options: [],
   },
+  {
+    id: 41,
+    name: "Region",
+    type: "dropdown",
+    entityKey: "system",
+    order: 1,
+    // The display order (Japan, North America, Europe) is deliberately neither
+    // alphabetical nor option-id order, so a sort by display order is
+    // distinguishable from one by the value text or the option id.
+    options: [
+      { id: 53, customFieldId: 41, name: "Japan", isDefault: false, order: 0 },
+      { id: 51, customFieldId: 41, name: "North America", isDefault: false, order: 1 },
+      { id: 52, customFieldId: 41, name: "Europe", isDefault: false, order: 2 },
+    ],
+  },
 ];
 
 // Mirrors the real /filters/system response, including the all_fields entry —
@@ -45,6 +60,7 @@ const FILTER_SPEC = {
     all_fields: "sort",
     pagination_fields: "pagination",
     "Release Year": "number",
+    Region: "dropdown",
   },
   filters: {
     name: ["equals", "not_equals", "contains", "starts_with", "ends_with"],
@@ -69,6 +85,8 @@ const FILTER_SPEC = {
       "less_than",
       "less_than_equal_to",
     ],
+    // Enum custom fields match by option id and now also advertise sorting.
+    Region: ["equals", "not_equals", "order_by", "order_by_desc"],
   },
 };
 
@@ -77,6 +95,8 @@ function system(
   name: string,
   generation: number,
   releaseYear: string,
+  regionOptionId: number,
+  regionName: string,
 ): StubSystem {
   return {
     id,
@@ -92,6 +112,13 @@ function system(
         value: releaseYear,
         valueOptionId: null,
       },
+      {
+        customFieldId: 41,
+        customFieldName: "Region",
+        customFieldType: "dropdown",
+        value: regionName,
+        valueOptionId: regionOptionId,
+      },
     ],
     createdAt: "",
     updatedAt: "",
@@ -100,12 +127,27 @@ function system(
 }
 
 // Default (backend) order is intentionally not alphabetical or by year, so a
-// sorted order is distinguishable from the unsorted one.
+// sorted order is distinguishable from the unsorted one. The Region options
+// (Japan, North America, Europe) are assigned so their display order differs
+// from the rows' default, name, and option-id orders.
 const SYSTEMS: StubSystem[] = [
-  system(1, "NES", 3, "1985"),
-  system(2, "SNES", 4, "1990"),
-  system(3, "Game Boy", 4, "1989"),
+  system(1, "NES", 3, "1985", 53, "Japan"),
+  system(2, "SNES", 4, "1990", 52, "Europe"),
+  system(3, "Game Boy", 4, "1989", 51, "North America"),
 ];
+
+// The option-backed ("enum") custom field types, which the backend orders by
+// the selected option's display order rather than its value text or id.
+const ENUM_TYPES = new Set(["dropdown", "radio_button", "progress_bar"]);
+
+// Per enum field, a lookup from an option's id to its display order, taken from
+// the field definitions — the order the backend sorts these fields by.
+const OPTION_ORDER = new Map(
+  FIELDS.filter((f) => ENUM_TYPES.has(f.type)).map((f) => [
+    f.name,
+    new Map(f.options.map((o) => [o.id, o.order])),
+  ]),
+);
 
 function valueOf(s: StubSystem, field: string): string {
   if (field === "name") return s.name;
@@ -114,6 +156,20 @@ function valueOf(s: StubSystem, field: string): string {
   return (
     s.customFieldValues.find((v) => v.customFieldName === field)?.value ?? ""
   );
+}
+
+// The key the backend orders a row by for a given field. Enum custom fields
+// order by the selected option's display order; every other field by its
+// stored value (compared numerically or lexically downstream).
+function sortKeyOf(s: StubSystem, field: string): string {
+  const orders = OPTION_ORDER.get(field);
+  if (orders) {
+    const entry = s.customFieldValues.find((v) => v.customFieldName === field);
+    const order =
+      entry?.valueOptionId == null ? undefined : orders.get(entry.valueOptionId);
+    return order == null ? "" : String(order);
+  }
+  return valueOf(s, field);
 }
 
 // Apply the regular (non-sort) filters; only the operators these tests use.
@@ -146,8 +202,8 @@ function applySorts(list: StubSystem[], sorts: StubFilter[]): StubSystem[] {
   const sorted = [...list];
   sorted.sort((a, b) => {
     for (const s of sorts) {
-      const av = valueOf(a, s.field);
-      const bv = valueOf(b, s.field);
+      const av = sortKeyOf(a, s.field);
+      const bv = sortKeyOf(b, s.field);
       const an = Number(av);
       const bn = Number(bv);
       const numeric = av !== "" && bv !== "" && !Number.isNaN(an) && !Number.isNaN(bn);
@@ -245,6 +301,28 @@ test("sorts by a custom field, descending", async ({ page }) => {
     .getByRole("radio", { name: "Desc" })
     .click();
 
+  await expect(names(page)).toHaveText(["SNES", "Game Boy", "NES"]);
+});
+
+test("sorts an enum custom field by its option display order", async ({
+  page,
+}) => {
+  await page.goto("/systems");
+  await expect(names(page)).toHaveText(["NES", "SNES", "Game Boy"]);
+
+  const dialog = await openSortPopover(page);
+  await dialog.getByRole("button", { name: "Add sort" }).click();
+  await dialog.getByRole("button", { name: "Sort field 1" }).click();
+  await page.getByRole("option", { name: "Region", exact: true }).click();
+
+  // Ascending follows the option display order — Japan (NES) < North America
+  // (Game Boy) < Europe (SNES) — not the values' alphabetical or id order.
+  await expect(names(page)).toHaveText(["NES", "Game Boy", "SNES"]);
+
+  await dialog
+    .getByRole("radiogroup", { name: "Sort direction 1" })
+    .getByRole("radio", { name: "Desc" })
+    .click();
   await expect(names(page)).toHaveText(["SNES", "Game Boy", "NES"]);
 });
 

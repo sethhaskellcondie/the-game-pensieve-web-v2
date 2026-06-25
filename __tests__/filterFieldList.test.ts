@@ -1,6 +1,7 @@
 import {
   buildFieldList,
   searchField,
+  sortableFields,
   supportsSorting,
 } from "@/components/filters/fieldList";
 import type { CustomField, FilterSpecification } from "@/lib/api";
@@ -27,7 +28,8 @@ const spec: FilterSpecification = {
     all_fields: ["order_by", "order_by_desc"],
     pagination_fields: ["limit", "offset"],
     Notes: ["equals", "not_equals", "contains", "starts_with", "ends_with"],
-    Series: ["equals", "not_equals", "contains", "starts_with", "ends_with"],
+    // Enum custom fields filter by option id and now also advertise sorting.
+    Series: ["equals", "not_equals", "order_by", "order_by_desc"],
     Quantity: [
       "equals",
       "not_equals",
@@ -119,6 +121,15 @@ describe("buildFieldList", () => {
     expect(series.options?.map((o) => o.name)).toEqual(["Original", "Special"]);
   });
 
+  it("strips sort operators from an enum field's filter operators", () => {
+    // order_by/order_by_desc drive the Sort control, not the filter operator
+    // picker, so they must not surface as filter operators on the field.
+    const series = buildFieldList(spec, customFields).find(
+      (f) => f.field === "Series",
+    )!;
+    expect(series.operators).toEqual(["equals", "not_equals"]);
+  });
+
   it("skips spec fields whose kind the UI can't render", () => {
     const weird: FilterSpecification = {
       type: "toy_filters",
@@ -130,6 +141,16 @@ describe("buildFieldList", () => {
 
   it("returns an empty list when the spec is missing", () => {
     expect(buildFieldList(null, customFields)).toEqual([]);
+  });
+});
+
+describe("sortableFields", () => {
+  it("offers every field, including enum custom fields", () => {
+    const fields = buildFieldList(spec, customFields);
+    const tokens = sortableFields(fields).map((f) => f.field);
+    // The backend now sorts enum custom fields (e.g. the Series dropdown) by
+    // their option display order, so none are withheld from the sort picker.
+    expect(tokens).toEqual(["name", "set", "Notes", "Series", "Quantity"]);
   });
 });
 

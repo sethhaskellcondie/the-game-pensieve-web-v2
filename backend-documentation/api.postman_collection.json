@@ -239,6 +239,25 @@
 			"response": []
 		},
 		{
+			"name": "read all video games sorted by enum custom field (option display order)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"filters\": [\r\n        {\r\n            \"key\": \"videoGame\",\r\n            \"field\": \"Completion Status\",\r\n            \"operator\": \"order_by\",\r\n            \"operand\": \"\"\r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8080/v1/videoGames/function/search",
+				"description": "Sorting an enum custom field (dropdown, radio_button, progress_bar) orders rows by the selected option's display order, not by option id. Use order_by_desc for the reverse. The operand is ignored for sort filters."
+			},
+			"response": []
+		},
+		{
 			"name": "update one system",
 			"request": {
 				"method": "PUT",

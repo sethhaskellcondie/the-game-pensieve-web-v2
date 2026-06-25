@@ -67,9 +67,9 @@ const FILTER_SPEC = {
       "less_than",
       "less_than_equal_to",
     ],
-    // Enum (option-backed) fields only support identity checks — the backend
-    // matches on option id, so the text operators don't apply.
-    Series: ["equals", "not_equals"],
+    // Enum (option-backed) fields match on option id (no text operators) and
+    // also advertise sorting, ordered by the option's display order.
+    Series: ["equals", "not_equals", "order_by", "order_by_desc"],
   },
 };
 
@@ -158,6 +158,29 @@ function applyFilters(list: StubToy[], filters: StubFilter[]): StubToy[] {
   }, list);
 }
 
+// Per enum field, a lookup from an option's id to its display order, taken from
+// the field definitions — the order the backend sorts these fields by.
+const OPTION_ORDER = new Map(
+  FIELDS.filter((f) => ENUM_TYPES.has(f.type)).map((f) => [
+    f.name,
+    new Map(f.options.map((o) => [o.id, o.order])),
+  ]),
+);
+
+// The key the backend orders a row by for a given field. Enum custom fields
+// order by the selected option's display order; every other field by its
+// stored value (compared numerically or lexically downstream).
+function sortKeyOf(toy: StubToy, field: string): string {
+  const orders = OPTION_ORDER.get(field);
+  if (orders) {
+    const entry = toy.customFieldValues.find((v) => v.customFieldName === field);
+    const order =
+      entry?.valueOptionId == null ? undefined : orders.get(entry.valueOptionId);
+    return order == null ? "" : String(order);
+  }
+  return valueOf(toy, field);
+}
+
 // Apply the sort filters (operator order_by/order_by_desc; the field names the
 // sorted-by column) the way the backend does: first entry is the primary sort,
 // later entries break ties. Numeric values compare numerically, everything
@@ -167,8 +190,8 @@ function applySorts(list: StubToy[], sorts: StubFilter[]): StubToy[] {
   const sorted = [...list];
   sorted.sort((a, b) => {
     for (const s of sorts) {
-      const av = valueOf(a, s.field);
-      const bv = valueOf(b, s.field);
+      const av = sortKeyOf(a, s.field);
+      const bv = sortKeyOf(b, s.field);
       const an = Number(av);
       const bn = Number(bv);
       const numeric =
@@ -390,11 +413,11 @@ test("sorts toys by a custom field via the Sort button", async ({ page }) => {
   // The new level defaults to the first field (Name); switch it to the numeric
   // Quantity custom field.
   await dialog.getByRole("button", { name: "Sort field 1" }).click();
-  // The enum (dropdown) Series field is not sortable, so the sort picker
-  // doesn't offer it.
+  // The enum (dropdown) Series field is now sortable, so the picker offers it
+  // alongside the standard and numeric fields.
   await expect(
     page.getByRole("option", { name: "Series", exact: true }),
-  ).toHaveCount(0);
+  ).toHaveCount(1);
   await page.getByRole("option", { name: "Quantity", exact: true }).click();
 
   // Quantity ascending: Pikachu (3) before R2-D2 (10).
@@ -405,4 +428,26 @@ test("sorts toys by a custom field via the Sort button", async ({ page }) => {
     .getByRole("radio", { name: "Desc" })
     .click();
   await expect(names).toHaveText(["R2-D2", "Pikachu"]);
+});
+
+test("sorts toys by an enum custom field's option display order", async ({
+  page,
+}) => {
+  await page.goto("/toys");
+  const names = page.locator("tbody tr td:first-child");
+  await expect(names).toHaveText(["R2-D2", "Pikachu"]);
+
+  await page.getByRole("button", { name: "Sort", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Sort options" });
+  await dialog.getByRole("button", { name: "Add sort" }).click();
+  await dialog.getByRole("button", { name: "Sort field 1" }).click();
+  await page.getByRole("option", { name: "Series", exact: true }).click();
+
+  // Descending by Series display order: Special (Pikachu, order 1) before
+  // Original (R2-D2, order 0).
+  await dialog
+    .getByRole("radiogroup", { name: "Sort direction 1" })
+    .getByRole("radio", { name: "Desc" })
+    .click();
+  await expect(names).toHaveText(["Pikachu", "R2-D2"]);
 });

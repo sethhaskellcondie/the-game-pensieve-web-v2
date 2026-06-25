@@ -32,6 +32,12 @@ export function customKind(type: CustomFieldType): FilterFieldKind {
   return type;
 }
 
+// Sort operators a field's spec entry may carry. Enum custom fields now
+// advertise these in their own operator list (alongside equals/not_equals);
+// they drive the Sort control, not the filter operator picker, so they're
+// stripped from a field's filter operators in buildFieldList.
+const SORT_OPERATORS = new Set<string>(["order_by", "order_by_desc"]);
+
 // Title-case a backend field name for display ("created_at" → "Created At").
 function humanize(field: string): string {
   return field
@@ -68,8 +74,11 @@ export function buildFieldList(
     if (!KNOWN_KINDS.has(kind)) continue;
     const def = byName.get(field);
     const specOps = spec.filters[field] as FilterOperator[] | undefined;
+    // Sort operators (order_by/order_by_desc) belong to the Sort control, not
+    // the filter operator picker, so they're dropped from the filter operators.
+    const filterOps = specOps?.filter((op) => !SORT_OPERATORS.has(op));
     const operators =
-      specOps && specOps.length > 0 ? specOps : operatorsForKind(kind);
+      filterOps && filterOps.length > 0 ? filterOps : operatorsForKind(kind);
     const entry: FilterFieldDef = {
       field,
       label: def ? def.name : standardLabel(field, kind),
@@ -86,18 +95,14 @@ export function buildFieldList(
   return out;
 }
 
-// The option-bearing ("enum") custom field kinds. Their values are option-id
-// references, so the backend filters them by id and offers no sorting on them.
-const ENUM_KINDS = new Set<FilterFieldKind>([
-  "dropdown",
-  "radio_button",
-  "progress_bar",
-]);
-
-// The subset of a field list that sort controls may offer: everything except
-// the enum custom fields, which the backend cannot sort.
+// The subset of a field list the sort controls may offer. Every filterable
+// field is sortable: the backend sorts the standard fields and — since it added
+// order_by/order_by_desc for the enum custom kinds (dropdown/radio_button/
+// progress_bar) — the option-bearing custom fields too, ordering them by the
+// option's display order rather than its id. Kept as a named seam for the sort
+// controls even though it no longer narrows the list.
 export function sortableFields(fields: FilterFieldDef[]): FilterFieldDef[] {
-  return fields.filter((f) => !ENUM_KINDS.has(f.kind));
+  return fields;
 }
 
 // Whether the spec advertises sorting via its sort capability marker (the

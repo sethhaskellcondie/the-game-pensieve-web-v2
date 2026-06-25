@@ -65,7 +65,7 @@ info:
     - **Boolean filters**: equals
     - **Time filters**: since, before (operand is epoch milliseconds or an ISO datetime string)
     - **System filters**: equals, not_equals (for `system_id` on video games and video game boxes)
-    - **Enum custom field filters** (`dropdown`, `radio_button`, `progress_bar`): equals, not_equals — the operand is the selected option's id (a whole number). These fields filter by option id (like system filters), so they support no sorting and no text matching (contains/starts_with/ends_with).
+    - **Enum custom field filters** (`dropdown`, `radio_button`, `progress_bar`): equals, not_equals, order_by, order_by_desc — for equals/not_equals the operand is the selected option's id (a whole number). These fields filter by option id (like system filters), so they support no text matching (contains/starts_with/ends_with). Sorting **is** supported: `order_by`/`order_by_desc` order rows by the selected option's display order (the order the options were arranged in), not by option id, so values sort in their logical user-defined order.
     - **Custom field filters**: filter on a custom field by sending its field metadata (custom fields surface as filterable fields for their entity)
     - **Sort and Pagination**: order_by, order_by_desc, limit, offset — multiple sort filters are supported and applied in request order (first = primary sort, second = tiebreaker, ...)
   version: 1.0.0
@@ -1625,9 +1625,13 @@ paths:
         `data`). The import is idempotent: existing records are matched by their natural keys — custom
         fields by name+entity, toys by name+set, systems by name, video/board games by title,
         metadata by key — rather than by the ids in the payload, so re-importing the same backup
-        creates nothing new and only increments the `existing*` counts. Parent references inside the
-        payload (e.g. a video game's system, a board game box's base set) are resolved by
-        name/title, not by the file's ids, so ids may safely differ from the live database.
+        creates nothing new and only increments the `existing*` counts. One exception: when an
+        existing metadata key holds a blank stub value (null, empty/whitespace, or JSON that parses
+        to null, `{}`, `[]`, or an empty string — the placeholder a client may pre-seed), the
+        imported value overwrites it and is tallied under `createdMetadata` instead of
+        `existingMetadata`. Parent references inside the payload (e.g. a video game's system, a board
+        game box's base set) are resolved by name/title, not by the file's ids, so ids may safely
+        differ from the live database.
 
         Only one import may run at a time; a concurrent attempt returns **409 Conflict**. Per-record
         failures do not fail the whole request — they are reported in `exceptionBackupImport` and the

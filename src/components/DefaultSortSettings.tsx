@@ -92,9 +92,9 @@ async function readJson<T>(res: Response): Promise<T> {
 
 // The sortable field list for one entity: the filter spec's standard fields
 // merged with the entity's custom fields — the same list the entity page's
-// own Sort button offers (so enum custom fields, which the backend cannot
-// sort, are excluded). Empty when the spec doesn't advertise sorting, which
-// leaves that row's Sort button disabled.
+// own Sort button offers (including the enum custom fields, which the backend
+// now sorts by option display order). Empty when the spec doesn't advertise
+// sorting, which leaves that row's Sort button disabled.
 async function fetchSortFields(
   key: EntityKey,
   signal?: AbortSignal,

@@ -346,9 +346,9 @@ describe("FilterBar", () => {
     expect(screen.getByRole("button", { name: "Sort" })).toBeInTheDocument();
   });
 
-  it("omits enum custom fields from the sort field picker", () => {
-    // The backend cannot sort enum custom fields (they're option-id
-    // references), so the Series dropdown must not be offered as a sort field.
+  it("offers enum custom fields in the sort field picker", () => {
+    // The backend sorts enum custom fields by their option display order, so
+    // the Series dropdown must be offered alongside the standard fields.
     render(
       <FilterBar
         entityKey="system"
@@ -371,7 +371,7 @@ describe("FilterBar", () => {
       .getAllByRole("option")
       .map((o) => o.textContent);
     expect(labels).toContain("Year");
-    expect(labels).not.toContain("Series");
+    expect(labels).toContain("Series");
   });
 
   describe("searchHint beginner hint", () => {
