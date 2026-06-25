@@ -32,6 +32,7 @@ import { buildFieldList, supportsSorting } from "@/components/filters/fieldList"
 import { toFilterRequest, toSortRequest } from "@/components/filters/serialize";
 import { decodeFilterParam } from "@/components/filters/urlFilters";
 import { usePersistentFilters } from "@/components/filters/usePersistentFilters";
+import { usePersistentSorts } from "@/components/filters/usePersistentSorts";
 import type { ActiveSort } from "@/components/filters/types";
 import CustomFieldValue from "@/components/toys/CustomFieldValue";
 import FieldEditor, {
@@ -206,7 +207,7 @@ export default function SystemsManager({
   // The sort levels the user entered on this page (the Sort button's state).
   // Starts empty even when a default sort is stored — the default never shows
   // here; it is folded into the search request only while this is empty.
-  const [sorts, setSorts] = useState<ActiveSort[]>([]);
+  const [sorts, setSorts, initialResolvedSorts] = usePersistentSorts("system");
   // The stored default sort, resolved against the field list at mount. Every
   // search without page sorts (initial load, and after "Clear sorting") sends
   // these instead; any page sort wins outright.
@@ -262,7 +263,7 @@ export default function SystemsManager({
           : [];
         const dto = [
           ...toFilterRequest("system", initialResolvedFilters),
-          ...toSortRequest("system", seeded),
+          ...toSortRequest("system", sortsOrDefault(initialResolvedSorts, seeded)),
         ];
         lastDto.current = JSON.stringify(dto);
         const loadedSystems = await searchSystemsClient(dto, controller.signal);
@@ -285,7 +286,7 @@ export default function SystemsManager({
       active = false;
       controller.abort();
     };
-  }, [showSnackbar, initialResolvedFilters]);
+  }, [showSnackbar, initialResolvedFilters, initialResolvedSorts]);
 
   // Re-run the server search whenever the filter chips or sort levels change.
   // The sort filters sent are the page's own levels, or the stored defaults

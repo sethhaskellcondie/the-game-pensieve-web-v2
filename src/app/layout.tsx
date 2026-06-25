@@ -23,6 +23,13 @@ export const metadata: Metadata = {
   description: "Welcome to the Game Pensieve!",
 };
 
+// Every route fetches live data from the backend (this layout loads UI settings,
+// pages load games/toys/saved filters), and API_BASE_URL is supplied only at
+// runtime — never at build time. Forcing dynamic rendering app-wide keeps Next
+// from trying to prerender these pages during `next build`, where the backend is
+// unreachable. Applied in the root layout so it cascades to all nested routes.
+export const dynamic = "force-dynamic";
+
 export default async function RootLayout({
   children,
 }: Readonly<{

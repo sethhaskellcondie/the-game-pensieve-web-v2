@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.idea
+.swc
+.DS_Store
+npm-debug.log*
+*.log
+.env*.local
+__tests__
+e2e
+test-results
+playwright-report
+playwright/.cache
+*.tsbuildinfo
