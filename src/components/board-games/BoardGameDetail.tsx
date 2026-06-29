@@ -26,6 +26,8 @@ import {
   StandardFieldGlyph,
 } from "@/components/custom-fields/registry";
 import { useToast } from "@/components/ToastProvider";
+import { useSession } from "@/components/auth/SessionProvider";
+import { bffFetch } from "@/lib/bffClient";
 // Aliased: CustomFieldValue (the type) is already imported from the API types.
 import CustomFieldValueDisplay from "@/components/toys/CustomFieldValue";
 import FieldEditor, {
@@ -59,6 +61,7 @@ export default function BoardGameDetail({
   boxDefinitions: CustomField[];
 }) {
   const { showToast, showSnackbar } = useToast();
+  const { canWrite } = useSession();
   const [game, setGame] = useState<BoardGame>(initialGame);
   // Create-box dialog state: open flag + in-flight guard for its save button.
   const [creating, setCreating] = useState(false);
@@ -78,7 +81,7 @@ export default function BoardGameDetail({
         title: next.title,
         customFieldValues: next.customFieldValues,
       };
-      const res = await fetch(`/api/board-games/${next.id}`, {
+      const res = await bffFetch(`/api/board-games/${next.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
@@ -137,7 +140,7 @@ export default function BoardGameDetail({
   ): Promise<boolean> => {
     setSavingCreate(true);
     try {
-      const res = await fetch("/api/board-game-boxes", {
+      const res = await bffFetch("/api/board-game-boxes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
@@ -257,15 +260,26 @@ export default function BoardGameDetail({
                     </span>
                   </div>
                   <div className={styles.rowval}>
-                    <FieldEditor
-                      field={{
-                        name: row.name,
-                        kind: row.kind,
-                        value: row.value,
-                        options: row.options,
-                      }}
-                      onCommit={row.onCommit}
-                    />
+                    {/* Editing a field is a write, so only an active (Paid)
+                        account gets the editor; everyone else sees the value
+                        read-only. */}
+                    {canWrite ? (
+                      <FieldEditor
+                        field={{
+                          name: row.name,
+                          kind: row.kind,
+                          value: row.value,
+                          options: row.options,
+                        }}
+                        onCommit={row.onCommit}
+                      />
+                    ) : (
+                      <CustomFieldValueDisplay
+                        type={row.kind}
+                        value={row.value}
+                        options={row.options}
+                      />
+                    )}
                   </div>
                 </div>
               );
@@ -280,13 +294,17 @@ export default function BoardGameDetail({
           <div className={`${styles.card} ${chartStyles.gamesCard}`}>
             <div className={styles.caphdr}>
               <span className={styles.caphdrTitle}>Board Game Boxes</span>
-              <button
-                type="button"
-                className={chartStyles.newBtn}
-                onClick={() => setCreating(true)}
-              >
-                <PlusIcon aria-hidden="true" /> New Board Game Box
-              </button>
+              {/* Creating a box is a write, so the New button shows only for an
+                  active (Paid) account. */}
+              {canWrite && (
+                <button
+                  type="button"
+                  className={chartStyles.newBtn}
+                  onClick={() => setCreating(true)}
+                >
+                  <PlusIcon aria-hidden="true" /> New Board Game Box
+                </button>
+              )}
               <span className={`${styles.caphdrCount} ${chartStyles.count}`}>
                 <b>{boxes.length}</b> {boxes.length === 1 ? "box" : "boxes"}
               </span>

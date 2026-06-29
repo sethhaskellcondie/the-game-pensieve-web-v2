@@ -28,11 +28,43 @@ info:
     }
     ```
     Status codes used:
-    - **400 Bad Request** — input/validation failure (blank required field, malformed entity, invalid custom field value, duplicate that violates a uniqueness rule, invalid filter).
+    - **400 Bad Request** — input/validation failure (blank required field, malformed entity, invalid custom field value, duplicate that violates a uniqueness rule, invalid filter). Also returned when registering an email that already has an account.
+    - **401 Unauthorized** — authentication failed or is missing. Returned only when the API is running with the `secured` profile: a protected route was called without a valid `Bearer` access token, or `/v1/auth/login`/`/v1/auth/refresh` were given bad credentials or an invalid/expired refresh token. In the default (unsecured) build no route requires authentication and 401 is never returned.
+    - **402 Payment Required** — (`secured` profile only) a role lacking the **FILTER** capability sent a **filtered** `/{entity}/function/search` request. In practice this is a **LAPSED** account: it may still list its own data with an empty `filters` array, but any non-empty filter needs an active subscription. See *Roles & Capabilities* below.
+    - **403 Forbidden** — (`secured` profile only) the caller's role lacks the capability for the action: a **WRITE** (create/update/delete), a **BACKUP** (`/v1/function/backup`), an **IMPORT** (`/v1/function/import`, `/importFromFile`, `/seedSampleData`, `/seedMyCollection`), or **admin** access (`/v1/admin/**` by a non-ADMIN caller). Anonymous callers are rejected earlier with **401**. See *Roles & Capabilities* below.
     - **404 Not Found** — the requested resource (or an unknown route) does not exist.
     - **409 Conflict** — an import is already in progress (the import endpoints take a global lock).
     - **500 Internal Server Error** — an unexpected error; the array contains a generic message followed by the underlying exception message.
     - **200 OK with populated `errors`** — the backup/import endpoints report partial failures here: the import still returns HTTP 200, but `errors` lists the records that could not be processed. Always inspect `errors` on these endpoints even on a 200.
+
+    ## Data Ownership & Multi-Tenancy
+    All collection data (systems, toys, video games and boxes, board games and boxes, custom fields and their options/values, and metadata) is **owned by a single account and isolated per owner**. Ownership is enforced in the database with PostgreSQL Row-Level Security, so a request can only ever read or write the caller's own rows — the isolation holds even against direct SQL.
+    - **Secured build** (`secured` profile): the owner is the authenticated user (from the `Bearer` token). Reads, searches, and writes are automatically scoped to that user; another owner's records are invisible (a read by id returns **404**, and they never appear in list/search results). Ownership is assigned by the server on create — there is no `owner` field in any request or response body. The **showcase** owner's data is world-readable: under the secured profile the read surface — `GET /v1/{entity}/{id}`, `POST /v1/{entity}/function/search`, and `GET /v1/filters/{entity}` — is reachable **without a token** (anonymous requests resolve to the showcase owner); writes always require authentication.
+    - **Default (unsecured) build**: anonymous requests resolve to a single seeded, world-readable **showcase** owner, preserving the original single-collection behavior for the public site. The showcase owner's records are **not** visible to an authenticated user — each user sees only their own.
+    - Metadata keys are unique **per owner** (two owners may each use the same key).
+
+    ## Roles & Capabilities (secured profile)
+    Under the `secured` profile, each request resolves to one of five **roles**, derived per request from backend fields on the account (never from a payment processor): an admin **role override** if set, otherwise the account's `access_until` / `subscription_status`. A new account is auto-granted a **trial** on registration (a configurable window, default 30 days), so it starts as **TRIAL** and becomes **LAPSED** automatically when the window ends. An operator can pin any account's role through the admin API (`POST /v1/admin/users/{id}/role`); to bootstrap the first admin, run a one-line `UPDATE users SET role_override='ADMIN' WHERE email='you@domain.com'`.
+    - **GUEST** (anonymous → showcase): reads and filters the **showcase** data only; any write/backup/import is rejected at authentication (**401**).
+    - **TRIAL** (new account, trial window active): full read, filter, write, and backup of its own data; **import is paid-only (403)**.
+    - **PAID** (authenticated, active subscription): full read, filter, write, backup, and import of its own data.
+    - **LAPSED** (authenticated, access window expired): may read/list its own data and back it up, but a **filtered** search returns **402** and write/import return **403**.
+    - **ADMIN** (pinned via `role_override`): every own-data capability plus the admin role-management API.
+
+    Capability matrix (✓ = allowed; the denied response is in parentheses):
+
+    | Capability | GUEST | TRIAL | PAID | LAPSED | ADMIN |
+    |---|:--:|:--:|:--:|:--:|:--:|
+    | READ (own/showcase) | ✓ | ✓ | ✓ | ✓ | ✓ |
+    | FILTER (402) | ✓* | ✓ | ✓ | ✗ | ✓ |
+    | WRITE (403) | ✗ | ✓ | ✓ | ✗ | ✓ |
+    | BACKUP (403) | ✗ | ✓ | ✓ | ✓ | ✓ |
+    | IMPORT (403) | ✗ | ✗ | ✓ | ✗ | ✓ |
+    | ACCESS&#95;ADMIN (403) | ✗ | ✗ | ✗ | ✗ | ✓ |
+
+    `*` GUEST filters the public **showcase** only (RLS scopes anonymous requests to the showcase owner); GUEST writes/backup/import are blocked at authentication (**401**) before capabilities apply.
+
+    **Impersonation (deferred):** a future read-only `X-Act-As-Owner: <userId>` header, honored only for an ADMIN caller, will let an admin view another user's collection (READ + FILTER only; WRITE/BACKUP/IMPORT → **403**). Not yet implemented.
 
     ## Timestamps
     All `createdAt`, `updatedAt`, and `deletedAt` fields are serialized as **epoch milliseconds** (a JSON integer, e.g. `1757970298640`), not ISO-8601 strings. `deletedAt` is `null` for records that have not been soft-deleted. This applies uniformly to entities, custom fields, metadata, and backup exports.
@@ -83,6 +115,7 @@ paths:
         - System
       summary: Health check endpoint
       description: Simple health check. Returns the string "thump thump" inside the standard response envelope.
+      security: []
       responses:
         '200':
           description: Service is healthy
@@ -103,6 +136,182 @@ paths:
                 data: "thump thump"
                 errors: null
                 roundTripMs: 0
+
+  /v1/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new account
+      description: |
+        Create a new user account. `email` and `password` are required and the body is flat (there is no
+        entity-key wrapper). The email must be unique — registering an email that already has an account is
+        rejected with a 400. Public endpoint: no token required even under the `secured` profile.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              email: "collector@example.com"
+              password: "Sup3rSecret!"
+      responses:
+        '201':
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterDataResponse'
+              example:
+                data:
+                  id: 1
+                  email: "collector@example.com"
+                errors: null
+                roundTripMs: 12
+        '400':
+          description: Missing email/password, or an account with that email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors:
+                  - "Registration failed, an account with email: 'collector@example.com' already exists."
+
+  /v1/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Log in and obtain tokens
+      description: |
+        Exchange credentials for a short-lived access token and a longer-lived, revocable refresh token.
+        Send the access token as `Authorization: Bearer <accessToken>` on protected routes. Public endpoint:
+        no token required.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: "collector@example.com"
+              password: "Sup3rSecret!"
+      responses:
+        '200':
+          description: Authentication succeeded; tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthDataResponse'
+              example:
+                data:
+                  accessToken: "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjb2xsZWN0b3JAZXhhbXBsZS5jb20ifQ.signature"
+                  refreshToken: "PHCQ8m1k0t9rJv3w7s2A6bQx4nL5dZ0uHcRfTgYkImE"
+                  tokenType: "Bearer"
+                  expiresInMs: 900000
+                errors: null
+                roundTripMs: 18
+        '401':
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors:
+                  - "Invalid email or password."
+
+  /v1/auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Rotate tokens using a refresh token
+      description: |
+        Exchange a valid refresh token for a new access token and a new refresh token. The presented refresh
+        token is single-use: it is revoked as part of the call, so the previous refresh token can no longer be
+        replayed. Public endpoint: no access token required.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+            example:
+              refreshToken: "PHCQ8m1k0t9rJv3w7s2A6bQx4nL5dZ0uHcRfTgYkImE"
+      responses:
+        '200':
+          description: Refresh succeeded; a new token pair is issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthDataResponse'
+              example:
+                data:
+                  accessToken: "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjb2xsZWN0b3JAZXhhbXBsZS5jb20ifQ.newsignature"
+                  refreshToken: "Zk2pQ9w0Lr4Jv7s1A6bQx3nL8dZ5uHcRfTgYkImEnew"
+                  tokenType: "Bearer"
+                  expiresInMs: 900000
+                errors: null
+                roundTripMs: 14
+        '401':
+          description: The refresh token is missing, invalid, expired, or already used
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors:
+                  - "Invalid refresh token."
+
+  /v1/auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get the authenticated caller's identity and role
+      description: |
+        Return the caller's email and effective per-request **role** (already reflecting any admin role
+        override). The role is resolved the same way as for every other request (admin override, otherwise
+        `access_until` / `subscription_status`), so a front-end can read it directly instead of inferring it
+        from capability errors. Requires a valid `Bearer` access token; an anonymous caller gets **401**.
+      responses:
+        '200':
+          description: The caller's identity and role
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AuthMe'
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                  roundTripMs:
+                    type: integer
+                    format: int64
+              example:
+                data:
+                  email: "collector@example.com"
+                  role: "TRIAL"
+                errors: null
+                roundTripMs: 6
+        '401':
+          description: Authentication required (anonymous caller)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors:
+                  - "Authentication required."
 
   /v1/toys:
     post:
@@ -1827,6 +2036,115 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /v1/admin/users:
+    get:
+      tags:
+        - Admin
+      summary: List all user accounts (admin only)
+      description: |
+        List every account with its effective role, role override, and billing fields. **Admin only**: the
+        caller must resolve to the `ADMIN` role (pinned via `role_override`); any other authenticated caller
+        receives **403**, and an anonymous caller **401**. These routes bypass the per-request tenant
+        transaction so they can read the `users` table (which the demoted RLS role cannot access).
+      responses:
+        '200':
+          description: The list of user accounts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminUser'
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                  roundTripMs:
+                    type: integer
+                    format: int64
+        '401':
+          description: Authentication required (anonymous caller)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: The caller does not resolve to the ADMIN role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/admin/users/{id}/role:
+    post:
+      tags:
+        - Admin
+      summary: Set or clear a user's role override (admin only)
+      description: |
+        Pin the target user to a specific role, or clear the pin to revert to auto-derivation. Send
+        `roleOverride` as one of `GUEST`, `TRIAL`, `PAID`, `LAPSED`, `ADMIN`, or `null` to clear. The change
+        takes effect on the target's next request (the role is re-derived per request). **Admin only** (403
+        for non-admins, 401 for anonymous). An unknown role value returns **400**; an unknown user id **404**.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The target user's id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetRoleOverrideRequest'
+            example:
+              roleOverride: "PAID"
+      responses:
+        '200':
+          description: The updated user account
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AdminUser'
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                  roundTripMs:
+                    type: integer
+                    format: int64
+        '400':
+          description: The role value is not one of the five roles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required (anonymous caller)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: The caller does not resolve to the ADMIN role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No user with that id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /v1/metadata:
     post:
       tags:
@@ -2031,6 +2349,93 @@ components:
       description: Unique identifier for the entity
 
   schemas:
+    # Authentication
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: Unique login identifier for the account
+        password:
+          type: string
+          format: password
+          description: Plaintext password; stored only as a BCrypt hash
+      required:
+        - email
+        - password
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+      required:
+        - email
+        - password
+
+    RefreshRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          description: A valid, unrevoked refresh token previously issued by login or refresh
+      required:
+        - refreshToken
+
+    AuthTokens:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: "Short-lived JWT to send as `Authorization: Bearer <accessToken>`"
+        refreshToken:
+          type: string
+          description: Longer-lived, single-use, revocable token used to obtain a new access token
+        tokenType:
+          type: string
+          example: "Bearer"
+        expiresInMs:
+          type: integer
+          format: int64
+          description: Lifetime of the access token in milliseconds
+
+    AuthDataResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AuthTokens'
+        errors:
+          type: 'null'
+        roundTripMs:
+          type: integer
+          format: int64
+
+    RegisteredUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        email:
+          type: string
+          format: email
+
+    RegisterDataResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/RegisteredUser'
+        errors:
+          type: 'null'
+        roundTripMs:
+          type: integer
+          format: int64
+
     # Common Components
     CustomFieldValue:
       type: object
@@ -2797,6 +3202,55 @@ components:
           all_fields: ["order_by", "order_by_desc"]
           pagination_fields: ["limit", "offset"]
 
+    # Auth identity schema
+    AuthMe:
+      type: object
+      description: The authenticated caller's identity and effective role.
+      properties:
+        email:
+          type: string
+        role:
+          type: string
+          enum: [GUEST, TRIAL, PAID, LAPSED, ADMIN]
+          description: The caller's effective per-request role (already reflects any role override).
+
+    # Admin Schemas
+    AdminUser:
+      type: object
+      description: A user account as exposed to the admin role-management API.
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        role:
+          type: string
+          enum: [GUEST, TRIAL, PAID, LAPSED, ADMIN]
+          description: The user's effective per-request role (already reflects any role override).
+        roleOverride:
+          type: string
+          enum: [GUEST, TRIAL, PAID, LAPSED, ADMIN]
+          nullable: true
+          description: The admin pin, or null when the role is auto-derived.
+        accessUntil:
+          type: integer
+          format: int64
+          nullable: true
+          description: Access window expiry as epoch milliseconds, or null for no window.
+        subscriptionStatus:
+          type: string
+          nullable: true
+          description: "Informational billing status (e.g. trialing, active, past_due), or null."
+
+    SetRoleOverrideRequest:
+      type: object
+      properties:
+        roleOverride:
+          type: string
+          enum: [GUEST, TRIAL, PAID, LAPSED, ADMIN]
+          nullable: true
+          description: The role to pin the user to, or null to clear the pin and revert to auto-derivation.
+
     # Data Management Schemas
     BackupData:
       type: object
@@ -2999,6 +3453,8 @@ components:
 tags:
   - name: System
     description: Health check and system status endpoints
+  - name: Authentication
+    description: Account registration, login, and token refresh (public; required only under the secured profile)
   - name: Toys
     description: Manage toy collectibles
   - name: Systems
@@ -3019,3 +3475,5 @@ tags:
     description: Get filtering capabilities for entities
   - name: Data Management
     description: Backup, import, and data seeding operations
+  - name: Admin
+    description: Admin-only role management (list users, set/clear a user's role override); requires the ADMIN role

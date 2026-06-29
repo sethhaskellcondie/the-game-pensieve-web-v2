@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/bffError";
 import { createBoardGameBox, type CreateBoardGameBoxInput } from "@/lib/api";
 
 // Creates a board game box (listing goes through ./search instead). The box's
@@ -9,10 +10,6 @@ export async function POST(request: Request) {
     const data = await createBoardGameBox(input);
     return NextResponse.json({ status: "ok", data });
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Failed to create board game box";
-    return NextResponse.json({ status: "error", message }, { status: 502 });
+    return errorResponse(error, "Failed to create board game box");
   }
 }

@@ -1,0 +1,56 @@
+.content {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+.lede {
+  margin: 0 0 32px;
+  color: rgba(var(--ink-navy-rgb), 0.75);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 36px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid rgba(var(--ink-navy-rgb), 0.12);
+  border-radius: 16px;
+}
+
+.card[data-featured="true"] {
+  border-color: rgba(var(--ink-navy-rgb), 0.5);
+  box-shadow: 0 24px 60px -28px rgba(var(--ink-navy-rgb), 0.4);
+}
+
+.planName {
+  margin: 0 0 4px;
+  color: rgb(var(--ink-navy-rgb));
+}
+
+.price {
+  margin: 0 0 16px;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: rgb(var(--ink-navy-rgb));
+}
+
+.price span {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: rgba(var(--ink-navy-rgb), 0.6);
+}
+
+.features {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.7;
+  color: rgba(var(--ink-navy-rgb), 0.85);
+}

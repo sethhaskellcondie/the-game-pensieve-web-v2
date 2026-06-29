@@ -1,15 +1,51 @@
 // Single source of truth for talking to The Game Pensieve backend.
 // Routes and the response envelope are documented in backend-documentation/openapi.yaml.
+//
+// Server-only: this module reads the session cookie (via next/headers) to attach
+// the caller's bearer token, so it must only be imported from Server Components
+// and Route Handlers — never from Client Components or middleware.
 
-function getBaseUrl(): string {
-  const url = process.env.API_BASE_URL;
-  if (url) return url;
-  if (process.env.NODE_ENV === "development") {
-    return "http://localhost:8080/v1";
+import { getBaseUrl } from "./apiBase";
+
+// Carries the backend's HTTP status alongside the message so route handlers can
+// translate auth/entitlement failures (401 not authenticated, 402 lapsed tried
+// to filter, 403 lapsed tried to write) into the right client-facing status
+// instead of collapsing everything to a generic 502.
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
   }
-  throw new Error(
-    "API_BASE_URL is not set. Define it in the environment before building for production.",
-  );
+}
+
+// How the bearer token for an outbound call is resolved. This module is shared
+// with Client Components (which import its types + pure helpers), so it must NOT
+// itself depend on `next/headers`/iron-session — that would pull server-only code
+// into the browser bundle. Instead the server installs a cookie-aware resolver at
+// startup via setTokenResolver (see src/lib/serverAuth.ts + src/instrumentation.ts).
+// The default resolves to the optional static API_TOKEN (undefined in the
+// browser → anonymous → the backend serves the public showcase).
+type TokenResolver = () => Promise<string | null>;
+
+let resolveToken: TokenResolver = async () => process.env.API_TOKEN ?? null;
+
+export function setTokenResolver(resolver: TokenResolver): void {
+  resolveToken = resolver;
+}
+
+// Builds the Authorization header for an outbound backend call. Never throws — a
+// missing/garbled session just yields no header (anonymous → showcase).
+async function authHeaders(): Promise<Record<string, string>> {
+  let token: string | null = null;
+  try {
+    token = await resolveToken();
+  } catch {
+    token = process.env.API_TOKEN ?? null;
+  }
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 // The backend wraps every response as { data, errors }.
@@ -56,10 +92,11 @@ async function failureMessage(res: Response, path: string): Promise<string> {
 export async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(`${getBaseUrl()}${path}`, {
     cache: "no-store",
+    headers: await authHeaders(),
   });
 
   if (!res.ok) {
-    throw new Error(await failureMessage(res, path));
+    throw new ApiError(res.status, await failureMessage(res, path));
   }
 
   const body = (await res.json()) as ApiResponse<T>;
@@ -76,12 +113,13 @@ export async function apiGet<T>(path: string): Promise<T> {
 export async function apiGetOrNull<T>(path: string): Promise<T | null> {
   const res = await fetch(`${getBaseUrl()}${path}`, {
     cache: "no-store",
+    headers: await authHeaders(),
   });
 
   if (res.status === 404) return null;
 
   if (!res.ok) {
-    throw new Error(await failureMessage(res, path));
+    throw new ApiError(res.status, await failureMessage(res, path));
   }
 
   const body = (await res.json()) as ApiResponse<T>;
@@ -101,12 +139,12 @@ async function apiSend<T>(
   const res = await fetch(`${getBaseUrl()}${path}`, {
     method,
     cache: "no-store",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(await authHeaders()) },
     body: JSON.stringify(body),
   });
 
   if (!res.ok) {
-    throw new Error(await failureMessage(res, path));
+    throw new ApiError(res.status, await failureMessage(res, path));
   }
 
   const payload = (await res.json()) as ApiResponse<T>;
@@ -136,10 +174,11 @@ export async function apiDelete(path: string): Promise<void> {
   const res = await fetch(`${getBaseUrl()}${path}`, {
     method: "DELETE",
     cache: "no-store",
+    headers: await authHeaders(),
   });
 
   if (!res.ok) {
-    throw new Error(await failureMessage(res, path));
+    throw new ApiError(res.status, await failureMessage(res, path));
   }
 
   // A 204 (or any empty body) means success with nothing to read.
@@ -175,6 +214,39 @@ export async function importFromFile(): Promise<unknown> {
 // ImportResults `data`.
 export async function importData(data: unknown): Promise<unknown> {
   return apiPost<unknown>("/function/import", { data });
+}
+
+// ---------- Admin (role management) ----------
+// Mirrors the AdminUser / SetRoleOverrideRequest schemas. Roles use the backend's
+// uppercase vocabulary. These routes are ADMIN-only: a non-admin caller gets 403
+// and an anonymous caller 401 (surfaced to the browser via errorResponse).
+
+export type BackendRole = "GUEST" | "TRIAL" | "PAID" | "LAPSED" | "ADMIN";
+
+export type AdminUser = {
+  id: number;
+  email: string;
+  // The effective per-request role (already reflects any override).
+  role: BackendRole;
+  // The admin pin, or null when the role is auto-derived.
+  roleOverride: BackendRole | null;
+  // Access window expiry as epoch ms, or null for no window.
+  accessUntil: number | null;
+  // Informational billing status (e.g. trialing, active, past_due), or null.
+  subscriptionStatus: string | null;
+};
+
+export function listAdminUsers(): Promise<AdminUser[]> {
+  return apiGet<AdminUser[]>("/admin/users");
+}
+
+// Pins the target user to a role, or clears the pin with `null` to revert to
+// auto-derivation. Returns the updated account.
+export function setUserRoleOverride(
+  id: number,
+  roleOverride: BackendRole | null,
+): Promise<AdminUser> {
+  return apiPost<AdminUser>(`/admin/users/${id}/role`, { roleOverride });
 }
 
 // ---------- Custom fields ----------

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/bffError";
 import { deleteToy, updateToy, type UpdateToyInput } from "@/lib/api";
 
 export async function PUT(
@@ -11,9 +12,7 @@ export async function PUT(
     const data = await updateToy(Number(id), input);
     return NextResponse.json({ status: "ok", data });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to update toy";
-    return NextResponse.json({ status: "error", message }, { status: 502 });
+    return errorResponse(error, "Failed to update toy");
   }
 }
 
@@ -26,8 +25,6 @@ export async function DELETE(
     await deleteToy(Number(id));
     return NextResponse.json({ status: "ok" });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to delete toy";
-    return NextResponse.json({ status: "error", message }, { status: 502 });
+    return errorResponse(error, "Failed to delete toy");
   }
 }

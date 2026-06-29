@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/bffError";
 import { searchBoardGameBoxes, type FilterRequestDto } from "@/lib/api";
 
 export async function POST(request: Request) {
@@ -9,10 +10,6 @@ export async function POST(request: Request) {
     const data = await searchBoardGameBoxes(filters);
     return NextResponse.json({ status: "ok", data });
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Failed to search board game boxes";
-    return NextResponse.json({ status: "error", message }, { status: 502 });
+    return errorResponse(error, "Failed to search board game boxes");
   }
 }

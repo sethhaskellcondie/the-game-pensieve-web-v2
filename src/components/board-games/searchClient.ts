@@ -6,6 +6,7 @@
 
 import type { BoardGame, BoardGameBox, FilterRequestDto } from "@/lib/api";
 import { readJson } from "@/components/video-games/searchClient";
+import { bffFetch } from "@/lib/bffClient";
 
 export {
   fetchEntityFields,
@@ -19,7 +20,7 @@ export async function searchBoardGamesClient(
   filters: FilterRequestDto[],
   signal?: AbortSignal,
 ): Promise<BoardGame[]> {
-  const res = await fetch("/api/board-games/search", {
+  const res = await bffFetch("/api/board-games/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ filters }),
@@ -33,7 +34,7 @@ export async function searchBoardGameBoxesClient(
   filters: FilterRequestDto[],
   signal?: AbortSignal,
 ): Promise<BoardGameBox[]> {
-  const res = await fetch("/api/board-game-boxes/search", {
+  const res = await bffFetch("/api/board-game-boxes/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ filters }),

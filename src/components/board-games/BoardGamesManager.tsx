@@ -19,6 +19,8 @@ import BeginnerHint from "@/components/BeginnerHint";
 import { BEGINNER_HINTS } from "@/components/beginnerHints";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
+import { useSession } from "@/components/auth/SessionProvider";
+import { bffFetch } from "@/lib/bffClient";
 import FilterBar from "@/components/filters/FilterBar";
 import {
   fetchDefaultSortOptions,
@@ -143,7 +145,12 @@ export default function BoardGamesManager({
   const router = useRouter();
   const { showToast, showSnackbar } = useToast();
   const { settings } = useUiSettings();
+  const { canWrite } = useSession();
+  // Inline (mass) editing is a write, so it's available only to an active (Paid)
+  // account — even when the mass-edit UI setting is on, guests/lapsed see the
+  // grid read-only.
   const massEditMode = settings.massEditMode;
+  const massEditable = massEditMode && canWrite;
   const standardFields = settings.standardFields.boardGame;
   const [games, setGames] = useState<BoardGame[]>([]);
   const [definitions, setDefinitions] = useState<CustomField[]>([]);
@@ -308,7 +315,7 @@ export default function BoardGamesManager({
           title: next.title,
           customFieldValues: next.customFieldValues,
         };
-        const res = await fetch(`/api/board-games/${next.id}`, {
+        const res = await bffFetch(`/api/board-games/${next.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(input),
@@ -381,7 +388,7 @@ export default function BoardGamesManager({
         width: 272,
         frozen: true,
         seam: true,
-        render: massEditMode
+        render: massEditable
           ? (game) => (
               <EditableTitleCell
                 game={game}
@@ -421,7 +428,7 @@ export default function BoardGamesManager({
       const value = game.customFieldValues.find(
         (cv) => cv.customFieldId === def.id,
       )?.value;
-      if (massEditMode && editableInline.includes(def.type)) {
+      if (massEditable && editableInline.includes(def.type)) {
         return (
           <FieldEditor
             field={{
@@ -459,7 +466,7 @@ export default function BoardGamesManager({
     return [...base.filter((col) => !hidden.has(col.key)), ...dynamic];
   }, [
     definitions,
-    massEditMode,
+    massEditable,
     standardFields,
     editingId,
     commitTitle,
@@ -474,7 +481,7 @@ export default function BoardGamesManager({
         <div className={styles.titleWrap}>
           <div className={styles.titleRow}>
             <h2 className={styles.entName}>{loading || searching ? "Loading…" : <><b>{games.length}</b> {games.length === 1 ? "Board Game" : "Board Games"}</>}</h2>
-            {massEditMode && (
+            {massEditable && (
               <BeginnerHint
                 placement="bottom-start"
                 text={BEGINNER_HINTS.massEdit}
@@ -523,13 +530,13 @@ export default function BoardGamesManager({
         // the whole row navigates to the game's detail page. Both routes are
         // the same — they just differ in affordance per mode.
         onOpenDetails={
-          massEditMode
+          massEditable
             ? (game) => router.push(`/board-games/${game.id}`)
             : undefined
         }
         detailsLabel={(game) => `View ${game.title}`}
         onRowClick={
-          massEditMode
+          massEditable
             ? undefined
             : (game) => router.push(`/board-games/${game.id}`)
         }

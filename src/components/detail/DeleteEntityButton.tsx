@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TrashIcon } from "@/components/custom-fields/icons";
 import { useToast } from "@/components/ToastProvider";
+import { useSession } from "@/components/auth/SessionProvider";
+import { bffFetch } from "@/lib/bffClient";
 import styles from "./DeleteEntityButton.module.css";
 
 // The destructive action for a record's detail page: a red button pinned to the
@@ -31,6 +33,7 @@ export default function DeleteEntityButton({
 }) {
   const router = useRouter();
   const { showToast, showSnackbar } = useToast();
+  const { canWrite } = useSession();
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -57,7 +60,7 @@ export default function DeleteEntityButton({
     setConfirming(false);
     setDeleting(true);
     try {
-      const res = await fetch(endpoint, { method: "DELETE" });
+      const res = await bffFetch(endpoint, { method: "DELETE" });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as {
           message?: string;
@@ -78,6 +81,10 @@ export default function DeleteEntityButton({
       });
     }
   };
+
+  // Deleting is a write: only an active (Paid) account may do it. Guests and
+  // lapsed users don't see the control at all.
+  if (!canWrite) return null;
 
   return (
     <div className={styles.footer}>

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/bffError";
 import {
   deleteCustomField,
   updateCustomField,
@@ -15,9 +16,7 @@ export async function PUT(
     const data = await updateCustomField(Number(id), input);
     return NextResponse.json({ status: "ok", data });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to update custom field";
-    return NextResponse.json({ status: "error", message }, { status: 502 });
+    return errorResponse(error, "Failed to update custom field");
   }
 }
 
@@ -30,8 +29,6 @@ export async function DELETE(
     await deleteCustomField(Number(id));
     return NextResponse.json({ status: "ok" });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to delete custom field";
-    return NextResponse.json({ status: "error", message }, { status: 502 });
+    return errorResponse(error, "Failed to delete custom field");
   }
 }

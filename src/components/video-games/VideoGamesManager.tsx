@@ -19,6 +19,8 @@ import DataTable, {
 } from "@/components/data-table/DataTable";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
+import { useSession } from "@/components/auth/SessionProvider";
+import { bffFetch } from "@/lib/bffClient";
 import BeginnerHint from "@/components/BeginnerHint";
 import { BEGINNER_HINTS } from "@/components/beginnerHints";
 import FilterBar from "@/components/filters/FilterBar";
@@ -146,7 +148,12 @@ export default function VideoGamesManager({
   const router = useRouter();
   const { showToast, showSnackbar } = useToast();
   const { settings } = useUiSettings();
+  const { canWrite } = useSession();
+  // Inline (mass) editing is a write, so it's available only to an active (Paid)
+  // account — even when the mass-edit UI setting is on, guests/lapsed see the
+  // grid read-only.
   const massEditMode = settings.massEditMode;
+  const massEditable = massEditMode && canWrite;
   const standardFields = settings.standardFields.videoGame;
   const [games, setGames] = useState<VideoGame[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
@@ -343,7 +350,7 @@ export default function VideoGamesManager({
           systemId: next.system.id,
           customFieldValues: next.customFieldValues,
         };
-        const res = await fetch(`/api/video-games/${next.id}`, {
+        const res = await bffFetch(`/api/video-games/${next.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(input),
@@ -429,7 +436,7 @@ export default function VideoGamesManager({
         width: 272,
         frozen: true,
         seam: true,
-        render: massEditMode
+        render: massEditable
           ? (game) => (
               <EditableTitleCell
                 game={game}
@@ -446,7 +453,7 @@ export default function VideoGamesManager({
         label: "System",
         width: 180,
         clip: true,
-        render: massEditMode
+        render: massEditable
           ? (game) => (
               <FieldEditor
                 field={{
@@ -489,7 +496,7 @@ export default function VideoGamesManager({
       const value = game.customFieldValues.find(
         (cv) => cv.customFieldId === def.id,
       )?.value;
-      if (massEditMode && editableInline.includes(def.type)) {
+      if (massEditable && editableInline.includes(def.type)) {
         return (
           <FieldEditor
             field={{
@@ -529,7 +536,7 @@ export default function VideoGamesManager({
     return [...base.filter((col) => !hidden.has(col.key)), ...dynamic];
   }, [
     definitions,
-    massEditMode,
+    massEditable,
     standardFields,
     editingId,
     systemOptions,
@@ -546,7 +553,7 @@ export default function VideoGamesManager({
         <div className={styles.titleWrap}>
           <div className={styles.titleRow}>
             <h2 className={styles.entName}>{loading || searching ? "Loading…" : <><b>{games.length}</b> {games.length === 1 ? "Video Game" : "Video Games"}</>}</h2>
-            {massEditMode && (
+            {massEditable && (
               <BeginnerHint
                 placement="bottom-start"
                 text={BEGINNER_HINTS.massEdit}
@@ -595,13 +602,13 @@ export default function VideoGamesManager({
         // the whole row navigates to the game's detail page. Both routes are
         // the same — they just differ in affordance per mode.
         onOpenDetails={
-          massEditMode
+          massEditable
             ? (game) => router.push(`/video-games/${game.id}`)
             : undefined
         }
         detailsLabel={(game) => `View ${game.title}`}
         onRowClick={
-          massEditMode
+          massEditable
             ? undefined
             : (game) => router.push(`/video-games/${game.id}`)
         }

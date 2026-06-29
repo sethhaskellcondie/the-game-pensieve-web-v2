@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/bffError";
 import { updateVideoGame, type UpdateVideoGameInput } from "@/lib/api";
 
 // Video games have no DELETE endpoint — they are removed through their video
@@ -13,8 +14,6 @@ export async function PUT(
     const data = await updateVideoGame(Number(id), input);
     return NextResponse.json({ status: "ok", data });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to update video game";
-    return NextResponse.json({ status: "error", message }, { status: 502 });
+    return errorResponse(error, "Failed to update video game");
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/bffError";
 import {
   deleteSystem,
   updateSystem,
@@ -15,9 +16,7 @@ export async function PUT(
     const data = await updateSystem(Number(id), input);
     return NextResponse.json({ status: "ok", data });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to update system";
-    return NextResponse.json({ status: "error", message }, { status: 502 });
+    return errorResponse(error, "Failed to update system");
   }
 }
 
@@ -30,8 +29,6 @@ export async function DELETE(
     await deleteSystem(Number(id));
     return NextResponse.json({ status: "ok" });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to delete system";
-    return NextResponse.json({ status: "error", message }, { status: 502 });
+    return errorResponse(error, "Failed to delete system");
   }
 }

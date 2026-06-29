@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/bffError";
 import {
   deleteBoardGameBox,
   updateBoardGameBox,
@@ -15,11 +16,7 @@ export async function PUT(
     const data = await updateBoardGameBox(Number(id), input);
     return NextResponse.json({ status: "ok", data });
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Failed to update board game box";
-    return NextResponse.json({ status: "error", message }, { status: 502 });
+    return errorResponse(error, "Failed to update board game box");
   }
 }
 
@@ -32,10 +29,6 @@ export async function DELETE(
     await deleteBoardGameBox(Number(id));
     return NextResponse.json({ status: "ok" });
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Failed to delete board game box";
-    return NextResponse.json({ status: "error", message }, { status: 502 });
+    return errorResponse(error, "Failed to delete board game box");
   }
 }

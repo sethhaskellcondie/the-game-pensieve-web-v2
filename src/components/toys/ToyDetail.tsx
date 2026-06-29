@@ -21,8 +21,11 @@ import {
   StandardFieldGlyph,
 } from "@/components/custom-fields/registry";
 import { useToast } from "@/components/ToastProvider";
+import { useSession } from "@/components/auth/SessionProvider";
+import { bffFetch } from "@/lib/bffClient";
 import DeleteEntityButton from "@/components/detail/DeleteEntityButton";
 import FieldEditor, { normalizeFieldValue } from "./toyFieldEditors";
+import CustomFieldValueDisplay from "./CustomFieldValue";
 import styles from "./ToyDetail.module.css";
 
 // One rendered field: the fixed Name/Set rows and every custom field share this
@@ -48,6 +51,7 @@ export default function ToyDetail({
   definitions: CustomField[];
 }) {
   const { showToast, showSnackbar } = useToast();
+  const { canWrite } = useSession();
   const [toy, setToy] = useState<Toy>(initialToy);
 
   // Optimistically apply `next`, then persist the whole toy (name + set + values
@@ -64,7 +68,7 @@ export default function ToyDetail({
         set: next.set,
         customFieldValues: next.customFieldValues,
       };
-      const res = await fetch(`/api/toys/${next.id}`, {
+      const res = await bffFetch(`/api/toys/${next.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
@@ -189,15 +193,23 @@ export default function ToyDetail({
                     </span>
                   </div>
                   <div className={styles.rowval}>
-                    <FieldEditor
-                      field={{
-                        name: row.name,
-                        kind: row.kind,
-                        value: row.value,
-                        options: row.options,
-                      }}
-                      onCommit={row.onCommit}
-                    />
+                    {canWrite ? (
+                      <FieldEditor
+                        field={{
+                          name: row.name,
+                          kind: row.kind,
+                          value: row.value,
+                          options: row.options,
+                        }}
+                        onCommit={row.onCommit}
+                      />
+                    ) : (
+                      <CustomFieldValueDisplay
+                        type={row.kind}
+                        value={row.value}
+                        options={row.options}
+                      />
+                    )}
                   </div>
                 </div>
               );

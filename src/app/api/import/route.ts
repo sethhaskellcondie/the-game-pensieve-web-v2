@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/bffError";
 import { importData } from "@/lib/api";
 
 export async function POST(request: Request) {
@@ -9,8 +10,6 @@ export async function POST(request: Request) {
     await importData(data);
     return NextResponse.json({ status: "ok" });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to import data";
-    return NextResponse.json({ status: "error", message }, { status: 502 });
+    return errorResponse(error, "Failed to import data");
   }
 }

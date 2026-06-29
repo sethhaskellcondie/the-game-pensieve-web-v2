@@ -23,6 +23,8 @@ import {
   StandardFieldGlyph,
 } from "@/components/custom-fields/registry";
 import { useToast } from "@/components/ToastProvider";
+import { useSession } from "@/components/auth/SessionProvider";
+import { bffFetch } from "@/lib/bffClient";
 import DeleteEntityButton from "@/components/detail/DeleteEntityButton";
 // Aliased: CustomFieldValue (the type) is already imported from the API types.
 import CustomFieldValueDisplay from "@/components/toys/CustomFieldValue";
@@ -71,6 +73,7 @@ export default function BoardGameBoxDetail({
   allBoxes: BoardGameBox[];
 }) {
   const { showToast, showSnackbar } = useToast();
+  const { canWrite } = useSession();
   const [box, setBox] = useState<BoardGameBox>(initialBox);
   // Base-set picker: seeded from the server snapshot so the card renders
   // instantly, then refreshed client-side on focus. The backend never tells the
@@ -107,7 +110,7 @@ export default function BoardGameBoxDetail({
         boardGameId: next.boardGame.id,
         customFieldValues: next.customFieldValues,
       };
-      const res = await fetch(`/api/board-game-boxes/${next.id}`, {
+      const res = await bffFetch(`/api/board-game-boxes/${next.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
@@ -339,15 +342,26 @@ export default function BoardGameBoxDetail({
                     </span>
                   </div>
                   <div className={styles.rowval}>
-                    <FieldEditor
-                      field={{
-                        name: row.name,
-                        kind: row.kind,
-                        value: row.value,
-                        options: row.options,
-                      }}
-                      onCommit={row.onCommit}
-                    />
+                    {/* Editing a field is a write, so only an active (Paid)
+                        account gets the editor; everyone else sees the value
+                        read-only. */}
+                    {canWrite ? (
+                      <FieldEditor
+                        field={{
+                          name: row.name,
+                          kind: row.kind,
+                          value: row.value,
+                          options: row.options,
+                        }}
+                        onCommit={row.onCommit}
+                      />
+                    ) : (
+                      <CustomFieldValueDisplay
+                        type={row.kind}
+                        value={row.value}
+                        options={row.options}
+                      />
+                    )}
                   </div>
                 </div>
               );
@@ -440,22 +454,29 @@ export default function BoardGameBoxDetail({
                       </div>
                     </div>
 
-                    {/* Raised above the row's stretched title link so the
-                        clear control still receives the click. */}
-                    <div className={chartStyles.delwrap}>
-                      <button
-                        type="button"
-                        className={pickerStyles.remove}
-                        aria-label={`Remove ${baseSet.title}`}
-                        onClick={() => commitBaseSet(null)}
-                      >
-                        <XIcon />
-                      </button>
-                    </div>
+                    {/* Clearing the base set is a write, so the control shows
+                        only for an active (Paid) account. Raised above the
+                        row's stretched title link so it still receives the
+                        click. */}
+                    {canWrite && (
+                      <div className={chartStyles.delwrap}>
+                        <button
+                          type="button"
+                          className={pickerStyles.remove}
+                          aria-label={`Remove ${baseSet.title}`}
+                          onClick={() => commitBaseSet(null)}
+                        >
+                          <XIcon />
+                        </button>
+                      </div>
+                    )}
                   </li>
                 </ul>
               )}
 
+              {/* Picking/changing the base set is a write, so the picker shows
+                  only for an active (Paid) account. */}
+              {canWrite && (
               <div className={pickerStyles.picker}>
                 <input
                   type="search"
@@ -510,6 +531,7 @@ export default function BoardGameBoxDetail({
                   </ul>
                 )}
               </div>
+              )}
             </div>
           )}
 
@@ -555,6 +577,9 @@ export default function BoardGameBoxDetail({
               </li>
             </ul>
 
+            {/* Relinking the box to another game is a write, so the picker
+                shows only for an active (Paid) account. */}
+            {canWrite && (
             <div className={pickerStyles.picker}>
               <input
                 type="search"
@@ -606,6 +631,7 @@ export default function BoardGameBoxDetail({
                 </ul>
               )}
             </div>
+            )}
           </div>
 
           <DeleteEntityButton

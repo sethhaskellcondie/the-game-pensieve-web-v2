@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/bffError";
 import { listCustomFieldsByEntity, type EntityKey } from "@/lib/api";
 
 export async function GET(
@@ -10,8 +11,6 @@ export async function GET(
     const data = await listCustomFieldsByEntity(key as EntityKey);
     return NextResponse.json({ status: "ok", data });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to load custom fields";
-    return NextResponse.json({ status: "error", message }, { status: 502 });
+    return errorResponse(error, "Failed to load custom fields");
   }
 }

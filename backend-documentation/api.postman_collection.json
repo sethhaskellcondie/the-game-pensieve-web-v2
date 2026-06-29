@@ -45,6 +45,111 @@
 			"response": []
 		},
 		{
+			"name": "auth - register",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "*/*"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"collector@example.com\",\n    \"password\": \"Sup3rSecret!\"\n}"
+				},
+				"url": "http://localhost:8080/v1/auth/register"
+			},
+			"response": []
+		},
+		{
+			"name": "auth - login (captures tokens)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var json = pm.response.json();",
+							"if (json && json.data) {",
+							"    pm.collectionVariables.set(\"token\", json.data.accessToken);",
+							"    pm.collectionVariables.set(\"refreshToken\", json.data.refreshToken);",
+							"}"
+						]
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "*/*"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"collector@example.com\",\n    \"password\": \"Sup3rSecret!\"\n}"
+				},
+				"url": "http://localhost:8080/v1/auth/login"
+			},
+			"response": []
+		},
+		{
+			"name": "auth - refresh (rotates tokens)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var json = pm.response.json();",
+							"if (json && json.data) {",
+							"    pm.collectionVariables.set(\"token\", json.data.accessToken);",
+							"    pm.collectionVariables.set(\"refreshToken\", json.data.refreshToken);",
+							"}"
+						]
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "*/*"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
+				},
+				"url": "http://localhost:8080/v1/auth/refresh"
+			},
+			"response": []
+		},
+		{
 			"name": "create new toy",
 			"request": {
 				"method": "POST",
@@ -647,6 +752,25 @@
 			"response": []
 		},
 		{
+			"name": "import from body (TRIAL account → 403)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"data\": {\n        \"customFields\": [],\n        \"toys\": [],\n        \"systems\": [],\n        \"videoGameBoxes\": [],\n        \"boardGameBoxes\": [],\n        \"metadata\": []\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"description": "IMPORT is paid-only. Under the secured profile, run this with a freshly registered (TRIAL) account's access token in {{token}} and it returns 403 Forbidden. Promote the account to PAID (an active subscription) and the same request returns 200.",
+				"url": "http://localhost:8080/v1/function/import"
+			},
+			"response": []
+		},
+		{
 			"name": "import from backup.json",
 			"request": {
 				"method": "POST",
@@ -871,6 +995,54 @@
 				"url": "http://localhost:8080/v1/function/seedMyCollection"
 			},
 			"response": []
+		},
+		{
+			"name": "admin - list users",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"description": "ADMIN only. Lists every account with its effective role, role override, and billing fields. {{token}} must be an ADMIN account's token; a non-admin gets 403 and an anonymous caller 401.",
+				"url": "http://localhost:8080/v1/admin/users"
+			},
+			"response": []
+		},
+		{
+			"name": "admin - set user role override",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"roleOverride\": \"PAID\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"description": "ADMIN only. Pin user 2 to a role. roleOverride must be one of GUEST/TRIAL/PAID/LAPSED/ADMIN (an unknown value is 400, an unknown user 404). The change takes effect on the target's next request.",
+				"url": "http://localhost:8080/v1/admin/users/2/role"
+			},
+			"response": []
+		},
+		{
+			"name": "admin - clear user role override",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"roleOverride\": null\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"description": "ADMIN only. Clear user 2's role override (roleOverride: null) to revert the account to auto-derivation from its billing fields.",
+				"url": "http://localhost:8080/v1/admin/users/2/role"
+			},
+			"response": []
 		}
 	],
 	"auth": {
@@ -927,6 +1099,18 @@
 					"}"
 				]
 			}
+		}
+	],
+	"variable": [
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refreshToken",
+			"value": "",
+			"type": "string"
 		}
 	]
 }
