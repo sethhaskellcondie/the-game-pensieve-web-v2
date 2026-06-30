@@ -73,6 +73,14 @@ describe("capabilitiesFor", () => {
       canBackup: true,
       isAdmin: true,
     });
+    // An unresolved role renders like lapsed: read + backup only.
+    expect(capabilitiesFor("unknown")).toEqual({
+      canWrite: false,
+      canFilter: false,
+      canImport: false,
+      canBackup: true,
+      isAdmin: false,
+    });
   });
 });
 
@@ -112,6 +120,16 @@ describe("SessionProvider capabilities", () => {
 
   it("lapsed accounts may back up but not write, filter, or import", () => {
     renderWith({ role: "lapsed", email: "a@b.c" });
+    expect(screen.getByTestId("canWrite")).toHaveTextContent("false");
+    expect(screen.getByTestId("canFilter")).toHaveTextContent("false");
+    expect(screen.getByTestId("canImport")).toHaveTextContent("false");
+    expect(screen.getByTestId("canBackup")).toHaveTextContent("true");
+    expect(screen.getByTestId("auth")).toHaveTextContent("true");
+  });
+
+  it("an unknown role renders authenticated but restricted (like lapsed)", () => {
+    renderWith({ role: "unknown", email: "a@b.c" });
+    expect(screen.getByTestId("role")).toHaveTextContent("unknown");
     expect(screen.getByTestId("canWrite")).toHaveTextContent("false");
     expect(screen.getByTestId("canFilter")).toHaveTextContent("false");
     expect(screen.getByTestId("canImport")).toHaveTextContent("false");

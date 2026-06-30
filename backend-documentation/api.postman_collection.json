@@ -150,6 +150,21 @@
 			"response": []
 		},
 		{
+			"name": "auth - me (current user + role)",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "*/*"
+					}
+				],
+				"url": "http://localhost:8080/v1/auth/me",
+				"description": "Returns the authenticated caller's id, email, and effective role. Uses the collection-level bearer token in {{token}}. Under the secured profile an anonymous call returns 401; in the default build it resolves to the public showcase owner (GUEST)."
+			},
+			"response": []
+		},
+		{
 			"name": "create new toy",
 			"request": {
 				"method": "POST",

@@ -273,37 +273,29 @@ paths:
     get:
       tags:
         - Authentication
-      summary: Get the authenticated caller's identity and role
+      summary: Get the current caller's identity and effective role
       description: |
-        Return the caller's email and effective per-request **role** (already reflecting any admin role
-        override). The role is resolved the same way as for every other request (admin override, otherwise
-        `access_until` / `subscription_status`), so a front-end can read it directly instead of inferring it
-        from capability errors. Requires a valid `Bearer` access token; an anonymous caller gets **401**.
+        Return the authenticated caller's `id`, `email`, and effective `role`. The role is resolved per-request
+        the same way every other request resolves it, so the caller never has to re-derive it from billing state.
+        Under the `secured` profile this requires a valid `Bearer` access token (an anonymous call returns 401).
+        In the default (unsecured) build there is no authentication, so the request resolves to the seeded public
+        showcase owner and always reports the `GUEST` role.
       responses:
         '200':
-          description: The caller's identity and role
+          description: The current caller's identity and effective role
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  data:
-                    $ref: '#/components/schemas/AuthMe'
-                  errors:
-                    type: array
-                    items:
-                      type: string
-                  roundTripMs:
-                    type: integer
-                    format: int64
+                $ref: '#/components/schemas/MeDataResponse'
               example:
                 data:
+                  id: 42
                   email: "collector@example.com"
                   role: "TRIAL"
                 errors: null
                 roundTripMs: 6
         '401':
-          description: Authentication required (anonymous caller)
+          description: No valid access token was provided (secured profile only)
           content:
             application/json:
               schema:
@@ -311,7 +303,7 @@ paths:
               example:
                 data: null
                 errors:
-                  - "Authentication required."
+                  - "Full authentication is required to access this resource."
 
   /v1/toys:
     post:
@@ -2436,6 +2428,31 @@ components:
           type: integer
           format: int64
 
+    CurrentUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [GUEST, TRIAL, PAID, LAPSED, ADMIN]
+          description: The caller's effective per-request role.
+
+    MeDataResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/CurrentUser'
+        errors:
+          type: 'null'
+        roundTripMs:
+          type: integer
+          format: int64
+
     # Common Components
     CustomFieldValue:
       type: object
@@ -3201,18 +3218,6 @@ components:
           updated_at: ["since", "before"]
           all_fields: ["order_by", "order_by_desc"]
           pagination_fields: ["limit", "offset"]
-
-    # Auth identity schema
-    AuthMe:
-      type: object
-      description: The authenticated caller's identity and effective role.
-      properties:
-        email:
-          type: string
-        role:
-          type: string
-          enum: [GUEST, TRIAL, PAID, LAPSED, ADMIN]
-          description: The caller's effective per-request role (already reflects any role override).
 
     # Admin Schemas
     AdminUser:

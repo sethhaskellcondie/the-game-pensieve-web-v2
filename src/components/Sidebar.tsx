@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import BeginnerHint from "./BeginnerHint";
 import AccountMenu from "./auth/AccountMenu";
-import { useSession } from "./auth/SessionProvider";
 import styles from "./Sidebar.module.css";
 import {
   VideoGamesIcon,
@@ -14,12 +13,10 @@ import {
   SystemsIcon,
   CustomFieldsIcon,
   OptionsIcon,
-  AdminIcon,
 } from "./icons";
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { isAdmin } = useSession();
 
   // Marks a nav link active when it matches the current URL, via both a style
   // hook and aria-current so the state is exposed to assistive tech.
@@ -76,13 +73,6 @@ export default function Sidebar() {
           <OptionsIcon />
           Options
         </Link>
-
-        {isAdmin && (
-          <Link href="/admin" {...navProps("/admin")}>
-            <AdminIcon />
-            Admin
-          </Link>
-        )}
       </nav>
 
       <BeginnerHint

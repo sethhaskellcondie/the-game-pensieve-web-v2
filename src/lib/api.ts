@@ -30,10 +30,25 @@ export class ApiError extends Error {
 // browser → anonymous → the backend serves the public showcase).
 type TokenResolver = () => Promise<string | null>;
 
-let resolveToken: TokenResolver = async () => process.env.API_TOKEN ?? null;
+const DEFAULT_RESOLVER: TokenResolver = async () =>
+  process.env.API_TOKEN ?? null;
+
+// The resolver is stashed on `globalThis` (keyed by a global Symbol) rather than a
+// module-level `let`. Next bundles `instrumentation.ts` in a SEPARATE module graph
+// from route handlers / server components, so a plain module variable mutated by
+// instrumentation is invisible to the api.ts instance the handlers actually run —
+// the token silently never gets attached. `globalThis` is shared across every
+// module instance in the Node process, so all of them see the same resolver.
+const RESOLVER_KEY = Symbol.for("gamePensieve.tokenResolver");
+type ResolverHost = { [RESOLVER_KEY]?: TokenResolver };
 
 export function setTokenResolver(resolver: TokenResolver): void {
-  resolveToken = resolver;
+  (globalThis as ResolverHost)[RESOLVER_KEY] = resolver;
+}
+
+function resolveToken(): Promise<string | null> {
+  const resolver = (globalThis as ResolverHost)[RESOLVER_KEY] ?? DEFAULT_RESOLVER;
+  return resolver();
 }
 
 // Builds the Authorization header for an outbound backend call. Never throws — a

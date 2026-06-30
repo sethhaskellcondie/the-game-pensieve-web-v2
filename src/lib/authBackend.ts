@@ -99,11 +99,19 @@ const STORED_ROLES: Record<string, StoredRole> = {
   ADMIN: "admin",
 };
 
-// Reads the caller's authoritative role from `GET /v1/auth/me` ({ email, role }).
-// Returns the resolved StoredRole, or null on a transient failure (network error,
-// unexpected status, or a backend that doesn't yet expose the endpoint) so the
-// caller can keep a previously-known role or fall back to a safe default itself —
-// we never guess a *more* restrictive role from a failed probe.
+// The caller identity returned by `GET /v1/auth/me` (the backend's CurrentUser
+// schema). `id` is unused today but is part of the contract.
+export type CurrentUser = {
+  id: number;
+  email: string;
+  role: Role;
+};
+
+// Reads the caller's authoritative role from `GET /v1/auth/me`
+// ({ id, email, role }). Returns the resolved StoredRole, or null on a transient
+// failure (network error, or an unexpected status) so the caller can keep a
+// previously-known role or fall back to a safe default itself — we never guess a
+// *more* restrictive role from a failed probe.
 export async function fetchRole(accessToken: string): Promise<StoredRole | null> {
   try {
     const res = await fetch(`${getBaseUrl()}/auth/me`, {
@@ -114,11 +122,25 @@ export async function fetchRole(accessToken: string): Promise<StoredRole | null>
         Authorization: `Bearer ${accessToken}`,
       },
     });
-    if (!res.ok) return null;
-    const payload = (await res.json()) as Envelope<{ email: string; role: Role }>;
+    if (!res.ok) {
+      console.warn(
+        `[auth] GET /v1/auth/me failed (${res.status} ${res.statusText}); ` +
+          `role could not be resolved.`,
+      );
+      return null;
+    }
+    const payload = (await res.json()) as Envelope<CurrentUser>;
     const raw = payload.data?.role;
-    return (raw && STORED_ROLES[raw.toUpperCase()]) || null;
-  } catch {
+    const resolved = (raw && STORED_ROLES[raw.toUpperCase()]) || null;
+    if (!resolved) {
+      console.warn(
+        `[auth] GET /v1/auth/me returned an unrecognized role (${raw ?? "none"}); ` +
+          `role could not be resolved.`,
+      );
+    }
+    return resolved;
+  } catch (error) {
+    console.warn(`[auth] GET /v1/auth/me request errored; role could not be resolved.`, error);
     return null;
   }
 }

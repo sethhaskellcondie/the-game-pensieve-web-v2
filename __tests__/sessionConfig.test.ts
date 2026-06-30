@@ -17,8 +17,8 @@ describe("sessionRole", () => {
     expect(sessionRole({ accessToken: "t", role: "admin" })).toBe("admin");
   });
 
-  it("defaults an authenticated session with no role to paid", () => {
-    expect(sessionRole({ accessToken: "t" })).toBe("paid");
+  it("resolves an authenticated session with no stored role to unknown", () => {
+    expect(sessionRole({ accessToken: "t" })).toBe("unknown");
   });
 });
 

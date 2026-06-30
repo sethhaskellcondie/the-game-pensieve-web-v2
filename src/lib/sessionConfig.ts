@@ -7,8 +7,14 @@ import type { SessionOptions } from "iron-session";
 // The role the backend resolves for a caller, per request, under the `secured`
 // profile. We mirror the backend's AccessService vocabulary verbatim (the
 // backend is the source of truth). "guest" is the anonymous case — never stored
-// in a session, just the absence of a cookie/token.
-export type Role = "guest" | "trial" | "paid" | "lapsed" | "admin";
+// in a session, just the absence of a cookie/token. "unknown" is OUR sentinel
+// (not a backend role): an authenticated session whose role could not be resolved
+// from `GET /v1/auth/me` (endpoint down/missing, or a transient failure). It is
+// treated as the most restrictive authenticated state (capabilities mirror
+// "lapsed") and surfaced plainly in the UI rather than silently masquerading as
+// a fully-capable role. The backend still gates every endpoint, so an unknown
+// session can never exceed its real role's permissions.
+export type Role = "guest" | "trial" | "paid" | "lapsed" | "admin" | "unknown";
 
 // A role we may actually persist for an authenticated user — everything except
 // the anonymous "guest", which is represented by having no token at all.
@@ -52,12 +58,13 @@ export const sessionOptions: SessionOptions = {
 
 // Derives the caller's role from raw session data. A session with no access
 // token is the anonymous guest (e.g. a destroyed/empty cookie). An authenticated
-// session with no stored role defaults to "paid" — a safe, fully-capable role so
-// a transient role-probe failure never wrongly locks a user out of writes (the
-// runtime 402/403 handling will still catch a genuine lapse).
+// session with no stored role resolves to "unknown" — we never invent a role the
+// role probe failed to confirm, so the UI fails loudly (shows UNKNOWN, renders
+// restricted) instead of silently granting a fully-capable role. The backend
+// still enforces the real role on every endpoint.
 export function sessionRole(session: SessionData): Role {
   if (!session.accessToken) return "guest";
-  return session.role ?? "paid";
+  return session.role ?? "unknown";
 }
 
 export function toSessionView(session: SessionData): SessionView {

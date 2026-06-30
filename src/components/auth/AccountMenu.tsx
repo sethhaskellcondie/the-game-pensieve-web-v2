@@ -3,15 +3,8 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "./SessionProvider";
+import PlanBadge from "./PlanBadge";
 import styles from "./AccountMenu.module.css";
-
-const ROLE_LABEL: Record<string, string> = {
-  guest: "Guest",
-  trial: "Trial",
-  paid: "Paid",
-  lapsed: "Lapsed",
-  admin: "Admin",
-};
 
 // Sidebar account panel: shows the current plan, the signed-in email, and the
 // relevant auth actions (log in/sign up for guests; log out — plus an upgrade
@@ -38,13 +31,7 @@ export default function AccountMenu() {
     <div className={styles.panel}>
       <div className={styles.row}>
         <span className={styles.planLabel}>Plan</span>
-        <span
-          className={styles.badge}
-          data-tier={role}
-          aria-label={`Plan: ${ROLE_LABEL[role]}`}
-        >
-          {ROLE_LABEL[role]}
-        </span>
+        <PlanBadge role={role} />
       </div>
 
       {isAuthenticated && email ? (
@@ -61,6 +48,9 @@ export default function AccountMenu() {
                 Upgrade
               </Link>
             ) : null}
+            <Link href="/account" className={styles.link}>
+              Account
+            </Link>
             <button type="button" className={styles.link} onClick={logout}>
               Log out
             </button>

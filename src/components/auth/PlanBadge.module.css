@@ -1,0 +1,45 @@
+.badge {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge[data-tier="guest"] {
+  background: rgba(148, 163, 184, 0.3);
+  color: #e2e8f0;
+}
+
+.badge[data-tier="trial"] {
+  background: rgba(59, 130, 246, 0.25);
+  color: #bfdbfe;
+}
+
+.badge[data-tier="paid"] {
+  background: rgba(34, 197, 94, 0.25);
+  color: #bbf7d0;
+}
+
+.badge[data-tier="lapsed"] {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fde68a;
+}
+
+.badge[data-tier="admin"] {
+  background: rgba(168, 85, 247, 0.3);
+  color: #e9d5ff;
+}
+
+.badge[data-tier="unknown"] {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fecaca;
+}
+
+/* Light-surface variant (e.g. the Account page): keep the tinted backgrounds but
+   swap to dark text so the label is legible. The `[data-tier]` selector matches
+   the per-tier rules' specificity, and the extra `.onLight` class wins the tie. */
+.badge.onLight[data-tier] {
+  color: #1e293b;
+}

@@ -34,6 +34,11 @@ test.describe("Guest tier", () => {
     await page.goto("/toys");
     await expect(page.getByRole("link", { name: "Log in" }).first()).toBeVisible();
   });
+
+  test("redirects to login when visiting the account page", async ({ page }) => {
+    await page.goto("/account");
+    await expect(page).toHaveURL(/\/login$/);
+  });
 });
 
 test.describe("Trial tier (new account)", () => {
@@ -55,6 +60,15 @@ test.describe("Trial tier (new account)", () => {
 
     // Session is BFF-held: persists across a full reload.
     await page.reload();
+    await expect(page.getByLabel("Plan: Trial")).toBeVisible();
+
+    // The account page shows the signed-in email and the current plan.
+    await page.getByRole("link", { name: "Account" }).click();
+    await expect(page).toHaveURL(/\/account$/);
+    await expect(
+      page.getByRole("heading", { name: "ACCOUNT" }),
+    ).toBeVisible();
+    await expect(page.getByText(email)).toBeVisible();
     await expect(page.getByLabel("Plan: Trial")).toBeVisible();
 
     // Write controls are available to TRIAL users.

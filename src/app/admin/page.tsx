@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
-import AdminUsersManager from "@/components/admin/AdminUsersManager";
+import UsersManager from "@/components/admin/UsersManager";
 import { AdminIcon } from "@/components/icons";
 import { loadSessionView } from "@/lib/session";
 import styles from "./admin.module.css";
@@ -26,7 +26,7 @@ export default async function AdminPage() {
       />
 
       <main className={styles.content}>
-        <AdminUsersManager />
+        <UsersManager />
       </main>
     </>
   );

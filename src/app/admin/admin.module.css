@@ -1,9 +1,19 @@
+/* Fill the area below the Header without scrolling the whole page — the
+   DataTable card inside the manager owns the scroll instead (the manager's
+   .page supplies the padding, matching the entity screens). `min-height: 0`
+   lets this flex child shrink within .main so `overflow: hidden` clips rather
+   than pushing an outer scrollbar (and the paper background) past the viewport. */
 .content {
   flex: 1;
-  padding: 2rem;
-  overflow-y: auto;
-  background: var(--paper);
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  overflow: hidden;
+  background: var(--paper);
+  /* Own stacking context below the header so the DataTable's sticky cells stay
+     trapped here and can't paint over a header tooltip overflowing into this
+     area. Fixed modals/toasts escape to the viewport root, so they're
+     unaffected. */
+  position: relative;
+  z-index: 0;
 }

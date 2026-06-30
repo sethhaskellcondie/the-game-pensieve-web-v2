@@ -20,9 +20,17 @@ export async function POST(request: Request) {
     }
 
     const tokens = await loginBackend(email, password);
-    // Default to a safe, fully-capable role if the role probe is transiently
-    // unavailable; the runtime 402/403 handling still catches a genuine lapse.
-    const role = (await fetchRole(tokens.accessToken)) ?? "paid";
+    // Read the authoritative role. If the probe can't resolve it (endpoint
+    // down/missing, transient failure), fail loudly: store "unknown" rather than
+    // guessing a capable role. The session then renders restricted (like lapsed)
+    // and shows UNKNOWN; the backend still gates every endpoint by the real role.
+    const role = (await fetchRole(tokens.accessToken)) ?? "unknown";
+    if (role === "unknown") {
+      console.warn(
+        `[auth] Could not resolve role for ${email} from GET /v1/auth/me; ` +
+          `storing role "unknown" (session will render restricted).`,
+      );
+    }
 
     const session = await getSession();
     session.accessToken = tokens.accessToken;

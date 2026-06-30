@@ -32,11 +32,13 @@ export function capabilitiesFor(role: Role): Capabilities {
   return {
     // TRIAL, PAID, and ADMIN may create/update/delete their own data.
     canWrite: role === "trial" || role === "paid" || role === "admin",
-    // Everyone but LAPSED may filter (guests filter the public showcase).
-    canFilter: role !== "lapsed",
+    // Everyone but LAPSED may filter (guests filter the public showcase). An
+    // UNKNOWN role (probe failed) is treated like LAPSED — no filtering.
+    canFilter: role !== "lapsed" && role !== "unknown",
     // Import is paid-only — TRIAL is excluded (its import attempt 403s).
     canImport: role === "paid" || role === "admin",
-    // Any authenticated role may back up its own data.
+    // Any authenticated role may back up its own data (UNKNOWN included — it
+    // renders like LAPSED, which may back up).
     canBackup: role !== "guest",
     isAdmin: role === "admin",
   };

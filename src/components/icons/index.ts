@@ -8,3 +8,4 @@ export { default as CustomFieldsIcon } from "./CustomFieldsIcon";
 export { default as BeginnerModeIcon } from "./BeginnerModeIcon";
 export { default as OptionsIcon } from "./OptionsIcon";
 export { default as AdminIcon } from "./AdminIcon";
+export { default as AccountIcon } from "./AccountIcon";
