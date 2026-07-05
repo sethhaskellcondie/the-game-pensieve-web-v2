@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ToastProvider";
+import { useSession } from "@/components/auth/SessionProvider";
 import DataTable, {
   MIN_COL,
   type ColumnDef,
@@ -9,6 +11,7 @@ import DataTable, {
 import Listbox, { type ListboxOption } from "@/components/filters/Listbox";
 import type { AdminUser, BackendRole } from "@/lib/api";
 import layout from "@/components/toys/ToysManager.module.css";
+import ShowcaseModal from "./ShowcaseModal";
 import styles from "./UsersManager.module.css";
 
 const ROLE_VALUES: BackendRole[] = [
@@ -44,9 +47,16 @@ async function readMessage(res: Response): Promise<string> {
 // backend (403 for non-admins).
 export default function UsersManager() {
   const { showToast, showSnackbar } = useToast();
+  const { email: adminEmail, refresh } = useSession();
+  const router = useRouter();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // The row whose impersonation request is in flight (disables its button and
+  // shows a pending label). Only one can be active at a time.
+  const [actingId, setActingId] = useState<number | null>(null);
+  // The user whose showcase grant is being edited in the modal, or null.
+  const [showcaseUser, setShowcaseUser] = useState<AdminUser | null>(null);
   // Ids whose role write is in flight. A ref (not state) because it only guards
   // against a double-submit on the same row — it never needs to re-render.
   const savingIds = useRef<Set<number>>(new Set());
@@ -128,6 +138,43 @@ export default function UsersManager() {
     [showToast, showSnackbar],
   );
 
+  // Start acting as a user: POST the impersonate endpoint, then re-sync the
+  // session (so capabilities flip to the target's) and land on the home view
+  // inside the target's tenant. On failure, surface the backend message.
+  const impersonate = useCallback(
+    async (user: AdminUser) => {
+      if (actingId != null) return;
+      setActingId(user.id);
+      try {
+        const res = await fetch("/api/admin/impersonate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: user.id }),
+        });
+        if (!res.ok) {
+          showSnackbar({
+            message:
+              (await readMessage(res)) || `Couldn't act as ${user.email}.`,
+            variant: "error",
+          });
+          setActingId(null);
+          return;
+        }
+        await refresh();
+        // Leave actingId set — the navigation away unmounts this manager, so we
+        // never want the button to re-enable and invite a second start.
+        router.push("/");
+      } catch {
+        showSnackbar({
+          message: `Couldn't act as ${user.email}.`,
+          variant: "error",
+        });
+        setActingId(null);
+      }
+    },
+    [actingId, refresh, router, showSnackbar],
+  );
+
   // Email, the effective (resolved) role chip, and the override picker. Fixed
   // for every admin — no mass-edit variants and nothing hidden — so the column
   // set never depends on UI settings the way the entity grids do.
@@ -166,8 +213,84 @@ export default function UsersManager() {
           />
         ),
       },
+      {
+        key: "showcase",
+        label: "Showcase",
+        width: 260,
+        clip: true,
+        render: (user) => {
+          // The grant is only publicly listed while the owner derives to
+          // PAID/ADMIN — flag the reserved-but-dark state inline.
+          const dark =
+            user.showcaseSlug != null &&
+            user.role !== "PAID" &&
+            user.role !== "ADMIN";
+          return (
+            <span className={styles.showcaseCell}>
+              {user.showcaseSlug ? (
+                <span
+                  className={styles.showcaseValue}
+                  title={`${user.showcaseName ?? user.showcaseSlug} (${user.showcaseSlug})${dark ? " — not publicly visible" : ""}`}
+                >
+                  {user.showcaseName ?? user.showcaseSlug}{" "}
+                  <span className={styles.showcaseSlug}>
+                    ({user.showcaseSlug})
+                  </span>
+                  {dark ? (
+                    <span className={styles.showcaseDark}> not visible</span>
+                  ) : null}
+                </span>
+              ) : (
+                <span className={styles.showcaseNone}>—</span>
+              )}
+              <button
+                type="button"
+                className={styles.viewAs}
+                onClick={() => setShowcaseUser(user)}
+                aria-label={`Edit showcase for ${user.email}`}
+              >
+                {user.showcaseSlug ? "Edit" : "Grant"}
+              </button>
+            </span>
+          );
+        },
+      },
+      {
+        key: "impersonate",
+        label: "View as",
+        width: 160,
+        clip: true,
+        render: (user) => {
+          // Acting as yourself is a no-op — disable the admin's own row.
+          const isSelf = adminEmail != null && user.email === adminEmail;
+          return (
+            <button
+              type="button"
+              className={styles.viewAs}
+              onClick={() => impersonate(user)}
+              disabled={isSelf || actingId != null}
+              aria-label={`View as ${user.email}`}
+            >
+              {actingId === user.id ? "Starting…" : "View as user"}
+            </button>
+          );
+        },
+      },
     ],
-    [changeRole],
+    [changeRole, impersonate, actingId, adminEmail],
+  );
+
+  const showcaseSaved = useCallback(
+    (updated: AdminUser) => {
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+      showToast({
+        message: updated.showcaseSlug
+          ? `Showcase "${updated.showcaseSlug}" saved for ${updated.email}.`
+          : `Cleared the showcase for ${updated.email}.`,
+        variant: "success",
+      });
+    },
+    [showToast],
   );
 
   return (
@@ -197,6 +320,14 @@ export default function UsersManager() {
         loadingMessage="Loading users…"
         emptyMessage={error ?? "No users yet."}
       />
+
+      {showcaseUser ? (
+        <ShowcaseModal
+          user={showcaseUser}
+          onClose={() => setShowcaseUser(null)}
+          onSaved={showcaseSaved}
+        />
+      ) : null}
     </div>
   );
 }

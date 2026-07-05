@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   getVideoGameById,
-  listCustomFieldsByEntity,
+  listCustomFieldsByEntityOrEmpty,
   searchSystems,
 } from "@/lib/api";
 import VideoGameDetail from "@/components/video-games/VideoGameDetail";
@@ -23,8 +23,8 @@ export default async function VideoGameDetailsPage({
   const { id } = await params;
   const [game, definitions, boxDefinitions, systems] = await Promise.all([
     getVideoGameById(Number(id)),
-    listCustomFieldsByEntity("videoGame"),
-    listCustomFieldsByEntity("videoGameBox"),
+    listCustomFieldsByEntityOrEmpty("videoGame"),
+    listCustomFieldsByEntityOrEmpty("videoGameBox"),
     searchSystems([]),
   ]);
 

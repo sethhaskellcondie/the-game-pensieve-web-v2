@@ -24,6 +24,11 @@ type BffHandlers = {
     status: CapabilityDeniedStatus,
     message: string,
   ) => void;
+  // The selected showcase vanished mid-visit (owner lapsed / grant revoked):
+  // the BFF answered 404 with code SHOWCASE_UNAVAILABLE and already cleared the
+  // gp_showcase cookie. The handler tells the user and reloads into the home
+  // state.
+  onShowcaseGone?: (message: string) => void;
 };
 
 let handlers: BffHandlers = {};
@@ -43,6 +48,24 @@ async function readMessage(res: Response): Promise<string> {
   }
 }
 
+// The BFF marks a vanished-showcase 404 with this code (see src/lib/bffError.ts)
+// so it can be told apart from an ordinary not-found.
+const SHOWCASE_UNAVAILABLE_CODE = "SHOWCASE_UNAVAILABLE";
+
+async function readShowcaseGone(res: Response): Promise<string | null> {
+  try {
+    const body = (await res.clone().json()) as {
+      code?: string;
+      message?: string;
+    };
+    return body.code === SHOWCASE_UNAVAILABLE_CODE
+      ? (body.message ?? "That showcase is no longer available.")
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 // Drop-in for `fetch` against the BFF. Returns the Response unchanged (callers
 // handle `res.ok`/`res.json()` as before); the only added behavior is firing the
 // auth/entitlement handlers when the backend reports one of those statuses.
@@ -57,6 +80,9 @@ export async function bffFetch(
   } else if (res.status === 402 || res.status === 403) {
     const message = await readMessage(res);
     handlers.onCapabilityDenied?.(res.status, message);
+  } else if (res.status === 404) {
+    const gone = await readShowcaseGone(res);
+    if (gone !== null) handlers.onShowcaseGone?.(gone);
   }
 
   return res;

@@ -1,14 +1,21 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { CustomFieldsIcon } from "@/components/icons";
 import Header from "@/components/Header";
 import CustomFieldsManager from "@/components/custom-fields/CustomFieldsManager";
+import { readShowcaseSlug } from "@/lib/serverShowcase";
 import styles from "./customFields.module.css";
 
 export const metadata: Metadata = {
   title: "Custom Fields · The Game Pensieve",
 };
 
-export default function CustomFieldsPage() {
+export default async function CustomFieldsPage() {
+  // Custom fields are the VIEWER's own configuration — they have no meaning
+  // while browsing someone else's showcase, so the page (like its sidebar
+  // link) is unavailable in showcase mode.
+  if (await readShowcaseSlug()) redirect("/");
+
   return (
     <>
       <Header

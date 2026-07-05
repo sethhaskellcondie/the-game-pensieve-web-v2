@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   getBoardGameBoxById,
-  listCustomFieldsByEntity,
+  listCustomFieldsByEntityOrEmpty,
   searchBoardGameBoxes,
 } from "@/lib/api";
 import BoardGameBoxDetail from "@/components/board-games/BoardGameBoxDetail";
@@ -24,8 +24,8 @@ export default async function BoardGameBoxDetailsPage({
   const { id } = await params;
   const [box, definitions, gameDefinitions, allBoxes] = await Promise.all([
     getBoardGameBoxById(Number(id)),
-    listCustomFieldsByEntity("boardGameBox"),
-    listCustomFieldsByEntity("boardGame"),
+    listCustomFieldsByEntityOrEmpty("boardGameBox"),
+    listCustomFieldsByEntityOrEmpty("boardGame"),
     searchBoardGameBoxes([]),
   ]);
 

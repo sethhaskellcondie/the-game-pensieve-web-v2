@@ -10,11 +10,12 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ToastProvider";
 import {
   registerBffHandlers,
   type CapabilityDeniedStatus,
 } from "@/lib/bffClient";
-import type { Role, SessionView } from "@/lib/sessionConfig";
+import type { ActiveShowcase, Role, SessionView } from "@/lib/sessionConfig";
 import UpgradePrompt from "./UpgradePrompt";
 
 // Capability flags derived from the caller's role. This matrix mirrors the
@@ -28,7 +29,24 @@ export type Capabilities = {
   isAdmin: boolean;
 };
 
-export function capabilitiesFor(role: Role): Capabilities {
+export function capabilitiesFor(
+  role: Role,
+  activeShowcase: ActiveShowcase | null = null,
+): Capabilities {
+  // While viewing a public showcase every caller is GUEST-scoped on the
+  // backend (X-Showcase wins for authenticated users too), so the collection
+  // capabilities collapse to the guest row: read + filter only. Account-level
+  // state is deliberately untouched — isAdmin still reflects the real
+  // logged-in user, so the account menu and /admin stay reachable.
+  if (activeShowcase) {
+    return {
+      canWrite: false,
+      canFilter: true,
+      canImport: false,
+      canBackup: false,
+      isAdmin: role === "admin",
+    };
+  }
   return {
     // TRIAL, PAID, and ADMIN may create/update/delete their own data.
     canWrite: role === "trial" || role === "paid" || role === "admin",
@@ -46,9 +64,28 @@ export function capabilitiesFor(role: Role): Capabilities {
 
 type SessionContextValue = Capabilities & {
   // The resolved role: "guest" (anonymous), "trial", "paid", "lapsed", or "admin".
+  // While an admin impersonates a user this is the TARGET's effective role.
   role: Role;
+  // The logged-in account's email (the admin's while impersonating).
   email: string | null;
   isAuthenticated: boolean;
+  // True while a real admin is acting as another user. The banner + Stop control
+  // key off this (not isAdmin — the effective role isn't admin while acting).
+  isImpersonating: boolean;
+  // The impersonated user's email (for the banner), or null when not active.
+  impersonatedEmail: string | null;
+  // The public showcase currently being viewed (read-only), or null in the
+  // home state (own collection / default showcase).
+  activeShowcase: ActiveShowcase | null;
+  // Select a showcase to view (slug) or return to the home state (null). On
+  // success this performs a FULL navigation to "/" — server components must
+  // re-render under the new cookie, and leaving via the section root avoids
+  // guaranteed 404s on another collection's detail URLs. Resolves false when
+  // the selection was rejected (e.g. the showcase just went dark).
+  selectShowcase: (slug: string | null) => Promise<boolean>;
+  // Stop impersonating: clears the act-as header server-side and restores the
+  // admin's own role, then re-syncs this provider + re-renders server data.
+  stopImpersonating: () => Promise<void>;
   // Optimistically flip to lapsed when a runtime 402 reveals the access window
   // has expired (e.g. mid-session), so controls disable immediately.
   markLapsed: () => void;
@@ -71,6 +108,11 @@ const SessionContext = createContext<SessionContextValue>({
   role: "paid",
   email: null,
   isAuthenticated: true,
+  isImpersonating: false,
+  impersonatedEmail: null,
+  activeShowcase: null,
+  selectShowcase: async () => false,
+  stopImpersonating: async () => {},
   ...capabilitiesFor("paid"),
   markLapsed: () => {},
   refresh: async () => null,
@@ -94,8 +136,18 @@ export function SessionProvider({
   children: ReactNode;
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [role, setRole] = useState<Role>(initial.role);
   const [email, setEmail] = useState<string | null>(initial.email);
+  const [isImpersonating, setIsImpersonating] = useState<boolean>(
+    initial.isImpersonating,
+  );
+  const [impersonatedEmail, setImpersonatedEmail] = useState<string | null>(
+    initial.impersonatedEmail,
+  );
+  const [activeShowcase, setActiveShowcase] = useState<ActiveShowcase | null>(
+    initial.activeShowcase,
+  );
   const [upgrade, setUpgrade] = useState<{ open: boolean; message: string }>({
     open: false,
     message: DEFAULT_UPGRADE_MESSAGE,
@@ -115,6 +167,9 @@ export function SessionProvider({
       if (body.data) {
         setRole(body.data.role);
         setEmail(body.data.email);
+        setIsImpersonating(body.data.isImpersonating);
+        setImpersonatedEmail(body.data.impersonatedEmail);
+        setActiveShowcase(body.data.activeShowcase ?? null);
         return body.data.role;
       }
     } catch {
@@ -122,6 +177,62 @@ export function SessionProvider({
     }
     return null;
   }, []);
+
+  const selectShowcase = useCallback(
+    async (slug: string | null): Promise<boolean> => {
+      try {
+        const res = await fetch("/api/showcase/select", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug }),
+        });
+        if (!res.ok) return false;
+      } catch {
+        return false;
+      }
+      // Full navigation (not router.refresh): every server component must
+      // re-render under the new cookie, and landing on the section root
+      // escapes detail URLs that don't exist in the other collection.
+      window.location.assign("/");
+      return true;
+    },
+    [],
+  );
+
+  // A showcase selection that outlived its showcase: the server marked the
+  // slug stale (no longer in the directory). Clear the cookie, tell the user,
+  // and re-render the home state.
+  const showcaseStale = activeShowcase?.stale === true;
+  useEffect(() => {
+    if (!showcaseStale) return;
+    (async () => {
+      try {
+        await fetch("/api/showcase/select", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug: null }),
+        });
+      } catch {
+        // The BFF also clears the cookie when a data call hits the stale slug.
+      }
+      setActiveShowcase(null);
+      showToast({ message: "That showcase is no longer available." });
+      router.refresh();
+    })();
+  }, [showcaseStale, router, showToast]);
+
+  const stopImpersonating = useCallback(async (): Promise<void> => {
+    try {
+      await fetch("/api/admin/impersonate/stop", { method: "POST" });
+    } catch {
+      // Even if the POST fails, fall through to refresh — /me is the source of
+      // truth, so re-syncing reflects the real (still-impersonating) state.
+    }
+    await refresh();
+    // Server Components fetched the target's data with the act-as header; re-run
+    // them now that the header is gone so the admin's own view re-renders.
+    router.refresh();
+  }, [refresh, router]);
 
   // Wire the BFF client's centralized auth/capability handling to this session.
   useEffect(() => {
@@ -158,21 +269,44 @@ export function SessionProvider({
           );
         }
       },
+      onShowcaseGone: (message: string) => {
+        // The BFF already cleared the gp_showcase cookie; sync client state,
+        // tell the user, and re-render server data in the home state.
+        setActiveShowcase(null);
+        showToast({ message });
+        router.refresh();
+      },
     });
     return () => registerBffHandlers({});
-  }, [router, role, refresh, markLapsed, showUpgradePrompt]);
+  }, [router, role, refresh, markLapsed, showUpgradePrompt, showToast]);
 
   const value = useMemo<SessionContextValue>(
     () => ({
       role,
       email,
       isAuthenticated: role !== "guest",
-      ...capabilitiesFor(role),
+      isImpersonating,
+      impersonatedEmail,
+      activeShowcase,
+      selectShowcase,
+      stopImpersonating,
+      ...capabilitiesFor(role, activeShowcase),
       markLapsed,
       refresh,
       showUpgradePrompt,
     }),
-    [role, email, markLapsed, refresh, showUpgradePrompt],
+    [
+      role,
+      email,
+      isImpersonating,
+      impersonatedEmail,
+      activeShowcase,
+      selectShowcase,
+      stopImpersonating,
+      markLapsed,
+      refresh,
+      showUpgradePrompt,
+    ],
   );
 
   return (

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getBoardGameById, listCustomFieldsByEntity } from "@/lib/api";
+import { getBoardGameById, listCustomFieldsByEntityOrEmpty } from "@/lib/api";
 import BoardGameDetail from "@/components/board-games/BoardGameDetail";
 
 export const metadata: Metadata = {
@@ -19,8 +19,8 @@ export default async function BoardGameDetailsPage({
   const { id } = await params;
   const [game, definitions, boxDefinitions] = await Promise.all([
     getBoardGameById(Number(id)),
-    listCustomFieldsByEntity("boardGame"),
-    listCustomFieldsByEntity("boardGameBox"),
+    listCustomFieldsByEntityOrEmpty("boardGame"),
+    listCustomFieldsByEntityOrEmpty("boardGameBox"),
   ]);
 
   if (!game) notFound();

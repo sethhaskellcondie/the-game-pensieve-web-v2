@@ -21,7 +21,15 @@ const fields: FilterFieldDef[] = [
 
 function renderFor(role: Role) {
   render(
-    <SessionProvider initial={{ role, email: null }}>
+    <SessionProvider
+      initial={{
+        role,
+        email: null,
+        isImpersonating: false,
+        impersonatedEmail: null,
+        activeShowcase: null,
+      }}
+    >
       <FilterBar
         entityKey="toy"
         fields={fields}

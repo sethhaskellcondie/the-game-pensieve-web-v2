@@ -483,7 +483,15 @@ describe("BackupImport", () => {
   describe("capability gating", () => {
     function renderForRole(role: Role) {
       return render(
-        <SessionProvider initial={{ role, email: "a@b.c" }}>
+        <SessionProvider
+          initial={{
+            role,
+            email: "a@b.c",
+            isImpersonating: false,
+            impersonatedEmail: null,
+            activeShowcase: null,
+          }}
+        >
           <UiSettingsProvider
             initial={{ ...DEFAULT_UI_SETTINGS, developerMode: true }}
           >

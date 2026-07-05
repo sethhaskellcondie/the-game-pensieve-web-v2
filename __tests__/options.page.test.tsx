@@ -3,9 +3,31 @@ import { render, screen } from "@testing-library/react";
 import OptionsPage from "@/app/options/page";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
+import { readShowcaseSlug } from "@/lib/serverShowcase";
+import { redirect } from "next/navigation";
+
+// The page is an async server component only because of its showcase-mode
+// redirect check; with the cookie read mocked it resolves synchronously and the
+// rendered tree stays coverable here (per the project's testing notes).
+jest.mock("@/lib/serverShowcase", () => ({
+  readShowcaseSlug: jest.fn(),
+}));
+
+jest.mock("next/navigation", () => ({
+  redirect: jest.fn(() => {
+    throw new Error("NEXT_REDIRECT");
+  }),
+}));
+
+const mockReadShowcaseSlug = readShowcaseSlug as jest.MockedFunction<
+  typeof readShowcaseSlug
+>;
+const mockRedirect = redirect as unknown as jest.Mock;
 
 describe("OptionsPage", () => {
   beforeEach(() => {
+    mockReadShowcaseSlug.mockResolvedValue(null);
+    mockRedirect.mockClear();
     // The Default Sort Options section fetches its data on mount; a pending
     // promise keeps it in its initial (disabled) state for these render tests.
     global.fetch = jest.fn(
@@ -18,22 +40,22 @@ describe("OptionsPage", () => {
     delete global.fetch;
   });
 
-  it("renders the OPTIONS level-1 heading", () => {
-    render(<OptionsPage />);
+  it("renders the OPTIONS level-1 heading", async () => {
+    render(await OptionsPage());
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "OPTIONS",
     );
   });
 
-  it("renders the UI Settings section", () => {
-    render(<OptionsPage />);
+  it("renders the UI Settings section", async () => {
+    render(await OptionsPage());
     expect(
       screen.getByRole("heading", { level: 2, name: "UI Settings" }),
     ).toBeInTheDocument();
   });
 
-  it("renders the Default Sort Options section", () => {
-    render(<OptionsPage />);
+  it("renders the Default Sort Options section", async () => {
+    render(await OptionsPage());
     expect(
       screen.getByRole("heading", { level: 2, name: "Default Sort Options" }),
     ).toBeInTheDocument();
@@ -42,30 +64,36 @@ describe("OptionsPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the Backup & Import section (always visible)", () => {
-    render(<OptionsPage />);
+  it("renders the Backup & Import section (always visible)", async () => {
+    render(await OptionsPage());
     expect(
       screen.getByRole("heading", { level: 2, name: "Backup & Import" }),
     ).toBeInTheDocument();
   });
 
-  it("hides the API Tools section by default (developer mode off)", () => {
-    render(<OptionsPage />);
+  it("hides the API Tools section by default (developer mode off)", async () => {
+    render(await OptionsPage());
     expect(
       screen.queryByRole("heading", { level: 2, name: "API Tools" }),
     ).not.toBeInTheDocument();
   });
 
-  it("reveals the API Tools section when developer mode is on", () => {
+  it("reveals the API Tools section when developer mode is on", async () => {
     render(
       <UiSettingsProvider
         initial={{ ...DEFAULT_UI_SETTINGS, developerMode: true }}
       >
-        <OptionsPage />
+        {await OptionsPage()}
       </UiSettingsProvider>,
     );
     expect(
       screen.getByRole("heading", { level: 2, name: "API Tools" }),
     ).toBeInTheDocument();
+  });
+
+  it("redirects home while a showcase is being viewed", async () => {
+    mockReadShowcaseSlug.mockResolvedValue("showcase-one");
+    await expect(OptionsPage()).rejects.toThrow("NEXT_REDIRECT");
+    expect(mockRedirect).toHaveBeenCalledWith("/");
   });
 });

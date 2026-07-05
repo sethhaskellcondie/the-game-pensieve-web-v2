@@ -51,16 +51,107 @@ function resolveToken(): Promise<string | null> {
   return resolver();
 }
 
-// Builds the Authorization header for an outbound backend call. Never throws — a
-// missing/garbled session just yields no header (anonymous → showcase).
-async function authHeaders(): Promise<Record<string, string>> {
+// How the admin-impersonation target ("act as user") for an outbound call is
+// resolved. Mirrors the token resolver: api.ts is shared with Client Components
+// so it can't read the session itself — the server installs a cookie-aware
+// resolver at startup via setActAsResolver (see src/lib/serverAuth.ts +
+// src/instrumentation.ts). The default resolves to no impersonation. When set,
+// every backend call (reads/writes/search/backup) carries `X-Act-As-Owner`, so
+// the request runs inside the target's tenant. The backend honors the header
+// only for an authenticated ADMIN and ignores it on /v1/admin/** routes.
+type ActAsResolver = () => Promise<number | null>;
+
+const DEFAULT_ACT_AS_RESOLVER: ActAsResolver = async () => null;
+
+const ACT_AS_KEY = Symbol.for("gamePensieve.actAsResolver");
+type ActAsHost = { [ACT_AS_KEY]?: ActAsResolver };
+
+export function setActAsResolver(resolver: ActAsResolver): void {
+  (globalThis as ActAsHost)[ACT_AS_KEY] = resolver;
+}
+
+function resolveActAsOwner(): Promise<number | null> {
+  const resolver = (globalThis as ActAsHost)[ACT_AS_KEY] ?? DEFAULT_ACT_AS_RESOLVER;
+  return resolver();
+}
+
+// How the active public-showcase slug (the `gp_showcase` cookie) is resolved.
+// Mirrors the token/act-as resolvers: api.ts can't read cookies itself, so the
+// server installs a cookie-aware resolver at startup (see src/lib/serverAuth.ts
+// + src/instrumentation.ts). The default resolves to no showcase. The header is
+// attached ONLY to calls that opt in with `showcaseScoped: true` — collection
+// data (entity search/get, filter specs, custom-field definitions feeding table
+// columns). Personal routes (auth, admin, ui-settings, saved filters, backup,
+// import) must never send it: `X-Showcase` scopes the WHOLE request to the
+// showcase owner as GUEST, so a metadata call carrying it would read the
+// owner's settings instead of the viewer's. Opt-in (rather than a URL denylist)
+// keeps new endpoints personal by default.
+type ShowcaseResolver = () => Promise<string | null>;
+
+const DEFAULT_SHOWCASE_RESOLVER: ShowcaseResolver = async () => null;
+
+const SHOWCASE_KEY = Symbol.for("gamePensieve.showcaseResolver");
+type ShowcaseHost = { [SHOWCASE_KEY]?: ShowcaseResolver };
+
+export function setShowcaseResolver(resolver: ShowcaseResolver): void {
+  (globalThis as ShowcaseHost)[SHOWCASE_KEY] = resolver;
+}
+
+function resolveShowcaseSlug(): Promise<string | null> {
+  const resolver =
+    (globalThis as ShowcaseHost)[SHOWCASE_KEY] ?? DEFAULT_SHOWCASE_RESOLVER;
+  return resolver();
+}
+
+// Per-call options for the request helpers. `showcaseScoped: true` marks a call
+// as collection data, allowing the active showcase's `X-Showcase` header to be
+// attached (when one is selected).
+export type ApiCallOptions = { showcaseScoped?: boolean };
+
+// Builds the outbound headers (Authorization, plus the act-as header while an
+// admin is impersonating, plus `X-Showcase` on showcase-scoped calls while a
+// showcase is selected) for a backend call. Never throws — a missing/garbled
+// session just yields no auth header (anonymous → showcase) and no impersonation.
+async function authHeaders(
+  options: ApiCallOptions = {},
+): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {};
+
   let token: string | null = null;
   try {
     token = await resolveToken();
   } catch {
     token = process.env.API_TOKEN ?? null;
   }
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  let showcaseSlug: string | null = null;
+  if (options.showcaseScoped) {
+    try {
+      showcaseSlug = await resolveShowcaseSlug();
+    } catch {
+      showcaseSlug = null;
+    }
+  }
+  if (showcaseSlug) {
+    // The backend gives X-Showcase priority over X-Act-As-Owner anyway, but we
+    // omit the act-as header entirely so the outbound request states exactly
+    // one intent (a read-only showcase view).
+    headers["X-Showcase"] = showcaseSlug;
+    return headers;
+  }
+
+  let actAsOwnerId: number | null = null;
+  try {
+    actAsOwnerId = await resolveActAsOwner();
+  } catch {
+    actAsOwnerId = null;
+  }
+  if (actAsOwnerId != null) {
+    headers["X-Act-As-Owner"] = String(actAsOwnerId);
+  }
+
+  return headers;
 }
 
 // The backend wraps every response as { data, errors }.
@@ -104,10 +195,13 @@ async function failureMessage(res: Response, path: string): Promise<string> {
   return detail ? `${base}: ${detail}` : base;
 }
 
-export async function apiGet<T>(path: string): Promise<T> {
+export async function apiGet<T>(
+  path: string,
+  options: ApiCallOptions = {},
+): Promise<T> {
   const res = await fetch(`${getBaseUrl()}${path}`, {
     cache: "no-store",
-    headers: await authHeaders(),
+    headers: await authHeaders(options),
   });
 
   if (!res.ok) {
@@ -125,10 +219,13 @@ export async function apiGet<T>(path: string): Promise<T> {
 
 // Like apiGet, but treats a 404 as "not found" and returns null instead of
 // throwing. Other non-OK responses and envelope errors still throw.
-export async function apiGetOrNull<T>(path: string): Promise<T | null> {
+export async function apiGetOrNull<T>(
+  path: string,
+  options: ApiCallOptions = {},
+): Promise<T | null> {
   const res = await fetch(`${getBaseUrl()}${path}`, {
     cache: "no-store",
-    headers: await authHeaders(),
+    headers: await authHeaders(options),
   });
 
   if (res.status === 404) return null;
@@ -150,11 +247,15 @@ async function apiSend<T>(
   method: "POST" | "PATCH" | "PUT",
   path: string,
   body: unknown,
+  options: ApiCallOptions = {},
 ): Promise<T> {
   const res = await fetch(`${getBaseUrl()}${path}`, {
     method,
     cache: "no-store",
-    headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+    headers: {
+      "Content-Type": "application/json",
+      ...(await authHeaders(options)),
+    },
     body: JSON.stringify(body),
   });
 
@@ -171,8 +272,12 @@ async function apiSend<T>(
   return payload.data;
 }
 
-export async function apiPost<T>(path: string, body: unknown): Promise<T> {
-  return apiSend<T>("POST", path, body);
+export async function apiPost<T>(
+  path: string,
+  body: unknown,
+  options: ApiCallOptions = {},
+): Promise<T> {
+  return apiSend<T>("POST", path, body, options);
 }
 
 export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
@@ -231,6 +336,21 @@ export async function importData(data: unknown): Promise<unknown> {
   return apiPost<unknown>("/function/import", { data });
 }
 
+// ---------- Showcases ----------
+// Mirrors the Showcase schema: the public directory of visible showcases (slug +
+// display name only — never owner emails). Public: no token required, and only
+// showcases whose owner currently derives to PAID/ADMIN are listed. This call is
+// itself never showcase-scoped (it's the directory you pick FROM).
+
+export type ShowcaseDto = {
+  slug: string;
+  name: string;
+};
+
+export function listShowcases(): Promise<ShowcaseDto[]> {
+  return apiGet<ShowcaseDto[]>("/showcases");
+}
+
 // ---------- Admin (role management) ----------
 // Mirrors the AdminUser / SetRoleOverrideRequest schemas. Roles use the backend's
 // uppercase vocabulary. These routes are ADMIN-only: a non-admin caller gets 403
@@ -249,6 +369,12 @@ export type AdminUser = {
   accessUntil: number | null;
   // Informational billing status (e.g. trialing, active, past_due), or null.
   subscriptionStatus: string | null;
+  // The user's public showcase address + display title, or null when their
+  // collection is private. A granted slug is only publicly visible while the
+  // owner derives to PAID/ADMIN — it can be set here yet absent from the
+  // directory (reserved but dark).
+  showcaseSlug: string | null;
+  showcaseName: string | null;
 };
 
 export function listAdminUsers(): Promise<AdminUser[]> {
@@ -262,6 +388,18 @@ export function setUserRoleOverride(
   roleOverride: BackendRole | null,
 ): Promise<AdminUser> {
   return apiPost<AdminUser>(`/admin/users/${id}/role`, { roleOverride });
+}
+
+// Grants (or edits) the target user's public showcase, or clears it with a
+// null/blank slug. The backend enforces the slug format
+// (^[a-z0-9](-?[a-z0-9])*$, max 63 chars) and uniqueness, answering violations
+// with a 400 whose message should be surfaced verbatim. Returns the updated
+// account.
+export function setUserShowcase(
+  id: number,
+  input: { slug: string | null; name: string | null },
+): Promise<AdminUser> {
+  return apiPost<AdminUser>(`/admin/users/${id}/showcase`, input);
 }
 
 // ---------- Custom fields ----------
@@ -329,10 +467,40 @@ export type UpdateCustomFieldInput = {
   options?: UpdateCustomFieldOption[];
 };
 
+// Showcase-scoped: while viewing a showcase the table columns / filter options
+// must describe the OWNER's custom fields, not the viewer's. (The manage page
+// on /custom-fields is unreachable in showcase mode, so the scoped read never
+// leaks owner definitions into a personal editing surface.) Note: under the
+// backend's `secured` profile this endpoint requires a token — anonymous
+// callers get a 401, which consumers must degrade to "no custom fields".
 export function listCustomFieldsByEntity(
   key: EntityKey,
 ): Promise<CustomField[]> {
-  return apiGet<CustomField[]>(`/custom_fields/entity/${key}`);
+  return apiGet<CustomField[]>(`/custom_fields/entity/${key}`, {
+    showcaseScoped: true,
+  });
+}
+
+// listCustomFieldsByEntity for read-only rendering paths (detail pages, table
+// columns) that must survive anonymous browsing under the `secured` profile,
+// where /custom_fields requires a token: an auth/entitlement failure (401/403)
+// degrades to "no custom fields" instead of crashing the page. Other failures
+// still throw — a broken backend should not silently render an empty column
+// set for authenticated users.
+export async function listCustomFieldsByEntityOrEmpty(
+  key: EntityKey,
+): Promise<CustomField[]> {
+  try {
+    return await listCustomFieldsByEntity(key);
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      (error.status === 401 || error.status === 403)
+    ) {
+      return [];
+    }
+    throw error;
+  }
 }
 
 export function createCustomField(
@@ -375,8 +543,11 @@ export type FilterRequestDto = {
   operand: string;
 };
 
+// Showcase-scoped: filter discovery describes the collection being viewed.
 export function getFilterSpec(entity: EntityKey): Promise<FilterSpecification> {
-  return apiGet<FilterSpecification>(`/filters/${entity}`);
+  return apiGet<FilterSpecification>(`/filters/${entity}`, {
+    showcaseScoped: true,
+  });
 }
 
 // ---------- Toys ----------
@@ -478,7 +649,9 @@ export type Toy = {
 // The backend lists toys through a POST search endpoint; an empty filter set
 // returns them all. apiPost unwraps the { data, errors } envelope for us.
 export function searchToys(filters: FilterRequestDto[] = []): Promise<Toy[]> {
-  return apiPost<Toy[]>("/toys/function/search", { filters });
+  return apiPost<Toy[]>("/toys/function/search", { filters }, {
+    showcaseScoped: true,
+  });
 }
 
 // The update payload mirrors ToyRequest: name and set are required, while
@@ -519,7 +692,7 @@ export function deleteToy(id: number): Promise<void> {
 // Fetch a single toy by id. Returns null on 404 so the detail page can render
 // its own not-found state instead of throwing.
 export function getToyById(id: number): Promise<Toy | null> {
-  return apiGetOrNull<Toy>(`/toys/${id}`);
+  return apiGetOrNull<Toy>(`/toys/${id}`, { showcaseScoped: true });
 }
 
 // ---------- Systems ----------
@@ -544,7 +717,9 @@ export type System = {
 export function searchSystems(
   filters: FilterRequestDto[] = [],
 ): Promise<System[]> {
-  return apiPost<System[]>("/systems/function/search", { filters });
+  return apiPost<System[]>("/systems/function/search", { filters }, {
+    showcaseScoped: true,
+  });
 }
 
 // The update payload mirrors SystemRequest: name, generation, and handheld are
@@ -589,7 +764,7 @@ export function deleteSystem(id: number): Promise<void> {
 // Fetch a single system by id. Returns null on 404 so the detail page can
 // render its own not-found state instead of throwing.
 export function getSystemById(id: number): Promise<System | null> {
-  return apiGetOrNull<System>(`/systems/${id}`);
+  return apiGetOrNull<System>(`/systems/${id}`, { showcaseScoped: true });
 }
 
 // ---------- Video Games ----------
@@ -631,7 +806,9 @@ export type VideoGame = {
 export function searchVideoGames(
   filters: FilterRequestDto[] = [],
 ): Promise<VideoGame[]> {
-  return apiPost<VideoGame[]>("/videoGames/function/search", { filters });
+  return apiPost<VideoGame[]>("/videoGames/function/search", { filters }, {
+    showcaseScoped: true,
+  });
 }
 
 // The update payload mirrors VideoGameRequest: title and systemId are
@@ -658,7 +835,9 @@ export function updateVideoGame(
 // Fetch a single video game by id. Returns null on 404 so the detail page can
 // render its own not-found state instead of throwing.
 export function getVideoGameById(id: number): Promise<VideoGame | null> {
-  return apiGetOrNull<VideoGame>(`/videoGames/${id}`);
+  return apiGetOrNull<VideoGame>(`/videoGames/${id}`, {
+    showcaseScoped: true,
+  });
 }
 
 // ---------- Video Game Boxes ----------
@@ -695,9 +874,11 @@ export type VideoGameBox = {
 export function searchVideoGameBoxes(
   filters: FilterRequestDto[] = [],
 ): Promise<VideoGameBox[]> {
-  return apiPost<VideoGameBox[]>("/videoGameBoxes/function/search", {
-    filters,
-  });
+  return apiPost<VideoGameBox[]>(
+    "/videoGameBoxes/function/search",
+    { filters },
+    { showcaseScoped: true },
+  );
 }
 
 // One game to create through a box write — mirrors VideoGameRequest (games
@@ -771,7 +952,9 @@ export function deleteVideoGameBox(id: number): Promise<void> {
 export function getVideoGameBoxById(
   id: number,
 ): Promise<VideoGameBox | null> {
-  return apiGetOrNull<VideoGameBox>(`/videoGameBoxes/${id}`);
+  return apiGetOrNull<VideoGameBox>(`/videoGameBoxes/${id}`, {
+    showcaseScoped: true,
+  });
 }
 
 // ---------- Board Games ----------
@@ -809,7 +992,9 @@ export type BoardGame = {
 export function searchBoardGames(
   filters: FilterRequestDto[] = [],
 ): Promise<BoardGame[]> {
-  return apiPost<BoardGame[]>("/boardGames/function/search", { filters });
+  return apiPost<BoardGame[]>("/boardGames/function/search", { filters }, {
+    showcaseScoped: true,
+  });
 }
 
 // The update payload mirrors BoardGameRequest: title is required, while
@@ -835,7 +1020,9 @@ export function updateBoardGame(
 // Fetch a single board game by id. Returns null on 404 so the detail page can
 // render its own not-found state instead of throwing.
 export function getBoardGameById(id: number): Promise<BoardGame | null> {
-  return apiGetOrNull<BoardGame>(`/boardGames/${id}`);
+  return apiGetOrNull<BoardGame>(`/boardGames/${id}`, {
+    showcaseScoped: true,
+  });
 }
 
 // ---------- Board Game Boxes ----------
@@ -872,9 +1059,11 @@ export type BoardGameBox = {
 export function searchBoardGameBoxes(
   filters: FilterRequestDto[] = [],
 ): Promise<BoardGameBox[]> {
-  return apiPost<BoardGameBox[]>("/boardGameBoxes/function/search", {
-    filters,
-  });
+  return apiPost<BoardGameBox[]>(
+    "/boardGameBoxes/function/search",
+    { filters },
+    { showcaseScoped: true },
+  );
 }
 
 // A game to create through a box write — mirrors BoardGameRequest (games have
@@ -947,7 +1136,9 @@ export function deleteBoardGameBox(id: number): Promise<void> {
 export function getBoardGameBoxById(
   id: number,
 ): Promise<BoardGameBox | null> {
-  return apiGetOrNull<BoardGameBox>(`/boardGameBoxes/${id}`);
+  return apiGetOrNull<BoardGameBox>(`/boardGameBoxes/${id}`, {
+    showcaseScoped: true,
+  });
 }
 
 export async function checkHeartbeat(

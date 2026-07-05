@@ -23,18 +23,52 @@ export type StoredRole = Exclude<Role, "guest">;
 // What we persist in the encrypted cookie. The browser never sees these values —
 // only the BFF (server) reads/writes them. `accessTokenExpiresAt` is epoch ms,
 // used by the proxy to refresh proactively before the token expires.
+//
+// `email`/`role` always describe the EFFECTIVE caller. While an admin is
+// impersonating a user (acting as them via the X-Act-As-Owner header), `email`
+// stays the logged-in admin's email but `role` is overwritten with the target's
+// effective role, so the capability matrix automatically reflects the target.
+// `impersonatingUserId` is the target's user id (sent as the act-as header on
+// every backend call) and `impersonatedEmail` is the target's email (for the
+// banner). Both are absent for a normal, non-impersonating session.
 export type SessionData = {
   accessToken?: string;
   refreshToken?: string;
   accessTokenExpiresAt?: number;
   email?: string;
   role?: StoredRole;
+  impersonatingUserId?: number;
+  impersonatedEmail?: string;
+};
+
+// The public showcase the viewer currently has selected (the `gp_showcase`
+// cookie), resolved against the backend's showcase directory. `name` is the
+// display title from the directory. `stale` marks a slug the directory no
+// longer lists (owner lapsed / grant revoked mid-visit): the server stops
+// attaching the X-Showcase header for it, and the client clears the cookie and
+// tells the user the showcase is gone.
+export type ActiveShowcase = {
+  slug: string;
+  name: string;
+  stale?: boolean;
 };
 
 // What the browser is allowed to know about the session: never the tokens.
+// `role` is the effective role (the target's while impersonating). `email` is
+// the logged-in account (the admin's email while impersonating).
+// `isImpersonating`/`impersonatedEmail` drive the impersonation banner.
+// `activeShowcase` is the read-only public showcase being viewed, or null for
+// the "home" state (own collection when authenticated, the default showcase
+// when anonymous). It lives in its own plain cookie — not the session — so an
+// anonymous visitor can select a showcase without minting a session, but it is
+// surfaced through this view so first paint renders the right banner and
+// capabilities.
 export type SessionView = {
   role: Role;
   email: string | null;
+  isImpersonating: boolean;
+  impersonatedEmail: string | null;
+  activeShowcase: ActiveShowcase | null;
 };
 
 // A dev-only fallback keeps the app and E2E runnable out of the box; production
@@ -44,6 +78,13 @@ const DEV_SESSION_SECRET =
   "dev-only-insecure-session-secret-change-me-in-prod";
 
 export const SESSION_COOKIE_NAME = "gp_session";
+
+// The active-showcase cookie: a plain httpOnly cookie holding just the selected
+// showcase slug. Deliberately separate from the encrypted session cookie so an
+// anonymous visitor can pick a showcase without a session, and clearing it never
+// touches auth state. No cookie = the "home" state. Set/cleared only by
+// POST /api/showcase/select (which validates the slug against the directory).
+export const SHOWCASE_COOKIE_NAME = "gp_showcase";
 
 export const sessionOptions: SessionOptions = {
   password: process.env.SESSION_SECRET || DEV_SESSION_SECRET,
@@ -67,9 +108,19 @@ export function sessionRole(session: SessionData): Role {
   return session.role ?? "unknown";
 }
 
-export function toSessionView(session: SessionData): SessionView {
+export function toSessionView(
+  session: SessionData,
+  activeShowcase: ActiveShowcase | null = null,
+): SessionView {
+  const authed = !!session.accessToken;
+  // Only honor impersonation fields on an authenticated session — a stray id on
+  // an anonymous/destroyed session must never read as "impersonating".
+  const impersonating = authed && session.impersonatingUserId != null;
   return {
     role: sessionRole(session),
-    email: session.accessToken ? (session.email ?? null) : null,
+    email: authed ? (session.email ?? null) : null,
+    isImpersonating: impersonating,
+    impersonatedEmail: impersonating ? (session.impersonatedEmail ?? null) : null,
+    activeShowcase,
   };
 }

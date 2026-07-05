@@ -9,9 +9,17 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
 }));
 
-function renderWith(initial: SessionView) {
+function renderWith(
+  initial: Pick<SessionView, "role" | "email"> & Partial<SessionView>,
+) {
+  const view: SessionView = {
+    isImpersonating: false,
+    impersonatedEmail: null,
+    activeShowcase: null,
+    ...initial,
+  };
   render(
-    <SessionProvider initial={initial}>
+    <SessionProvider initial={view}>
       <AccountManager />
     </SessionProvider>,
   );

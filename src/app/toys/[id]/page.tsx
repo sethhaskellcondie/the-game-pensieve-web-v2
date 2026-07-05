@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getToyById, listCustomFieldsByEntity } from "@/lib/api";
+import { getToyById, listCustomFieldsByEntityOrEmpty } from "@/lib/api";
 import ToyDetail from "@/components/toys/ToyDetail";
 
 export const metadata: Metadata = {
@@ -18,7 +18,7 @@ export default async function ToyDetailsPage({
   const { id } = await params;
   const [toy, definitions] = await Promise.all([
     getToyById(Number(id)),
-    listCustomFieldsByEntity("toy"),
+    listCustomFieldsByEntityOrEmpty("toy"),
   ]);
 
   if (!toy) notFound();

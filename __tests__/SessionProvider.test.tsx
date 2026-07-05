@@ -28,9 +28,17 @@ function Probe() {
   );
 }
 
-function renderWith(initial: SessionView) {
+function renderWith(
+  initial: Pick<SessionView, "role" | "email"> & Partial<SessionView>,
+) {
+  const view: SessionView = {
+    isImpersonating: false,
+    impersonatedEmail: null,
+    activeShowcase: null,
+    ...initial,
+  };
   render(
-    <SessionProvider initial={initial}>
+    <SessionProvider initial={view}>
       <Probe />
     </SessionProvider>,
   );

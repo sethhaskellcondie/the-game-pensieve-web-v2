@@ -5,6 +5,7 @@ import { ToastProvider } from "@/components/ToastProvider";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { SessionProvider } from "@/components/auth/SessionProvider";
 import ShowcaseBanner from "@/components/auth/ShowcaseBanner";
+import ImpersonationBanner from "@/components/auth/ImpersonationBanner";
 import { loadUiSettings } from "@/lib/uiSettings";
 import { loadSessionView } from "@/lib/session";
 import "./globals.css";
@@ -58,6 +59,7 @@ export default async function RootLayout({
               <div className={styles.layout}>
                 <Sidebar />
                 <div className={styles.main}>
+                  <ImpersonationBanner />
                   <ShowcaseBanner />
                   {children}
                 </div>

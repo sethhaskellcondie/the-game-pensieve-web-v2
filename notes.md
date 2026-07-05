@@ -99,3 +99,73 @@ import the types and defaults safely.)
 envelope, or stores a malformed value, it falls back to all-`false` defaults so the app
 always renders — the same "fail soft" stance the heartbeat takes by reporting OFFLINE
 instead of surfacing a 500.
+
+# Public Showcases (multi-tenant viewing)
+
+A **showcase** is another user's collection made public by the backend
+(`GET /v1/showcases` lists the visible ones; an `X-Showcase: <slug>` request
+header scopes any read to that collection as GUEST — read + filter only, for
+every caller, winning over admin impersonation).
+
+## The `gp_showcase` cookie
+
+The active selection is a plain httpOnly cookie holding just the slug, kept
+**separate from `gp_session`** so anonymous visitors can select a showcase
+without minting a session and clearing it never touches auth state. No cookie =
+the "home" state (own collection when logged in, the backend's default showcase
+when anonymous). It is set/cleared only by `POST /api/showcase/select`, which
+validates the slug against the live directory first (junk or dark slugs are
+rejected with a 404) and stops any active impersonation; starting impersonation
+symmetrically clears the cookie, so the two banners can never show at once.
+
+## Header attachment (opt-in, server side)
+
+`src/lib/api.ts` gained a third resolver alongside the token and act-as
+resolvers: `setShowcaseResolver`, installed by
+`installServerShowcaseResolver()` (`src/lib/serverAuth.ts`, wired in
+`src/instrumentation.ts`). The header is attached **only** to calls that pass
+`{ showcaseScoped: true }` — the six entities' search/get-by-id, filter specs,
+and per-entity custom-field reads (the table columns must describe the OWNER's
+fields). Personal routes (auth, admin, ui-settings, saved filters, default
+sorts, backup/import) never send it: `X-Showcase` scopes the whole request to
+the showcase owner, so a metadata call carrying it would read the owner's
+settings instead of the viewer's. Opt-in keeps new endpoints personal by
+default.
+
+Resolution goes through `resolveActiveShowcase()` (`src/lib/serverShowcase.ts`,
+memoized per request with React `cache()`): the slug is checked against the
+directory, which yields the display name for the banner AND marks vanished
+slugs `stale` — a stale slug gets no header (that render falls back to the home
+state instead of cascading backend 404s) and the client clears the cookie and
+toasts.
+
+## Capability collapse
+
+`SessionView` (seeded server-side in the layout) carries
+`activeShowcase: {slug, name} | null`. When it is set,
+`capabilitiesFor(role, activeShowcase)` collapses the collection capabilities
+to the guest row (`canWrite=false, canFilter=true, canImport=false,
+canBackup=false`) while account-level state (`isAdmin`, the account menu,
+`/account`) still reflects the real user. All existing component gating then
+renders correctly with no per-component changes. The Custom Fields and Options
+pages (viewer-personal surfaces) are hidden from the sidebar and redirect to
+`/` in showcase mode.
+
+## Stale-slug handling
+
+If a showcase vanishes mid-visit (owner lapses, grant revoked), a
+showcase-scoped backend call returns the tenant filter's 404 envelope
+("No public showcase exists…"). `errorResponse` (`src/lib/bffError.ts`)
+recognizes it, clears `gp_showcase`, and answers 404 with
+`code: "SHOWCASE_UNAVAILABLE"`; `bffFetch` routes that to the session
+provider's `onShowcaseGone` handler, which toasts and re-renders the home
+state.
+
+## Admin management
+
+`/admin` (UsersManager) shows each user's grant (`showcaseSlug`/`showcaseName`
+on `AdminUser`) with a Grant/Edit modal posting to
+`POST /api/admin/users/{id}/showcase` (blank slug clears). Backend validation
+400s (slug taken / bad format) surface verbatim. A grant whose owner isn't
+PAID/ADMIN is flagged "not visible" — reserved but absent from the public
+directory until the owner renews.

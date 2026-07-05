@@ -6,9 +6,11 @@
 
 import { getIronSession, type IronSession } from "iron-session";
 import { cookies } from "next/headers";
+import { resolveActiveShowcase } from "./serverShowcase";
 import {
   sessionOptions,
   toSessionView,
+  type ActiveShowcase,
   type SessionData,
   type SessionView,
 } from "./sessionConfig";
@@ -24,12 +26,27 @@ export async function getSession(): Promise<IronSession<SessionData>> {
 }
 
 // The browser-safe view used to seed the client SessionProvider. Never exposes
-// the tokens. Falls back to guest if the cookie is missing/garbled.
+// the tokens. Falls back to guest if the cookie is missing/garbled. The active
+// showcase (the gp_showcase cookie, resolved against the directory for its
+// display name) rides along so the banner and capability collapse are correct
+// on first paint.
 export async function loadSessionView(): Promise<SessionView> {
+  let activeShowcase: ActiveShowcase | null = null;
+  try {
+    activeShowcase = await resolveActiveShowcase();
+  } catch {
+    activeShowcase = null;
+  }
   try {
     const session = await getSession();
-    return toSessionView(session);
+    return toSessionView(session, activeShowcase);
   } catch {
-    return { role: "guest", email: null };
+    return {
+      role: "guest",
+      email: null,
+      isImpersonating: false,
+      impersonatedEmail: null,
+      activeShowcase,
+    };
   }
 }

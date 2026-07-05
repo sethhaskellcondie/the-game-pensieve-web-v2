@@ -26,3 +26,63 @@
 .role[data-role="ADMIN"] {
   background: rgba(168, 85, 247, 0.25);
 }
+
+/* The showcase cell: current grant (name + slug) beside the Grant/Edit action. */
+.showcaseCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.showcaseValue {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.82rem;
+}
+
+.showcaseSlug {
+  opacity: 0.65;
+}
+
+/* Marks a granted slug whose owner isn't PAID/ADMIN: reserved but absent from
+   the public directory. */
+.showcaseDark {
+  color: #92400e;
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.showcaseNone {
+  flex: 1 1 auto;
+  opacity: 0.5;
+}
+
+/* The per-row "View as user" action that starts admin impersonation. */
+.viewAs {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink-navy);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.viewAs:hover:not(:disabled) {
+  background: var(--field-gold-bg);
+  border-color: var(--field-gold-border-strong);
+  color: var(--field-gold-text);
+}
+
+.viewAs:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

@@ -7,7 +7,7 @@
 
 import { getIronSession } from "iron-session";
 import { NextResponse, type NextRequest } from "next/server";
-import { refreshBackend, fetchRole, AuthError } from "./lib/authBackend";
+import { refreshBackend, fetchMe, AuthError } from "./lib/authBackend";
 import {
   SESSION_COOKIE_NAME,
   sessionOptions,
@@ -43,8 +43,24 @@ export async function proxy(request: NextRequest) {
     // The backend re-derives the role per request, so a long-lived session can
     // silently cross TRIAL → LAPSED. Re-read it on each refresh; only overwrite
     // when the probe gives a definitive answer (null = transient → keep prior).
-    const role = await fetchRole(tokens.accessToken);
-    if (role) session.role = role;
+    // While impersonating, pass the act-as header so the EFFECTIVE (target) role
+    // is what we re-store — keeping capabilities correct across refreshes even
+    // if the admin re-pinned the target's role elsewhere mid-session.
+    const me = await fetchMe(tokens.accessToken, session.impersonatingUserId);
+    if (me) {
+      session.role = me.role;
+      if (session.impersonatingUserId != null) {
+        if (me.impersonatedEmail) {
+          session.impersonatedEmail = me.impersonatedEmail;
+        } else {
+          // Desync: the header was sent but the backend reports no
+          // impersonation (e.g. the target was deleted). /me is the source of
+          // truth — treat impersonation as off and clear it.
+          session.impersonatingUserId = undefined;
+          session.impersonatedEmail = undefined;
+        }
+      }
+    }
     await session.save();
 
     // session.save() only writes the new sealed cookie to the RESPONSE (so the

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import BeginnerHint from "./BeginnerHint";
 import AccountMenu from "./auth/AccountMenu";
+import { useSession } from "./auth/SessionProvider";
 import styles from "./Sidebar.module.css";
 import {
   VideoGamesIcon,
@@ -17,6 +18,12 @@ import {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  // While viewing a public showcase the Manage pages that edit the VIEWER's
+  // own configuration (custom fields, options) are hidden — the data on screen
+  // isn't theirs to configure. Systems stays: it's collection data, viewable
+  // read-only like the rest.
+  const { activeShowcase } = useSession();
+  const showcaseMode = activeShowcase != null;
 
   // Marks a nav link active when it matches the current URL, via both a style
   // hook and aria-current so the state is exposed to assistive tech.
@@ -65,14 +72,18 @@ export default function Sidebar() {
           <SystemsIcon />
           Systems
         </Link>
-        <Link href="/custom-fields" {...navProps("/custom-fields")}>
-          <CustomFieldsIcon />
-          Custom Fields
-        </Link>
-        <Link href="/options" {...navProps("/options")}>
-          <OptionsIcon />
-          Options
-        </Link>
+        {showcaseMode ? null : (
+          <>
+            <Link href="/custom-fields" {...navProps("/custom-fields")}>
+              <CustomFieldsIcon />
+              Custom Fields
+            </Link>
+            <Link href="/options" {...navProps("/options")}>
+              <OptionsIcon />
+              Options
+            </Link>
+          </>
+        )}
       </nav>
 
       <BeginnerHint

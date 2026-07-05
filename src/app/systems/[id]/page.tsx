@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getSystemById, listCustomFieldsByEntity } from "@/lib/api";
+import { getSystemById, listCustomFieldsByEntityOrEmpty } from "@/lib/api";
 import SystemDetail from "@/components/systems/SystemDetail";
 
 export const metadata: Metadata = {
@@ -18,7 +18,7 @@ export default async function SystemDetailsPage({
   const { id } = await params;
   const [system, definitions] = await Promise.all([
     getSystemById(Number(id)),
-    listCustomFieldsByEntity("system"),
+    listCustomFieldsByEntityOrEmpty("system"),
   ]);
 
   if (!system) notFound();

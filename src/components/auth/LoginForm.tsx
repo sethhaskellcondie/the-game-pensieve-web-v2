@@ -100,6 +100,9 @@ export default function LoginForm() {
       <p className={styles.alt}>
         Need an account? <Link href="/signup">Sign up</Link>
       </p>
+      <p className={styles.alt}>
+        Just browsing? <Link href="/showcases">Explore the public showcases</Link>
+      </p>
     </div>
   );
 }

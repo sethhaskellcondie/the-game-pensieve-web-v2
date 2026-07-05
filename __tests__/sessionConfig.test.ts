@@ -25,7 +25,13 @@ describe("sessionRole", () => {
 describe("toSessionView", () => {
   it("never exposes tokens and reports guest for an empty session", () => {
     const view = toSessionView({});
-    expect(view).toEqual({ role: "guest", email: null });
+    expect(view).toEqual({
+      role: "guest",
+      email: null,
+      isImpersonating: false,
+      impersonatedEmail: null,
+      activeShowcase: null,
+    });
   });
 
   it("maps an authenticated session to its role + email", () => {
@@ -38,6 +44,9 @@ describe("toSessionView", () => {
     expect(toSessionView(session)).toEqual({
       role: "lapsed",
       email: "collector@example.com",
+      isImpersonating: false,
+      impersonatedEmail: null,
+      activeShowcase: null,
     });
   });
 
@@ -45,6 +54,62 @@ describe("toSessionView", () => {
     expect(toSessionView({ email: "x@y.z" })).toEqual({
       role: "guest",
       email: null,
+      isImpersonating: false,
+      impersonatedEmail: null,
+      activeShowcase: null,
+    });
+  });
+
+  it("reports impersonation with the admin email and target's effective role", () => {
+    // While impersonating, `email` stays the admin's and `role` is the target's
+    // (the BFF overwrote it); the view exposes the target via impersonatedEmail.
+    const session: SessionData = {
+      accessToken: "a",
+      email: "admin@example.com",
+      role: "paid",
+      impersonatingUserId: 42,
+      impersonatedEmail: "user@example.com",
+    };
+    expect(toSessionView(session)).toEqual({
+      role: "paid",
+      email: "admin@example.com",
+      isImpersonating: true,
+      impersonatedEmail: "user@example.com",
+      activeShowcase: null,
+    });
+  });
+
+  it("carries the resolved active showcase through to the view", () => {
+    const active = { slug: "showcase-one", name: "Showcase One" };
+    expect(toSessionView({}, active)).toEqual({
+      role: "guest",
+      email: null,
+      isImpersonating: false,
+      impersonatedEmail: null,
+      activeShowcase: active,
+    });
+    // Authenticated viewers browse showcases too — the selection is orthogonal
+    // to auth state.
+    expect(
+      toSessionView({ accessToken: "a", role: "paid", email: "c@x.z" }, active),
+    ).toEqual({
+      role: "paid",
+      email: "c@x.z",
+      isImpersonating: false,
+      impersonatedEmail: null,
+      activeShowcase: active,
+    });
+  });
+
+  it("ignores a stray impersonation id on an unauthenticated session", () => {
+    expect(
+      toSessionView({ impersonatingUserId: 42, impersonatedEmail: "u@x.z" }),
+    ).toEqual({
+      role: "guest",
+      email: null,
+      isImpersonating: false,
+      impersonatedEmail: null,
+      activeShowcase: null,
     });
   });
 });

@@ -100,27 +100,53 @@ const STORED_ROLES: Record<string, StoredRole> = {
 };
 
 // The caller identity returned by `GET /v1/auth/me` (the backend's CurrentUser
-// schema). `id` is unused today but is part of the contract.
+// schema). While an admin acts as a user, `impersonating` describes the target
+// (the effective experience); it is null on a normal request. `id` on the outer
+// object is the logged-in account (the admin while impersonating).
 export type CurrentUser = {
   id: number;
   email: string;
   role: Role;
+  impersonating: { id: number; email: string; role: Role } | null;
 };
 
-// Reads the caller's authoritative role from `GET /v1/auth/me`
-// ({ id, email, role }). Returns the resolved StoredRole, or null on a transient
-// failure (network error, or an unexpected status) so the caller can keep a
-// previously-known role or fall back to a safe default itself — we never guess a
-// *more* restrictive role from a failed probe.
-export async function fetchRole(accessToken: string): Promise<StoredRole | null> {
+// The interpreted result of `GET /v1/auth/me`. `role` is the EFFECTIVE role to
+// store/gate on — the target's while impersonating, the caller's own otherwise.
+// `impersonatedEmail` is the target's email while impersonating, else null.
+export type ResolvedMe = {
+  role: StoredRole;
+  impersonatedEmail: string | null;
+};
+
+function resolveRole(raw: string | undefined): StoredRole | null {
+  return (raw && STORED_ROLES[raw.toUpperCase()]) || null;
+}
+
+// Reads `GET /v1/auth/me` and interprets the impersonation marker. When
+// `actAsOwnerId` is supplied the act-as header is attached (so an admin sees the
+// target's identity); this is how the impersonate endpoints and the proxy probe
+// the effective role while acting as a user. Returns null on a transient failure
+// (network error / unexpected status) so callers keep a previously-known role
+// rather than guessing a more restrictive one. While impersonating, the
+// effective role is the target's (defaulting to "unknown" if unrecognized —
+// impersonation is still active, so we keep it on, restricted); on a normal
+// request an unrecognized role yields null, exactly as before.
+export async function fetchMe(
+  accessToken: string,
+  actAsOwnerId?: number,
+): Promise<ResolvedMe | null> {
   try {
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    };
+    if (actAsOwnerId != null) {
+      headers["X-Act-As-Owner"] = String(actAsOwnerId);
+    }
     const res = await fetch(`${getBaseUrl()}/auth/me`, {
       method: "GET",
       cache: "no-store",
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
+      headers,
     });
     if (!res.ok) {
       console.warn(
@@ -129,18 +155,39 @@ export async function fetchRole(accessToken: string): Promise<StoredRole | null>
       );
       return null;
     }
-    const payload = (await res.json()) as Envelope<CurrentUser>;
-    const raw = payload.data?.role;
-    const resolved = (raw && STORED_ROLES[raw.toUpperCase()]) || null;
+    const data = ((await res.json()) as Envelope<CurrentUser>).data;
+    if (!data) {
+      console.warn(`[auth] GET /v1/auth/me returned no data; role could not be resolved.`);
+      return null;
+    }
+    if (data.impersonating) {
+      // The backend confirmed an active impersonation — render as the target.
+      return {
+        role: resolveRole(data.impersonating.role) ?? "unknown",
+        impersonatedEmail: data.impersonating.email,
+      };
+    }
+    const resolved = resolveRole(data.role);
     if (!resolved) {
       console.warn(
-        `[auth] GET /v1/auth/me returned an unrecognized role (${raw ?? "none"}); ` +
+        `[auth] GET /v1/auth/me returned an unrecognized role (${data.role ?? "none"}); ` +
           `role could not be resolved.`,
       );
+      return null;
     }
-    return resolved;
+    return { role: resolved, impersonatedEmail: null };
   } catch (error) {
     console.warn(`[auth] GET /v1/auth/me request errored; role could not be resolved.`, error);
     return null;
   }
+}
+
+// Reads the caller's authoritative effective role from `GET /v1/auth/me`.
+// Returns the resolved StoredRole, or null on a transient failure (network
+// error, or an unexpected status) so the caller can keep a previously-known role
+// or fall back to a safe default itself — we never guess a *more* restrictive
+// role from a failed probe. A thin wrapper over fetchMe for callers that only
+// need the role (login; the proxy when not impersonating).
+export async function fetchRole(accessToken: string): Promise<StoredRole | null> {
+  return (await fetchMe(accessToken))?.role ?? null;
 }
