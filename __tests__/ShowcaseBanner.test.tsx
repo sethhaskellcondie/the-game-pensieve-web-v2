@@ -38,9 +38,6 @@ describe("ShowcaseBanner", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       /viewing the public showcase/i,
     );
-    expect(
-      screen.getByRole("link", { name: /browse showcases/i }),
-    ).toHaveAttribute("href", "/showcases");
     expect(screen.getByRole("link", { name: /log in/i })).toHaveAttribute(
       "href",
       "/login",
@@ -71,8 +68,8 @@ describe("ShowcaseBanner", () => {
     expect(screen.getByRole("link", { name: /log in/i })).toBeInTheDocument();
   });
 
-  it("stays hidden on the auth pages and the directory itself", () => {
-    for (const p of ["/login", "/signup", "/pricing", "/showcases"]) {
+  it("stays hidden on the auth and marketing pages", () => {
+    for (const p of ["/login", "/signup", "/pricing"]) {
       pathname = p;
       const { unmount } = renderWith({ role: "guest", activeShowcase: ACTIVE });
       expect(screen.queryByRole("status")).not.toBeInTheDocument();

@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "./SessionProvider";
 import PlanBadge from "./PlanBadge";
-import ShowcaseSwitcher from "./ShowcaseSwitcher";
 import styles from "./AccountMenu.module.css";
 
 // Sidebar account panel: shows the current plan, the signed-in email, and the
@@ -40,8 +39,6 @@ export default function AccountMenu() {
           {email}
         </p>
       ) : null}
-
-      <ShowcaseSwitcher />
 
       <div className={styles.actions}>
         {isAuthenticated ? (

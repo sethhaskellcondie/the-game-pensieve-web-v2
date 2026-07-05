@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import Listbox, { type ListboxOption } from "@/components/filters/Listbox";
 import { useToast } from "@/components/ToastProvider";
 import type { ShowcaseDto } from "@/lib/api";
@@ -12,11 +11,10 @@ import styles from "./ShowcaseSwitcher.module.css";
 // collection, or the backend's default showcase for anonymous visitors.
 const HOME = "";
 
-// Dropdown for switching which public showcase is being viewed. Lives next to
-// the auth actions in the sidebar's account panel and on the /showcases
-// directory page. Selection posts to /api/showcase/select (via the session
-// provider) and performs a full navigation to "/" so all server-rendered data
-// re-fetches under the new cookie.
+// Dropdown for switching which public showcase is being viewed. Lives in the
+// Showcase section of the account page. Selection posts to
+// /api/showcase/select (via the session provider) and performs a full
+// navigation to "/" so all server-rendered data re-fetches under the new cookie.
 export default function ShowcaseSwitcher() {
   const { activeShowcase, isAuthenticated, selectShowcase } = useSession();
   const { showSnackbar } = useToast();
@@ -33,7 +31,7 @@ export default function ShowcaseSwitcher() {
         if (active && body.data) setEntries(body.data);
       } catch {
         // Directory unavailable: the switcher still offers the home option and
-        // the current selection; /showcases remains reachable via the link.
+        // the current selection.
       }
     })();
     return () => {
@@ -72,16 +70,12 @@ export default function ShowcaseSwitcher() {
 
   return (
     <div className={styles.wrap}>
-      <span className={styles.label}>Showcase</span>
       <Listbox
         value={current}
         options={options}
         onChange={change}
         ariaLabel="Switch showcase"
       />
-      <Link href="/showcases" className={styles.browse}>
-        Browse showcases
-      </Link>
     </div>
   );
 }

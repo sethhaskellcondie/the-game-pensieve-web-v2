@@ -1,8 +1,10 @@
 "use client";
 
+import BeginnerHint from "../BeginnerHint";
 import Button from "../Button";
 import SettingsSection from "../SettingsSection";
 import PlanBadge from "../auth/PlanBadge";
+import ShowcaseSwitcher from "../auth/ShowcaseSwitcher";
 import { useSession } from "../auth/SessionProvider";
 import styles from "./AccountManager.module.css";
 
@@ -27,6 +29,19 @@ export default function AccountManager() {
         <div className={styles.row}>
           <span className={styles.label}>Plan</span>
           <PlanBadge role={role} onLight />
+        </div>
+      </SettingsSection>
+
+      <SettingsSection
+        title="Showcase"
+        description="Choose which public showcase to view."
+      >
+        <div className={styles.row}>
+          <ShowcaseSwitcher />
+          <BeginnerHint
+            placement="bottom-end"
+            text="While logged in you can still browse the other showcase collections that are available."
+          />
         </div>
       </SettingsSection>
 

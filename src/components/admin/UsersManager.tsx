@@ -257,7 +257,7 @@ export default function UsersManager() {
       },
       {
         key: "impersonate",
-        label: "View as",
+        label: "Impersonate",
         width: 160,
         clip: true,
         render: (user) => {
@@ -269,9 +269,9 @@ export default function UsersManager() {
               className={styles.viewAs}
               onClick={() => impersonate(user)}
               disabled={isSelf || actingId != null}
-              aria-label={`View as ${user.email}`}
+              aria-label={`Impersonate ${user.email}`}
             >
-              {actingId === user.id ? "Starting…" : "View as user"}
+              {actingId === user.id ? "Starting…" : "Impersonate"}
             </button>
           );
         },

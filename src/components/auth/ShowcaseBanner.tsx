@@ -6,19 +6,18 @@ import { usePathname } from "next/navigation";
 import { useSession } from "./SessionProvider";
 import styles from "./ShowcaseBanner.module.css";
 
-// Routes where the banner would be noise (the auth/marketing pages themselves,
-// and the showcase directory — which explains itself).
-const HIDDEN_PREFIXES = ["/login", "/signup", "/pricing", "/showcases"];
+// Routes where the banner would be noise (the auth/marketing pages themselves).
+const HIDDEN_PREFIXES = ["/login", "/signup", "/pricing"];
 
 // The showcase context strip shown app-wide via the layout.
 //
 // Two states:
 // - A showcase is selected (any viewer): "Viewing {name} (read-only)" with
-//   *Browse showcases* plus *Back to my collection* (authenticated, clears the
-//   selection) or *Log in* (anonymous). Not dismissible — it's the only
-//   always-visible indicator that the data on screen isn't the viewer's own.
-// - Anonymous with no selection: the default-showcase notice pointing at the
-//   directory and log in. Dismissible, as before.
+//   *Back to my collection* (authenticated, clears the selection) or *Log in*
+//   (anonymous). Not dismissible — it's the only always-visible indicator that
+//   the data on screen isn't the viewer's own.
+// - Anonymous with no selection: the default-showcase notice pointing at log in.
+//   Dismissible, as before.
 export default function ShowcaseBanner() {
   const { role, activeShowcase, selectShowcase, isAuthenticated } =
     useSession();
@@ -37,12 +36,8 @@ export default function ShowcaseBanner() {
       >
         <span className={styles.text}>
           Viewing <strong>{activeShowcase.name}</strong> (read-only).{" "}
-          <Link href="/showcases" className={styles.link}>
-            Browse showcases
-          </Link>
           {isAuthenticated ? (
             <>
-              {" · "}
               <button
                 type="button"
                 className={styles.leave}
@@ -58,7 +53,6 @@ export default function ShowcaseBanner() {
             </>
           ) : (
             <>
-              {" · "}
               <Link href="/login" className={styles.link}>
                 Log in
               </Link>{" "}
@@ -76,12 +70,8 @@ export default function ShowcaseBanner() {
     <div className={styles.banner} role="status" aria-label="Showcase notice">
       <span className={styles.text}>
         You&rsquo;re viewing the public showcase.{" "}
-        <Link href="/showcases" className={styles.link}>
-          Browse showcases
-        </Link>{" "}
-        or{" "}
         <Link href="/login" className={styles.link}>
-          log in
+          Log in
         </Link>{" "}
         to manage your own collection.
       </span>
