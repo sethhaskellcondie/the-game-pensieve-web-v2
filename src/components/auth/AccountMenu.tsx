@@ -57,11 +57,10 @@ export default function AccountMenu() {
           </>
         ) : (
           <>
+            {/* The login page now hosts both sign-in and sign-up, so a single
+                entry point covers both. */}
             <Link href="/login" className={styles.link}>
               Log in
-            </Link>
-            <Link href="/signup" className={styles.link}>
-              Sign up
             </Link>
           </>
         )}

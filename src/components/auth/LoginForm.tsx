@@ -2,7 +2,6 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import Button from "@/components/Button";
 import { useSession } from "./SessionProvider";
 import styles from "./AuthForm.module.css";
@@ -43,63 +42,57 @@ export default function LoginForm() {
     }
   }
 
+  // Form-only: the surrounding card, heading, and sign-up link are composed by
+  // the page (src/app/login/page.tsx) so the login screen can lay these controls
+  // out alongside the guest-showcase and sign-up panels.
   return (
-    <div className={styles.wrap}>
-      <h1 className={styles.title}>Log in</h1>
-      <p className={styles.subtitle}>Welcome back to The Game Pensieve.</p>
+    <form className={styles.form} onSubmit={onSubmit}>
+      {error ? (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      ) : null}
 
-      <form className={styles.form} onSubmit={onSubmit}>
-        {error ? (
-          <p className={styles.error} role="alert">
-            {error}
-          </p>
-        ) : null}
+      <div className={styles.field}>
+        <label className={styles.label} htmlFor="login-email">
+          Email
+        </label>
+        <input
+          id="login-email"
+          className={styles.input}
+          type="email"
+          name="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </div>
 
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="login-email">
-            Email
-          </label>
-          <input
-            id="login-email"
-            className={styles.input}
-            type="email"
-            name="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
+      <div className={styles.field}>
+        <label className={styles.label} htmlFor="login-password">
+          Password
+        </label>
+        <input
+          id="login-password"
+          className={styles.input}
+          type="password"
+          name="password"
+          autoComplete="current-password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </div>
 
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="login-password">
-            Password
-          </label>
-          <input
-            id="login-password"
-            className={styles.input}
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-
-        <Button
-          className={styles.submit}
-          type="submit"
-          disabled={submitting}
-          aria-busy={submitting}
-        >
-          {submitting ? "Logging in…" : "Log in"}
-        </Button>
-      </form>
-
-      <p className={styles.alt}>
-        Need an account? <Link href="/signup">Sign up</Link>
-      </p>
-    </div>
+      <Button
+        className={styles.submit}
+        type="submit"
+        disabled={submitting}
+        aria-busy={submitting}
+      >
+        {submitting ? "Logging in…" : "Log in"}
+      </Button>
+    </form>
   );
 }

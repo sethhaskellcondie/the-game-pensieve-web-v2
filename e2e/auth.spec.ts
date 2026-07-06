@@ -50,10 +50,13 @@ test.describe("Trial tier (new account)", () => {
     const email = `e2e+${Date.now()}@example.com`;
     const password = "Sup3rSecret!";
 
-    await page.goto("/signup");
-    await page.getByLabel("Email").fill(email);
-    await page.getByLabel("Password").fill(password);
-    await page.getByRole("button", { name: "Create account" }).click();
+    // Sign-up now lives in the "New here?" card on the login page. Scope to that
+    // card so its Email/Password fields aren't confused with the Log in card's.
+    await page.goto("/login");
+    const signup = page.getByRole("region", { name: "New here?" });
+    await signup.getByLabel("Email").fill(email);
+    await signup.getByLabel("Password").fill(password);
+    await signup.getByRole("button", { name: "Create account" }).click();
 
     // Auto-login lands on home as a TRIAL account (30-day trial).
     await expect(page.getByLabel("Plan: Trial")).toBeVisible();

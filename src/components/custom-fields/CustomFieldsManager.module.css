@@ -235,10 +235,20 @@
   cursor: grabbing;
 }
 
+/* Showcase / read-only rows can't be reordered, so there's no grip to align
+   against — center the number in the column instead of left-aligning it. */
+.orderCellStatic {
+  cursor: default;
+}
+
 .orderWrap {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.orderCellStatic .orderWrap {
+  justify-content: center;
 }
 
 .grip {

@@ -7,6 +7,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
+import { FILTERS_STORAGE_PREFIX } from "./persistedViews";
 import type { ActiveFilter } from "./types";
 import { decodeFilterParam, encodeFilterParam } from "./urlFilters";
 
@@ -15,7 +16,9 @@ import { decodeFilterParam, encodeFilterParam } from "./urlFilters";
 // (not shared backend state), so localStorage — mirroring usePersistentColumnWidths
 // — rather than the ui_settings store. Serialization reuses the same encode/decode
 // the `filters` URL param uses, so the stored shape matches a deep-link exactly.
-const PREFIX = "filters:";
+// The prefix is shared so a showcase switch can clear these keys (see
+// clearPersistedCollectionViews).
+const PREFIX = FILTERS_STORAGE_PREFIX;
 
 // The filters a page should load with: a non-empty `filters` URL param (a deep
 // link from a home saved-filter card) wins; otherwise the last-used filters from

@@ -18,10 +18,10 @@ import {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  // While viewing a public showcase the Manage pages that edit the VIEWER's
-  // own configuration (custom fields, options) are hidden — the data on screen
-  // isn't theirs to configure. Systems stays: it's collection data, viewable
-  // read-only like the rest.
+  // While viewing a public showcase, Options (the VIEWER's own UI settings) is
+  // hidden — it isn't part of the collection on screen. Custom Fields stays: a
+  // showcase's fields are collection data, shown read-only like Systems and the
+  // rest (write controls are gated on canWrite, which is false in showcase mode).
   const { activeShowcase } = useSession();
   const showcaseMode = activeShowcase != null;
 
@@ -72,17 +72,15 @@ export default function Sidebar() {
           <SystemsIcon />
           Systems
         </Link>
+        <Link href="/custom-fields" {...navProps("/custom-fields")}>
+          <CustomFieldsIcon />
+          Custom Fields
+        </Link>
         {showcaseMode ? null : (
-          <>
-            <Link href="/custom-fields" {...navProps("/custom-fields")}>
-              <CustomFieldsIcon />
-              Custom Fields
-            </Link>
-            <Link href="/options" {...navProps("/options")}>
-              <OptionsIcon />
-              Options
-            </Link>
-          </>
+          <Link href="/options" {...navProps("/options")}>
+            <OptionsIcon />
+            Options
+          </Link>
         )}
       </nav>
 

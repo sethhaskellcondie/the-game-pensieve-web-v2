@@ -36,9 +36,12 @@ async function switcherHasOption(page: Page, optionName: string) {
 
 async function login(page: Page, email: string, password: string) {
   await page.goto("/login");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Log in" }).click();
+  // The login page hosts both a Log in and a New here? (sign up) card, each with
+  // Email/Password fields — scope to the Log in card so the selectors are unique.
+  const form = page.getByRole("region", { name: "Log in" });
+  await form.getByLabel("Email").fill(email);
+  await form.getByLabel("Password").fill(password);
+  await form.getByRole("button", { name: "Log in" }).click();
   await expect(page).toHaveURL(/\/$/);
 }
 

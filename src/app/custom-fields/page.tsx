@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { CustomFieldsIcon } from "@/components/icons";
 import Header from "@/components/Header";
 import CustomFieldsManager from "@/components/custom-fields/CustomFieldsManager";
-import { readShowcaseSlug } from "@/lib/serverShowcase";
 import styles from "./customFields.module.css";
 
 export const metadata: Metadata = {
@@ -11,11 +9,11 @@ export const metadata: Metadata = {
 };
 
 export default async function CustomFieldsPage() {
-  // Custom fields are the VIEWER's own configuration — they have no meaning
-  // while browsing someone else's showcase, so the page (like its sidebar
-  // link) is unavailable in showcase mode.
-  if (await readShowcaseSlug()) redirect("/");
-
+  // Viewable while browsing a public showcase: the manager shows the showcase
+  // owner's field definitions read-only (its write controls are gated on
+  // canWrite, which is false in showcase mode). The definitions read is
+  // showcase-scoped, so it returns the owner's fields the same way the
+  // collection pages do.
   return (
     <>
       <Header

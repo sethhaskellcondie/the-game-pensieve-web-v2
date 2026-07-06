@@ -15,6 +15,7 @@ import {
   registerBffHandlers,
   type CapabilityDeniedStatus,
 } from "@/lib/bffClient";
+import { clearPersistedCollectionViews } from "@/components/filters/persistedViews";
 import type { ActiveShowcase, Role, SessionView } from "@/lib/sessionConfig";
 import UpgradePrompt from "./UpgradePrompt";
 
@@ -190,6 +191,10 @@ export function SessionProvider({
       } catch {
         return false;
       }
+      // The new collection has its own fields, so the previous collection's
+      // persisted filters/sorts don't apply — clear them before we leave so a
+      // stale custom-field condition can't be sent to the backend.
+      clearPersistedCollectionViews();
       // Full navigation (not router.refresh): every server component must
       // re-render under the new cookie, and landing on the section root
       // escapes detail URLs that don't exist in the other collection.
@@ -215,6 +220,9 @@ export function SessionProvider({
       } catch {
         // The BFF also clears the cookie when a data call hits the stale slug.
       }
+      // Reverting to the home collection is the same context change as an
+      // explicit switch — drop the stale showcase's persisted filters/sorts too.
+      clearPersistedCollectionViews();
       setActiveShowcase(null);
       showToast({ message: "That showcase is no longer available." });
       router.refresh();

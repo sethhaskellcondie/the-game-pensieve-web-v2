@@ -2,7 +2,6 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import Button from "@/components/Button";
 import { useSession } from "./SessionProvider";
 import styles from "./AuthForm.module.css";
@@ -40,8 +39,9 @@ export default function SignupForm() {
         body: JSON.stringify({ email, password }),
       });
       if (!loginRes.ok) {
-        // Account created but auto-login failed — send them to log in manually.
-        router.push("/login");
+        // Account created but auto-login failed — point them at the Log in card
+        // on this same page.
+        setError("Account created — please log in.");
         return;
       }
 
@@ -55,66 +55,58 @@ export default function SignupForm() {
     }
   }
 
+  // Form-only: the surrounding card and heading are composed by the login page
+  // (src/app/login/page.tsx), where this sits in the "New here?" card next to the
+  // Log in card.
   return (
-    <div className={styles.wrap}>
-      <h1 className={styles.title}>Sign up</h1>
-      <p className={styles.subtitle}>
-        Start a free 30-day trial — manage your own collection.
-      </p>
+    <form className={styles.form} onSubmit={onSubmit}>
+      {error ? (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      ) : null}
 
-      <form className={styles.form} onSubmit={onSubmit}>
-        {error ? (
-          <p className={styles.error} role="alert">
-            {error}
-          </p>
-        ) : null}
+      <div className={styles.field}>
+        <label className={styles.label} htmlFor="signup-email">
+          Email
+        </label>
+        <input
+          id="signup-email"
+          className={styles.input}
+          type="email"
+          name="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </div>
 
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="signup-email">
-            Email
-          </label>
-          <input
-            id="signup-email"
-            className={styles.input}
-            type="email"
-            name="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
+      <div className={styles.field}>
+        <label className={styles.label} htmlFor="signup-password">
+          Password
+        </label>
+        <input
+          id="signup-password"
+          className={styles.input}
+          type="password"
+          name="password"
+          autoComplete="new-password"
+          required
+          minLength={8}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </div>
 
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="signup-password">
-            Password
-          </label>
-          <input
-            id="signup-password"
-            className={styles.input}
-            type="password"
-            name="password"
-            autoComplete="new-password"
-            required
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-
-        <Button
-          className={styles.submit}
-          type="submit"
-          disabled={submitting}
-          aria-busy={submitting}
-        >
-          {submitting ? "Creating account…" : "Create account"}
-        </Button>
-      </form>
-
-      <p className={styles.alt}>
-        Already have an account? <Link href="/login">Log in</Link>
-      </p>
-    </div>
+      <Button
+        className={styles.submit}
+        type="submit"
+        disabled={submitting}
+        aria-busy={submitting}
+      >
+        {submitting ? "Creating account…" : "Create account"}
+      </Button>
+    </form>
   );
 }

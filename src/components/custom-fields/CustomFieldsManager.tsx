@@ -505,7 +505,9 @@ export default function CustomFieldsManager() {
                     }}
                   >
                     <td
-                      className={`${styles.cell} ${styles.frozen} ${styles.orderCell}`}
+                      className={`${styles.cell} ${styles.frozen} ${styles.orderCell}${
+                        canWrite ? "" : ` ${styles.orderCellStatic}`
+                      }`}
                       style={{ left: frozenLeft.order }}
                       // Reordering is a write — only draggable for Paid users.
                       draggable={canWrite}
