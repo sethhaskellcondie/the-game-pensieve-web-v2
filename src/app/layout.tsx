@@ -3,7 +3,11 @@ import { JetBrains_Mono, Press_Start_2P } from "next/font/google";
 import Sidebar from "@/components/Sidebar";
 import { ToastProvider } from "@/components/ToastProvider";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
+import { SessionProvider } from "@/components/auth/SessionProvider";
+import ShowcaseBanner from "@/components/auth/ShowcaseBanner";
+import ImpersonationBanner from "@/components/auth/ImpersonationBanner";
 import { loadUiSettings } from "@/lib/uiSettings";
+import { loadSessionView } from "@/lib/session";
 import "./globals.css";
 import styles from "./layout.module.css";
 
@@ -36,8 +40,12 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   // Get-or-create the UI settings in the backend so they're available app-wide
-  // (and present on first paint) via the provider below.
-  const uiSettings = await loadUiSettings();
+  // (and present on first paint) via the provider below. The session view (auth
+  // tier + email, never the tokens) is resolved from the cookie the same way.
+  const [uiSettings, sessionView] = await Promise.all([
+    loadUiSettings(),
+    loadSessionView(),
+  ]);
 
   return (
     <html
@@ -46,12 +54,18 @@ export default async function RootLayout({
     >
       <body>
         <ToastProvider>
-          <UiSettingsProvider initial={uiSettings}>
-            <div className={styles.layout}>
-              <Sidebar />
-              <div className={styles.main}>{children}</div>
-            </div>
-          </UiSettingsProvider>
+          <SessionProvider initial={sessionView}>
+            <UiSettingsProvider initial={uiSettings}>
+              <div className={styles.layout}>
+                <Sidebar />
+                <div className={styles.main}>
+                  <ImpersonationBanner />
+                  <ShowcaseBanner />
+                  {children}
+                </div>
+              </div>
+            </UiSettingsProvider>
+          </SessionProvider>
         </ToastProvider>
       </body>
     </html>

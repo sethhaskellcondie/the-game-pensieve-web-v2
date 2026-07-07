@@ -3,12 +3,19 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import BackupImport from "@/components/BackupImport";
 import { ToastProvider } from "@/components/ToastProvider";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
+import { SessionProvider } from "@/components/auth/SessionProvider";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
 import { backupFilename, downloadTextFile } from "@/lib/download";
+import type { Role } from "@/lib/sessionConfig";
 
 jest.mock("@/lib/download", () => ({
   downloadTextFile: jest.fn(),
   backupFilename: jest.fn(() => "backup-2026-06-08T14-30-00Z.txt"),
+}));
+
+// SessionProvider (used by the capability-gating tests) reaches for the router.
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
 }));
 
 const mockDownloadTextFile = downloadTextFile as jest.Mock;
@@ -470,6 +477,69 @@ describe("BackupImport", () => {
       expect(screen.getByRole("button", { name: "Backup Data" })).toBeEnabled();
 
       (console.error as jest.Mock).mockRestore();
+    });
+  });
+
+  describe("capability gating", () => {
+    function renderForRole(role: Role) {
+      return render(
+        <SessionProvider
+          initial={{
+            role,
+            email: "a@b.c",
+            isImpersonating: false,
+            impersonatedEmail: null,
+            accessUntil: null,
+            activeShowcase: null,
+          }}
+        >
+          <UiSettingsProvider
+            initial={{ ...DEFAULT_UI_SETTINGS, developerMode: true }}
+          >
+            <ToastProvider>
+              <BackupImport />
+            </ToastProvider>
+          </UiSettingsProvider>
+        </SessionProvider>,
+      );
+    }
+
+    it("enables import and backup for a paid account", () => {
+      renderForRole("paid");
+      expect(
+        screen.getByRole("button", { name: "Import From File" }),
+      ).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Import From Backup" }),
+      ).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Seed Sample Data" }),
+      ).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Backup Data" })).toBeEnabled();
+    });
+
+    it("disables import but allows backup for a trial account", () => {
+      renderForRole("trial");
+      // Import is paid-only — a TRIAL is gated out before it can 403.
+      expect(
+        screen.getByRole("button", { name: "Import From File" }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Import From Backup" }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Seed Sample Data" }),
+      ).toBeDisabled();
+      // Backup needs only an authenticated role.
+      expect(screen.getByRole("button", { name: "Backup Data" })).toBeEnabled();
+    });
+
+    it("disables import but allows backup for a lapsed account", () => {
+      renderForRole("lapsed");
+      expect(
+        screen.getByRole("button", { name: "Import From File" }),
+      ).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Backup Data" })).toBeEnabled();
     });
   });
 });

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { PlusIcon } from "@/components/custom-fields/icons";
 import { FilterIcon, SearchIcon } from "@/components/toys/icons";
 import BeginnerHint from "@/components/BeginnerHint";
+import { useSession } from "@/components/auth/SessionProvider";
 import FilterChip from "./FilterChip";
 import FilterEditor from "./FilterEditor";
 import SortControl from "./SortControl";
@@ -59,6 +60,11 @@ export default function FilterBar({
 }) {
   const [edit, setEdit] = useState<EditState>({ mode: "closed" });
 
+  // A lapsed account may list its data with an empty filter set, but any
+  // non-empty filter returns 402 — so disable filtering (and quick-search, which
+  // becomes a filter) for them. Guests and Paid users can filter.
+  const { canFilter } = useSession();
+
   const sourceOf = (token: string): "standard" | "custom" =>
     fields.find((f) => f.field === token)?.source ?? "custom";
 
@@ -80,6 +86,7 @@ export default function FilterBar({
   // clears the box, so a quick search becomes an explicit, editable filter.
   const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== "Enter") return;
+    if (!canFilter) return;
     const text = searchValue.trim();
     const sf = searchField(fields);
     if (text === "" || !sf) return;
@@ -137,6 +144,7 @@ export default function FilterBar({
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
             onKeyDown={onSearchKeyDown}
+            disabled={!canFilter}
           />
         </div>
 
@@ -157,9 +165,14 @@ export default function FilterBar({
           <button
             type="button"
             className={styles.addBtn}
-            disabled={!hasFields}
+            disabled={!hasFields || !canFilter}
             aria-label="Add filter"
             aria-expanded={edit.mode === "add"}
+            title={
+              !canFilter
+                ? "Filtering requires an active subscription"
+                : undefined
+            }
             onClick={() =>
               setEdit((e) =>
                 e.mode === "add" ? { mode: "closed" } : { mode: "add" },
@@ -176,7 +189,7 @@ export default function FilterBar({
               </>
             )}
           </button>
-          {edit.mode === "add" && (
+          {canFilter && edit.mode === "add" && (
             <FilterEditor
               fields={fields}
               align="right"

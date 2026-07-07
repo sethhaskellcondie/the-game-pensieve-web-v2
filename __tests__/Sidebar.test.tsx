@@ -7,6 +7,8 @@ import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
 
 jest.mock("next/navigation", () => ({
   usePathname: jest.fn(),
+  // The Sidebar now hosts the AccountMenu, which reads the router.
+  useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
 }));
 
 const mockUsePathname = usePathname as jest.Mock;

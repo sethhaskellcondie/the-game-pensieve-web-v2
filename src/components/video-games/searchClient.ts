@@ -11,6 +11,7 @@ import type {
   VideoGame,
   VideoGameBox,
 } from "@/lib/api";
+import { bffFetch } from "@/lib/bffClient";
 
 // Reads a route handler's response once, throwing the forwarded backend message
 // on failure. Route handlers answer { status, data } or { status, message }.
@@ -30,7 +31,7 @@ export async function searchVideoGamesClient(
   filters: FilterRequestDto[],
   signal?: AbortSignal,
 ): Promise<VideoGame[]> {
-  const res = await fetch("/api/video-games/search", {
+  const res = await bffFetch("/api/video-games/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ filters }),
@@ -44,7 +45,7 @@ export async function searchVideoGameBoxesClient(
   filters: FilterRequestDto[],
   signal?: AbortSignal,
 ): Promise<VideoGameBox[]> {
-  const res = await fetch("/api/video-game-boxes/search", {
+  const res = await bffFetch("/api/video-game-boxes/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ filters }),
@@ -58,7 +59,7 @@ export async function searchVideoGameBoxesClient(
 export async function searchSystemsClient(
   signal?: AbortSignal,
 ): Promise<System[]> {
-  const res = await fetch("/api/systems/search", {
+  const res = await bffFetch("/api/systems/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ filters: [] }),

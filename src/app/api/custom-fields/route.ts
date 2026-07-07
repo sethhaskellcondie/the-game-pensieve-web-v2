@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/bffError";
 import { createCustomField, type CreateCustomFieldInput } from "@/lib/api";
 
 export async function POST(request: Request) {
@@ -9,8 +10,6 @@ export async function POST(request: Request) {
     const data = await createCustomField(input);
     return NextResponse.json({ status: "ok", data });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to create custom field";
-    return NextResponse.json({ status: "error", message }, { status: 502 });
+    return errorResponse(error, "Failed to create custom field");
   }
 }

@@ -8,7 +8,12 @@ export const metadata: Metadata = {
   title: "Custom Fields · The Game Pensieve",
 };
 
-export default function CustomFieldsPage() {
+export default async function CustomFieldsPage() {
+  // Viewable while browsing a public showcase: the manager shows the showcase
+  // owner's field definitions read-only (its write controls are gated on
+  // canWrite, which is false in showcase mode). The definitions read is
+  // showcase-scoped, so it returns the owner's fields the same way the
+  // collection pages do.
   return (
     <>
       <Header

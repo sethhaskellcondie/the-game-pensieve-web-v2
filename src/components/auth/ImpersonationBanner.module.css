@@ -1,0 +1,40 @@
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--field-gold-bg);
+  border-bottom: 2px solid var(--field-gold-border-strong);
+  color: var(--field-gold-text);
+  font-size: 0.9rem;
+}
+
+.text {
+  flex: 1;
+}
+
+.target {
+  color: var(--field-gold-accent);
+}
+
+.stop {
+  flex: none;
+  border: 1px solid var(--field-gold-border-strong);
+  border-radius: var(--radius);
+  background: var(--field-gold-accent);
+  color: var(--white-pure);
+  font: inherit;
+  font-weight: 700;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+
+.stop:hover:not(:disabled) {
+  background: var(--field-gold-text);
+}
+
+.stop:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

@@ -21,6 +21,8 @@ import DataTable, {
 import { PlusIcon } from "@/components/custom-fields/icons";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
+import { useSession } from "@/components/auth/SessionProvider";
+import { bffFetch } from "@/lib/bffClient";
 import BeginnerHint from "@/components/BeginnerHint";
 import { BEGINNER_HINTS } from "@/components/beginnerHints";
 import FilterBar from "@/components/filters/FilterBar";
@@ -152,7 +154,12 @@ export default function VideoGameBoxesManager({
   const router = useRouter();
   const { showToast, showSnackbar } = useToast();
   const { settings } = useUiSettings();
+  const { canWrite } = useSession();
+  // Inline (mass) editing is a write, so it's available only to an active (Paid)
+  // account — even when the mass-edit UI setting is on, guests/lapsed see the
+  // grid read-only.
   const massEditMode = settings.massEditMode;
+  const massEditable = massEditMode && canWrite;
   const standardFields = settings.standardFields.videoGameBox;
   const [boxes, setBoxes] = useState<VideoGameBox[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
@@ -374,7 +381,7 @@ export default function VideoGameBoxesManager({
           isPhysical: next.isPhysical,
           customFieldValues: next.customFieldValues,
         };
-        const res = await fetch(`/api/video-game-boxes/${next.id}`, {
+        const res = await bffFetch(`/api/video-game-boxes/${next.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(input),
@@ -471,7 +478,7 @@ export default function VideoGameBoxesManager({
         width: 272,
         frozen: true,
         seam: true,
-        render: massEditMode
+        render: massEditable
           ? (box) => (
               <EditableTitleCell
                 box={box}
@@ -488,7 +495,7 @@ export default function VideoGameBoxesManager({
         label: "System",
         width: 180,
         clip: true,
-        render: massEditMode
+        render: massEditable
           ? (box) => (
               <FieldEditor
                 field={{
@@ -520,7 +527,7 @@ export default function VideoGameBoxesManager({
         label: "Physical",
         width: MIN_COL,
         clip: true,
-        render: massEditMode
+        render: massEditable
           ? (box) => (
               <FieldEditor
                 field={{
@@ -566,7 +573,7 @@ export default function VideoGameBoxesManager({
       const value = box.customFieldValues.find(
         (cv) => cv.customFieldId === def.id,
       )?.value;
-      if (massEditMode && editableInline.includes(def.type)) {
+      if (massEditable && editableInline.includes(def.type)) {
         return (
           <FieldEditor
             field={{
@@ -606,7 +613,7 @@ export default function VideoGameBoxesManager({
     return [...base.filter((col) => !hidden.has(col.key)), ...dynamic];
   }, [
     definitions,
-    massEditMode,
+    massEditable,
     standardFields,
     editingId,
     systemOptions,
@@ -624,7 +631,7 @@ export default function VideoGameBoxesManager({
     async (input: UpdateVideoGameBoxInput): Promise<boolean> => {
       setSaving(true);
       try {
-        const res = await fetch("/api/video-game-boxes", {
+        const res = await bffFetch("/api/video-game-boxes", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(input),
@@ -658,7 +665,7 @@ export default function VideoGameBoxesManager({
         <div className={styles.titleWrap}>
           <div className={styles.titleRow}>
             <h2 className={styles.entName}>{loading || searching ? "Loading…" : <><b>{boxes.length}</b> {boxes.length === 1 ? "Video Game Box" : "Video Game Boxes"}</>}</h2>
-            {massEditMode && (
+            {massEditable && (
               <BeginnerHint
                 placement="bottom-start"
                 text={BEGINNER_HINTS.massEdit}
@@ -679,11 +686,14 @@ export default function VideoGameBoxesManager({
           sorts={canSort ? sorts : undefined}
           onSortsChange={canSort ? setSorts : undefined}
         />
-        <div className={styles.actions}>
-          <Button className={styles.newBtn} onClick={() => setCreating(true)}>
-            <PlusIcon /> New
-          </Button>
-        </div>
+        {/* Creating a box is a write — only an active (Paid) account sees New. */}
+        {canWrite && (
+          <div className={styles.actions}>
+            <Button className={styles.newBtn} onClick={() => setCreating(true)}>
+              <PlusIcon /> New
+            </Button>
+          </div>
+        )}
       </div>
 
       <DataTable
@@ -703,13 +713,13 @@ export default function VideoGameBoxesManager({
         // the whole row navigates to the box's detail page. Both routes are
         // the same — they just differ in affordance per mode.
         onOpenDetails={
-          massEditMode
+          massEditable
             ? (box) => router.push(`/video-game-boxes/${box.id}`)
             : undefined
         }
         detailsLabel={(box) => `View ${box.title}`}
         onRowClick={
-          massEditMode
+          massEditable
             ? undefined
             : (box) => router.push(`/video-game-boxes/${box.id}`)
         }

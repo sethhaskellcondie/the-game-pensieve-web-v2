@@ -1,0 +1,51 @@
+/* Login-screen layout. The Header stays on top; below it, three controls sit on
+   the paper background: a primary login card, and a stacked column with a
+   guest-showcase panel and a sign-up panel. Collapses to a single column on
+   narrow viewports. */
+
+.content {
+  flex: 1;
+  padding: 40px 24px 56px;
+  overflow-y: auto;
+  background: var(--paper);
+}
+
+.grid {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: start;
+  gap: 20px;
+}
+
+/* When the row gets too skinny for three equal cards, stack them into a single
+   centered column so each keeps a comfortable, readable width. */
+@media (max-width: 820px) {
+  .grid {
+    grid-template-columns: 1fr;
+    max-width: 440px;
+  }
+}
+
+/* Shared card chrome for every panel on the page. */
+.panel {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 30px 80px -40px rgba(var(--ink-navy-rgb), 0.4);
+  padding: 26px 26px 24px;
+}
+
+.panelTitle {
+  margin: 0 0 4px;
+  font-size: var(--text-subtitle);
+  font-weight: 800;
+  color: rgb(var(--ink-navy-rgb));
+}
+
+.panelText {
+  margin: 0 0 18px;
+  font-size: var(--text-label);
+  color: rgba(var(--ink-navy-rgb), 0.7);
+}

@@ -5,6 +5,7 @@
 // should import shapes/helpers from "./savedFilterCategories.types" instead.
 
 import { apiGetOrNull, apiPatch, apiPost } from "./api";
+import { resolveActiveShowcase } from "./serverShowcase";
 import {
   SAVED_FILTER_CATEGORIES_KEY,
   DEFAULT_SAVED_FILTER_CATEGORIES,
@@ -56,8 +57,25 @@ export async function updateSavedFilterCategories(
 // Uncategorized row) if it does not yet exist. Never throws: if the backend is
 // unreachable or returns garbage, it falls back to the default so the home page
 // always renders.
+//
+// While a public showcase is active the read is showcase-scoped (`X-Showcase`),
+// so RLS returns the OWNER's categories — a guest sees, and stays in sync with,
+// whatever categories the owner has configured for the showcase. A showcase view
+// is scoped to the owner as GUEST and cannot write, so the create-if-missing
+// branch is skipped there (an anonymous POST would be a doomed write into the
+// owner's namespace); an owner with no entry falls back to the default.
 export async function loadSavedFilterCategories(): Promise<StoredCategory[]> {
   try {
+    const showcase = await resolveActiveShowcase();
+    if (showcase && !showcase.stale) {
+      const owners = await apiGetOrNull<MetadataRecord>(METADATA_PATH, {
+        showcaseScoped: true,
+      });
+      return owners
+        ? parseSavedFilterCategoriesValue(owners.value)
+        : normalizeCategories([]);
+    }
+
     const existing = await apiGetOrNull<MetadataRecord>(METADATA_PATH);
     if (existing) {
       return parseSavedFilterCategoriesValue(existing.value);

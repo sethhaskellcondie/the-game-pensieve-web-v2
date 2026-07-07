@@ -23,6 +23,8 @@ import {
   StandardFieldGlyph,
 } from "@/components/custom-fields/registry";
 import { useToast } from "@/components/ToastProvider";
+import { useSession } from "@/components/auth/SessionProvider";
+import { bffFetch } from "@/lib/bffClient";
 // Aliased: CustomFieldValue (the type) is already imported from the API types.
 import CustomFieldValueDisplay from "@/components/toys/CustomFieldValue";
 import FieldEditor, {
@@ -61,6 +63,7 @@ export default function VideoGameDetail({
   systems: System[];
 }) {
   const { showToast, showSnackbar } = useToast();
+  const { canWrite } = useSession();
   const [game, setGame] = useState<VideoGame>(initialGame);
 
   // Optimistically apply `next`, then persist the whole game (title + systemId
@@ -78,7 +81,7 @@ export default function VideoGameDetail({
         systemId: next.system.id,
         customFieldValues: next.customFieldValues,
       };
-      const res = await fetch(`/api/video-games/${next.id}`, {
+      const res = await bffFetch(`/api/video-games/${next.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
@@ -221,15 +224,24 @@ export default function VideoGameDetail({
                     </span>
                   </div>
                   <div className={styles.rowval}>
-                    <FieldEditor
-                      field={{
-                        name: row.name,
-                        kind: row.kind,
-                        value: row.value,
-                        options: row.options,
-                      }}
-                      onCommit={row.onCommit}
-                    />
+                    {/* Editing is a write — guests/lapsed see the value read-only. */}
+                    {canWrite ? (
+                      <FieldEditor
+                        field={{
+                          name: row.name,
+                          kind: row.kind,
+                          value: row.value,
+                          options: row.options,
+                        }}
+                        onCommit={row.onCommit}
+                      />
+                    ) : (
+                      <CustomFieldValueDisplay
+                        type={row.kind}
+                        value={row.value}
+                        options={row.options}
+                      />
+                    )}
                   </div>
                 </div>
               );

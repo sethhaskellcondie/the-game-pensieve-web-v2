@@ -1,0 +1,54 @@
+/* Upgrade prompt dialog. Chrome mirrors the app's other modals (ToyCreateModal). */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(var(--ink-navy-rgb), 0.42);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.modal {
+  width: 440px;
+  max-width: 100%;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 30px 80px -20px rgba(var(--ink-navy-rgb), 0.5);
+  padding: 24px 26px 22px;
+}
+
+.title {
+  margin: 0 0 10px;
+  font-size: 1.15rem;
+  color: rgb(var(--ink-navy-rgb));
+}
+
+.message {
+  margin: 0 0 20px;
+  line-height: 1.5;
+  color: rgba(var(--ink-navy-rgb), 0.8);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.dismiss {
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid rgba(var(--ink-navy-rgb), 0.2);
+  border-radius: 10px;
+  background: #fff;
+  color: rgb(var(--ink-navy-rgb));
+  cursor: pointer;
+}
+
+.dismiss:hover {
+  background: rgba(var(--ink-navy-rgb), 0.06);
+}

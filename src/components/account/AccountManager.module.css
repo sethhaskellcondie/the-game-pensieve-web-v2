@@ -1,0 +1,28 @@
+/* A labelled row inside a SettingsSection card. Mirrors the Options page rows
+   (UiSettings.module.css) so the two pages read the same. */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+}
+
+.row + .row {
+  border-top: 1px solid var(--line);
+}
+
+.label {
+  flex: 0 0 auto;
+  min-width: 120px;
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--ink-navy);
+}
+
+.value {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--text-body);
+  color: var(--gray-500);
+  overflow-wrap: anywhere;
+}

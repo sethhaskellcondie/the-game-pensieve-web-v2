@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/bffError";
 import { seedMyCollection } from "@/lib/api";
 
 export async function POST() {
@@ -6,8 +7,6 @@ export async function POST() {
     await seedMyCollection();
     return NextResponse.json({ status: "ok" });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to seed Seth's data";
-    return NextResponse.json({ status: "error", message }, { status: 502 });
+    return errorResponse(error, "Failed to seed Seth's data");
   }
 }

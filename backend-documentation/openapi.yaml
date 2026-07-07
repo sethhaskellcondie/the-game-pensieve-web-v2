@@ -28,11 +28,48 @@ info:
     }
     ```
     Status codes used:
-    - **400 Bad Request** — input/validation failure (blank required field, malformed entity, invalid custom field value, duplicate that violates a uniqueness rule, invalid filter).
-    - **404 Not Found** — the requested resource (or an unknown route) does not exist.
+    - **400 Bad Request** — input/validation failure (blank required field, malformed entity, invalid custom field value, duplicate that violates a uniqueness rule, invalid filter). Also returned when registering an email that already has an account.
+    - **401 Unauthorized** — authentication failed or is missing. Returned only when the API is running with the `secured` profile: a protected route was called without a valid `Bearer` access token, or `/v1/auth/login`/`/v1/auth/refresh` were given bad credentials or an invalid/expired refresh token. In the default (unsecured) build no route requires authentication and 401 is never returned.
+    - **402 Payment Required** — (`secured` profile only) a role lacking the **FILTER** capability sent a **filtered** `/{entity}/function/search` request. In practice this is a **LAPSED** account: it may still list its own data with an empty `filters` array, but any non-empty filter needs an active subscription. See *Roles & Capabilities* below.
+    - **403 Forbidden** — (`secured` profile only) the caller's role lacks the capability for the action: a **WRITE** (create/update/delete), a **BACKUP** (`/v1/function/backup`), an **IMPORT** (`/v1/function/import`, `/importFromFile`, `/seedSampleData`, `/seedMyCollection`), or **admin** access (`/v1/admin/**` by a non-ADMIN caller). Anonymous callers are rejected earlier with **401**. See *Roles & Capabilities* below.
+    - **404 Not Found** — the requested resource (or an unknown route) does not exist. Also returned when an `X-Showcase` header names a slug that does not exist **or is not currently visible** (its owner is not PAID/ADMIN) — the two cases are deliberately indistinguishable.
     - **409 Conflict** — an import is already in progress (the import endpoints take a global lock).
     - **500 Internal Server Error** — an unexpected error; the array contains a generic message followed by the underlying exception message.
     - **200 OK with populated `errors`** — the backup/import endpoints report partial failures here: the import still returns HTTP 200, but `errors` lists the records that could not be processed. Always inspect `errors` on these endpoints even on a 200.
+
+    ## Data Ownership & Multi-Tenancy
+    All collection data (systems, toys, video games and boxes, board games and boxes, custom fields and their options/values, and metadata) is **owned by a single account and isolated per owner**. Ownership is enforced in the database with PostgreSQL Row-Level Security, so a request can only ever read or write the caller's own rows — the isolation holds even against direct SQL.
+    - **Secured build** (`secured` profile): the owner is the authenticated user (from the `Bearer` token). Reads, searches, and writes are automatically scoped to that user; another owner's records are invisible (a read by id returns **404**, and they never appear in list/search results). Ownership is assigned by the server on create — there is no `owner` field in any request or response body. **Showcase** data is world-readable: under the secured profile the read surface — `GET /v1/{entity}/{id}`, `POST /v1/{entity}/function/search`, and `GET /v1/filters/{entity}` — is reachable **without a token** (anonymous requests resolve to the **default showcase** owner); writes always require authentication.
+    - **Default (unsecured) build**: anonymous requests resolve to the single seeded, world-readable **default showcase** owner, preserving the original single-collection behavior for the public site. The showcase owner's records are **not** visible to an authenticated user — each user sees only their own.
+    - Metadata keys are unique **per owner** (two owners may each use the same key).
+
+    ## Public Showcases (secured profile)
+    A **showcase is a paid user's own collection made public** — there is no separate "showcase data". The admin grants one via `POST /v1/admin/users/{id}/showcase`, which sets the user's unique **slug** (the public address and the entitlement, one column) and a display **name**. A slug **resolves only while its owner derives to PAID or ADMIN**: a lapsed owner's slug stays reserved but its showcase answers **404** until they renew.
+    - **Switch showcases with the `X-Showcase: <slug>` request header** on the tenant-scoped routes. The header wins for **every** caller — even authenticated ones, and over `X-Act-As-Owner` — and is always **GUEST-scoped**: read + filter only (writes/backup → **403**); an unknown or not-visible slug → **404**. Anonymous requests without the header keep resolving to the **default showcase** (the seeded row, slug `seths-collection`).
+    - **`GET /v1/showcases`** is a public directory of all currently visible showcases (`{slug, name}` only — never emails), backing a front-end switcher.
+
+    ## Roles & Capabilities (secured profile)
+    Under the `secured` profile, each request resolves to one of five **roles**, derived per request from backend fields on the account (never from a payment processor): an admin **role override** if set, otherwise the account's `access_until` / `subscription_status`. A new account is auto-granted a **trial** on registration (a configurable window, default 30 days), so it starts as **TRIAL** and becomes **LAPSED** automatically when the window ends. An operator can pin any account's role through the admin API (`POST /v1/admin/users/{id}/role`) — but **at most one account may be pinned ADMIN** (a partial unique index enforces it; pinning a second returns **400**). To bootstrap the admin, claim the seeded default-showcase row: `UPDATE users SET email='you@domain.com', password_hash='<bcrypt>', role_override='ADMIN' WHERE is_public_showcase;` (see `documentation/Notes.md` for the full hash-minting procedure).
+    - **GUEST** (anonymous, or any caller viewing a showcase via `X-Showcase`): reads and filters the resolved **showcase** data only; writes/backup/import are rejected (anonymous → **401** at authentication, authenticated showcase views → **403** by capability).
+    - **TRIAL** (new account, trial window active): full read, filter, write, and backup of its own data; **import is paid-only (403)**.
+    - **PAID** (authenticated, active subscription): full read, filter, write, backup, and import of its own data.
+    - **LAPSED** (authenticated, access window expired): may read/list its own data and back it up, but a **filtered** search returns **402** and write/import return **403**.
+    - **ADMIN** (pinned via `role_override`; exactly one — the operator): every own-data capability plus the admin role/showcase-management API. The admin owns the default showcase and edits it as their own collection.
+
+    Capability matrix (✓ = allowed; the denied response is in parentheses):
+
+    | Capability | GUEST | TRIAL | PAID | LAPSED | ADMIN |
+    |---|:--:|:--:|:--:|:--:|:--:|
+    | READ (own/showcase) | ✓ | ✓ | ✓ | ✓ | ✓ |
+    | FILTER (402) | ✓* | ✓ | ✓ | ✗ | ✓ |
+    | WRITE (403) | ✗ | ✓ | ✓ | ✗ | ✓ |
+    | BACKUP (403) | ✗ | ✓ | ✓ | ✓ | ✓ |
+    | IMPORT (403) | ✗ | ✗ | ✓ | ✗ | ✓ |
+    | ACCESS&#95;ADMIN (403) | ✗ | ✗ | ✗ | ✗ | ✓ |
+
+    `*` GUEST reads/filters whichever **showcase** the request resolves to — the default showcase for anonymous no-header requests, or the one named by `X-Showcase` (RLS scopes the request to that owner). Anonymous writes/backup/import are blocked at authentication (**401**) before capabilities apply; on an authenticated showcase view they are **403**.
+
+    **Impersonation:** an `X-Act-As-Owner: <userId>` header, honored only for an ADMIN caller, scopes the request to that user with **full act-as** semantics — the capability matrix adopts the target's effective role, so writes are permitted exactly when the target could write (this is deliberately *not* a read-only clamp; see the `X-Act-As-Owner` parameter). When `X-Showcase` is also present, **`X-Showcase` wins**: an explicit read-only showcase view, GUEST-scoped.
 
     ## Timestamps
     All `createdAt`, `updatedAt`, and `deletedAt` fields are serialized as **epoch milliseconds** (a JSON integer, e.g. `1757970298640`), not ISO-8601 strings. `deletedAt` is `null` for records that have not been soft-deleted. This applies uniformly to entities, custom fields, metadata, and backup exports.
@@ -83,6 +120,7 @@ paths:
         - System
       summary: Health check endpoint
       description: Simple health check. Returns the string "thump thump" inside the standard response envelope.
+      security: []
       responses:
         '200':
           description: Service is healthy
@@ -103,6 +141,200 @@ paths:
                 data: "thump thump"
                 errors: null
                 roundTripMs: 0
+
+  /v1/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new account
+      description: |
+        Create a new user account. `email` and `password` are required and the body is flat (there is no
+        entity-key wrapper). The email must be unique — registering an email that already has an account is
+        rejected with a 400. Public endpoint: no token required even under the `secured` profile.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              email: "collector@example.com"
+              password: "Sup3rSecret!"
+      responses:
+        '201':
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterDataResponse'
+              example:
+                data:
+                  id: 1
+                  email: "collector@example.com"
+                errors: null
+                roundTripMs: 12
+        '400':
+          description: Missing email/password, or an account with that email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors:
+                  - "Registration failed, an account with email: 'collector@example.com' already exists."
+
+  /v1/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Log in and obtain tokens
+      description: |
+        Exchange credentials for a short-lived access token and a longer-lived, revocable refresh token.
+        Send the access token as `Authorization: Bearer <accessToken>` on protected routes. Public endpoint:
+        no token required.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: "collector@example.com"
+              password: "Sup3rSecret!"
+      responses:
+        '200':
+          description: Authentication succeeded; tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthDataResponse'
+              example:
+                data:
+                  accessToken: "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjb2xsZWN0b3JAZXhhbXBsZS5jb20ifQ.signature"
+                  refreshToken: "PHCQ8m1k0t9rJv3w7s2A6bQx4nL5dZ0uHcRfTgYkImE"
+                  tokenType: "Bearer"
+                  expiresInMs: 900000
+                errors: null
+                roundTripMs: 18
+        '401':
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors:
+                  - "Invalid email or password."
+
+  /v1/auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Rotate tokens using a refresh token
+      description: |
+        Exchange a valid refresh token for a new access token and a new refresh token. The presented refresh
+        token is single-use: it is revoked as part of the call, so the previous refresh token can no longer be
+        replayed. Public endpoint: no access token required.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+            example:
+              refreshToken: "PHCQ8m1k0t9rJv3w7s2A6bQx4nL5dZ0uHcRfTgYkImE"
+      responses:
+        '200':
+          description: Refresh succeeded; a new token pair is issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthDataResponse'
+              example:
+                data:
+                  accessToken: "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjb2xsZWN0b3JAZXhhbXBsZS5jb20ifQ.newsignature"
+                  refreshToken: "Zk2pQ9w0Lr4Jv7s1A6bQx3nL8dZ5uHcRfTgYkImEnew"
+                  tokenType: "Bearer"
+                  expiresInMs: 900000
+                errors: null
+                roundTripMs: 14
+        '401':
+          description: The refresh token is missing, invalid, expired, or already used
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors:
+                  - "Invalid refresh token."
+
+  /v1/auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get the current caller's identity and effective role
+      description: |
+        Return the authenticated caller's `id`, `email`, effective `role`, and `accessUntil` (the access-window
+        expiry, epoch milliseconds, or `null` for no window). The role is resolved per-request the same way every
+        other request resolves it, so the caller never has to re-derive it from billing state.
+        Under the `secured` profile this requires a valid `Bearer` access token (an anonymous call returns 401).
+        In the default (unsecured) build there is no authentication, so the request resolves to the seeded public
+        showcase owner and always reports the `GUEST` role.
+
+        When an **ADMIN** sends the `X-Act-As-Owner` header, the primary `id`/`email`/`role` report the admin and
+        the `impersonating` field carries the user being acted as. For everyone else the header is ignored and
+        `impersonating` is `null`.
+      parameters:
+        - $ref: '#/components/parameters/ActAsOwner'
+      responses:
+        '200':
+          description: The current caller's identity and effective role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeDataResponse'
+              examples:
+                normal:
+                  summary: A normal authenticated caller
+                  value:
+                    data:
+                      id: 42
+                      email: "collector@example.com"
+                      role: "TRIAL"
+                      accessUntil: 1785484800000
+                      impersonating: null
+                    errors: null
+                    roundTripMs: 6
+                impersonating:
+                  summary: An admin impersonating user 42 via X-Act-As-Owner
+                  value:
+                    data:
+                      id: 1
+                      email: "admin@example.com"
+                      role: "ADMIN"
+                      accessUntil: null
+                      impersonating:
+                        id: 42
+                        email: "collector@example.com"
+                        role: "PAID"
+                    errors: null
+                    roundTripMs: 6
+        '401':
+          description: No valid access token was provided (secured profile only)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors:
+                  - "Full authentication is required to access this resource."
 
   /v1/toys:
     post:
@@ -515,6 +747,13 @@ paths:
       description: |
         Search and filter systems. Common fields include `name` (text), `generation` (number),
         and `handheld` (boolean). Send an empty `filters` array to return all systems.
+
+        Like every tenant-scoped route, this honors the `X-Showcase` header (browse a public showcase,
+        GUEST-scoped; unknown slug → **404**) and the `X-Act-As-Owner` header (admin impersonation) — see the
+        two parameters; `X-Showcase` wins when both are present.
+      parameters:
+        - $ref: '#/components/parameters/ShowcaseView'
+        - $ref: '#/components/parameters/ActAsOwner'
       requestBody:
         required: true
         content:
@@ -565,6 +804,15 @@ paths:
                     customFieldValues: []
                 errors: null
                 roundTripMs: 5
+        '404':
+          description: The `X-Showcase` header named a slug that does not exist or is not currently visible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors: ["No public showcase exists for the requested X-Showcase slug."]
 
   /v1/videoGameBoxes:
     post:
@@ -1827,6 +2075,238 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /v1/admin/users:
+    get:
+      tags:
+        - Admin
+      summary: List all user accounts (admin only)
+      description: |
+        List every account with its effective role, role override, and billing fields. **Admin only**: the
+        caller must resolve to the `ADMIN` role (pinned via `role_override`); any other authenticated caller
+        receives **403**, and an anonymous caller **401**. These routes bypass the per-request tenant
+        transaction so they can read the `users` table (which the demoted RLS role cannot access).
+      responses:
+        '200':
+          description: The list of user accounts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminUser'
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                  roundTripMs:
+                    type: integer
+                    format: int64
+        '401':
+          description: Authentication required (anonymous caller)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: The caller does not resolve to the ADMIN role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/admin/users/{id}/role:
+    post:
+      tags:
+        - Admin
+      summary: Set or clear a user's role override (admin only)
+      description: |
+        Pin the target user to a specific role, or clear the pin to revert to auto-derivation. Send
+        `roleOverride` as one of `GUEST`, `TRIAL`, `PAID`, `LAPSED`, `ADMIN`, or `null` to clear. The change
+        takes effect on the target's next request (the role is re-derived per request). **Admin only** (403
+        for non-admins, 401 for anonymous). An unknown role value returns **400**; an unknown user id **404**.
+
+        **At most one ADMIN may exist**: pinning `ADMIN` while another account already holds the pin returns
+        **400** ("An admin already exists. Clear the current admin's role override first."). Re-pinning the
+        existing admin is an idempotent 200, and the sole admin may clear their own pin (self-demotion — the
+        documented SQL bootstrap is the recovery path).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The target user's id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetRoleOverrideRequest'
+            example:
+              roleOverride: "PAID"
+      responses:
+        '200':
+          description: The updated user account
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AdminUser'
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                  roundTripMs:
+                    type: integer
+                    format: int64
+        '400':
+          description: The role value is not one of the five roles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required (anonymous caller)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: The caller does not resolve to the ADMIN role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No user with that id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/admin/users/{id}/showcase:
+    post:
+      tags:
+        - Admin
+      summary: Grant or clear a user's public showcase (admin only)
+      description: |
+        Publish the target user's collection as a public showcase, or unpublish it. A non-blank `slug` grants
+        the showcase: the slug is both the entitlement and the public address (`X-Showcase: <slug>`), and `name`
+        is the display title listed by `GET /v1/showcases` (owner emails are never exposed). A `null`/blank
+        `slug` clears the grant (the name is cleared with it).
+
+        The showcase is **visible only while the owner derives to PAID or ADMIN** — granting a slug to a TRIAL
+        or LAPSED user reserves the address but the showcase answers 404 until they are PAID. Slugs must match
+        `^[a-z0-9](-?[a-z0-9])*$` (lowercase alphanumerics, single interior hyphens) and be **unique** — a slug
+        already held by another user returns **400**. **Admin only** (403 for non-admins, 401 for anonymous);
+        an unknown user id returns **404**. This grant is the backend-authoritative entitlement a future Paddle
+        showcase product would automate.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The target user's id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetShowcaseRequest'
+            example:
+              slug: "retro-vault"
+              name: "The Retro Vault"
+      responses:
+        '200':
+          description: The updated user account (showcaseSlug/showcaseName reflect the grant or clear)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AdminUser'
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                  roundTripMs:
+                    type: integer
+                    format: int64
+        '400':
+          description: The slug is malformed, or already taken by another user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                data: null
+                errors: ["Failed Input Validation: The showcase slug 'retro-vault' is already taken."]
+        '401':
+          description: Authentication required (anonymous caller)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: The caller does not resolve to the ADMIN role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No user with that id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/showcases:
+    get:
+      tags:
+        - Showcases
+      summary: List all visible public showcases
+      security: []
+      description: |
+        The public showcase directory: every showcase whose owner currently derives to PAID or ADMIN, as
+        `{slug, name}` pairs — never emails or any other account field. Pass a listed `slug` in the
+        `X-Showcase` header on the read endpoints to browse that collection. **Public**: no token required
+        (under both profiles); authenticated callers see the same listing. A lapsed owner's showcase drops out
+        of this directory exactly when its slug stops resolving.
+      responses:
+        '200':
+          description: The visible showcases
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Showcase'
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                  roundTripMs:
+                    type: integer
+                    format: int64
+              example:
+                data:
+                  - slug: "seths-collection"
+                    name: "Seth's Collection"
+                  - slug: "retro-vault"
+                    name: "The Retro Vault"
+                errors: null
+                roundTripMs: 3
+
   /v1/metadata:
     post:
       tags:
@@ -2030,7 +2510,187 @@ components:
         minimum: 1
       description: Unique identifier for the entity
 
+    ActAsOwner:
+      name: X-Act-As-Owner
+      in: header
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+      description: |
+        Admin impersonation ("act as user"). When an **ADMIN** caller sends this header with a target user's id,
+        the request is scoped to that user: Row-Level Security reads/writes the target's data and the capability
+        matrix adopts the target's effective role (**full act-as** — e.g. impersonating a PAID user permits
+        writes, a LAPSED user does not). The header is **ignored** for non-admin callers, for anonymous requests,
+        and on the `/v1/admin/**` routes themselves (so an admin can't lock themselves out of the admin API). It
+        applies to all tenant-scoped routes; `GET /v1/auth/me` reflects the resulting state via its
+        `impersonating` field. Stop impersonating by no longer sending the header. When `X-Showcase` is also
+        present it takes precedence over this header. Only meaningful under the `secured` profile.
+
+    ShowcaseView:
+      name: X-Showcase
+      in: header
+      required: false
+      schema:
+        type: string
+        pattern: '^[a-z0-9](-?[a-z0-9])*$'
+      example: seths-collection
+      description: |
+        View a public showcase. The value is a showcase **slug** (discover them via `GET /v1/showcases`); the
+        request is scoped to that showcase owner's data as **GUEST** — read + filter only, so writes and backup
+        return **403**. The header wins for **every** caller: authenticated users browse showcases without
+        logging out (their own data is not visible while it is set), and it takes precedence over
+        `X-Act-As-Owner`. A slug that does not exist — or whose owner does not currently derive to PAID/ADMIN
+        (e.g. lapsed) — returns **404** (the cases are indistinguishable by design). Applies to all tenant-scoped
+        routes under the `secured` profile; without it, anonymous requests resolve to the **default showcase**.
+
   schemas:
+    # Authentication
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: Unique login identifier for the account
+        password:
+          type: string
+          format: password
+          description: Plaintext password; stored only as a BCrypt hash
+      required:
+        - email
+        - password
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+      required:
+        - email
+        - password
+
+    RefreshRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          description: A valid, unrevoked refresh token previously issued by login or refresh
+      required:
+        - refreshToken
+
+    AuthTokens:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: "Short-lived JWT to send as `Authorization: Bearer <accessToken>`"
+        refreshToken:
+          type: string
+          description: Longer-lived, single-use, revocable token used to obtain a new access token
+        tokenType:
+          type: string
+          example: "Bearer"
+        expiresInMs:
+          type: integer
+          format: int64
+          description: Lifetime of the access token in milliseconds
+
+    AuthDataResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AuthTokens'
+        errors:
+          type: 'null'
+        roundTripMs:
+          type: integer
+          format: int64
+
+    RegisteredUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        email:
+          type: string
+          format: email
+
+    RegisterDataResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/RegisteredUser'
+        errors:
+          type: 'null'
+        roundTripMs:
+          type: integer
+          format: int64
+
+    CurrentUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: |
+            The caller's id. While impersonating, this (and `email`/`role`) is the **admin's** identity; the
+            impersonated user appears under `impersonating`.
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [GUEST, TRIAL, PAID, LAPSED, ADMIN]
+          description: The caller's effective per-request role. Always `ADMIN` while impersonating.
+        accessUntil:
+          type: integer
+          format: int64
+          nullable: true
+          description: |
+            The caller's access-window expiry as epoch milliseconds, or `null` for no window (e.g. an
+            admin-pinned account). This is the same `access_until` that drives the TRIAL/PAID/LAPSED derivation.
+            While impersonating, this is the **admin's** window (matching the primary `id`/`email`/`role`).
+        impersonating:
+          nullable: true
+          description: |
+            Present (non-null) only when an admin is impersonating another user via the `X-Act-As-Owner` header.
+            Carries the target user being acted as, so the front end can render that user's view while knowing an
+            admin is driving. `null` for a normal request.
+          allOf:
+            - $ref: '#/components/schemas/ImpersonatedUser'
+
+    ImpersonatedUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [GUEST, TRIAL, PAID, LAPSED, ADMIN]
+          description: The impersonated user's effective role (what that user sees in the app).
+
+    MeDataResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/CurrentUser'
+        errors:
+          type: 'null'
+        roundTripMs:
+          type: integer
+          format: int64
+
     # Common Components
     CustomFieldValue:
       type: object
@@ -2797,6 +3457,77 @@ components:
           all_fields: ["order_by", "order_by_desc"]
           pagination_fields: ["limit", "offset"]
 
+    # Admin Schemas
+    AdminUser:
+      type: object
+      description: A user account as exposed to the admin role-management API.
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        role:
+          type: string
+          enum: [GUEST, TRIAL, PAID, LAPSED, ADMIN]
+          description: The user's effective per-request role (already reflects any role override).
+        roleOverride:
+          type: string
+          enum: [GUEST, TRIAL, PAID, LAPSED, ADMIN]
+          nullable: true
+          description: The admin pin, or null when the role is auto-derived.
+        accessUntil:
+          type: integer
+          format: int64
+          nullable: true
+          description: Access window expiry as epoch milliseconds, or null for no window.
+        subscriptionStatus:
+          type: string
+          nullable: true
+          description: "Informational billing status (e.g. trialing, active, past_due), or null."
+        showcaseSlug:
+          type: string
+          nullable: true
+          pattern: '^[a-z0-9](-?[a-z0-9])*$'
+          description: The user's public showcase address, or null when their collection is private. Visible to viewers only while the user derives to PAID/ADMIN.
+        showcaseName:
+          type: string
+          nullable: true
+          description: The showcase's public display title, or null.
+
+    SetRoleOverrideRequest:
+      type: object
+      properties:
+        roleOverride:
+          type: string
+          enum: [GUEST, TRIAL, PAID, LAPSED, ADMIN]
+          nullable: true
+          description: The role to pin the user to, or null to clear the pin and revert to auto-derivation. At most one account may be pinned ADMIN (400 otherwise).
+
+    SetShowcaseRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+          nullable: true
+          pattern: '^[a-z0-9](-?[a-z0-9])*$'
+          description: The public address to grant (lowercase alphanumerics, single interior hyphens; unique across users), or null/blank to clear the grant.
+        name:
+          type: string
+          nullable: true
+          description: The display title shown by the public directory in place of the owner's email. Cleared along with the slug.
+
+    Showcase:
+      type: object
+      description: One visible public showcase, as listed by the directory. Deliberately excludes owner emails and every other account field.
+      properties:
+        slug:
+          type: string
+          description: The showcase's address — pass it in the `X-Showcase` header to browse the collection.
+        name:
+          type: string
+          nullable: true
+          description: The showcase's public display title.
+
     # Data Management Schemas
     BackupData:
       type: object
@@ -2999,6 +3730,8 @@ components:
 tags:
   - name: System
     description: Health check and system status endpoints
+  - name: Authentication
+    description: Account registration, login, and token refresh (public; required only under the secured profile)
   - name: Toys
     description: Manage toy collectibles
   - name: Systems
@@ -3019,3 +3752,7 @@ tags:
     description: Get filtering capabilities for entities
   - name: Data Management
     description: Backup, import, and data seeding operations
+  - name: Admin
+    description: Admin-only account management (list users, set/clear a user's role override, grant/clear a public showcase); requires the ADMIN role
+  - name: Showcases
+    description: The public showcase directory (no authentication required)

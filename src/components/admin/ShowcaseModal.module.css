@@ -1,0 +1,201 @@
+/* Dialog chrome mirrors StandardFieldsModal.module.css so the admin dialogs
+   look and move like the rest of the app's modals. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(var(--ink-navy-rgb), 0.42);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: sc-fade 0.14s ease;
+}
+
+@keyframes sc-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal {
+  width: 480px;
+  max-width: 100%;
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 30px 80px -20px rgba(var(--ink-navy-rgb), 0.5);
+  padding: 22px 24px 20px;
+  animation: sc-pop 0.16s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@keyframes sc-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .modal {
+    animation: none;
+  }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink-navy);
+  letter-spacing: -0.01em;
+}
+
+.close {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--cannon-red);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.close:hover {
+  background: #fdecec;
+}
+
+.hint {
+  margin: 0 0 16px;
+  font-size: 12.5px;
+  color: var(--gray-500);
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-navy);
+}
+
+.input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--ink-navy);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--cannon-red);
+}
+
+.fieldHint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--gray-500);
+}
+
+.warn {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.14);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.error {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--cannon-red);
+}
+
+.foot {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.clear {
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--cannon-red);
+  background: #fff;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--cannon-red);
+}
+
+.clear:hover:not(:disabled) {
+  background: #fdecec;
+}
+
+.cancel {
+  flex: 1;
+  height: 42px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink-navy);
+}
+
+.cancel:hover {
+  background: #f3f5f9;
+}
+
+.save {
+  flex: 1.4;
+  height: 42px;
+  border: none;
+  background: var(--primary-600);
+  color: #fff;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  transition: 0.12s;
+}
+
+.save:hover:not(:disabled) {
+  background: #205fd6;
+}
+
+.save:disabled {
+  background: #c6d4ea;
+  cursor: not-allowed;
+}

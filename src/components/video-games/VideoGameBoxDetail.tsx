@@ -31,6 +31,8 @@ import {
   StandardFieldGlyph,
 } from "@/components/custom-fields/registry";
 import { useToast } from "@/components/ToastProvider";
+import { useSession } from "@/components/auth/SessionProvider";
+import { bffFetch } from "@/lib/bffClient";
 import DeleteEntityButton from "@/components/detail/DeleteEntityButton";
 // Aliased: CustomFieldValue (the type) is already imported from the API types.
 import CustomFieldValueDisplay from "@/components/toys/CustomFieldValue";
@@ -67,6 +69,7 @@ export default function VideoGameBoxDetail({
   systems: System[];
 }) {
   const { showToast, showSnackbar } = useToast();
+  const { canWrite } = useSession();
   const [box, setBox] = useState<VideoGameBox>(initialBox);
   // The game whose delete confirmation menu is open, if any.
   const [confirmingGameId, setConfirmingGameId] = useState<number | null>(null);
@@ -112,7 +115,7 @@ export default function VideoGameBoxDetail({
         isPhysical: next.isPhysical,
         customFieldValues: next.customFieldValues,
       };
-      const res = await fetch(`/api/video-game-boxes/${next.id}`, {
+      const res = await bffFetch(`/api/video-game-boxes/${next.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
@@ -207,7 +210,7 @@ export default function VideoGameBoxDetail({
         isPhysical: box.isPhysical,
         customFieldValues: box.customFieldValues,
       };
-      const res = await fetch(`/api/video-game-boxes/${box.id}`, {
+      const res = await bffFetch(`/api/video-game-boxes/${box.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -255,7 +258,7 @@ export default function VideoGameBoxDetail({
         isPhysical: box.isPhysical,
         customFieldValues: box.customFieldValues,
       };
-      const res = await fetch(`/api/video-game-boxes/${box.id}`, {
+      const res = await bffFetch(`/api/video-game-boxes/${box.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -370,15 +373,24 @@ export default function VideoGameBoxDetail({
                     </span>
                   </div>
                   <div className={styles.rowval}>
-                    <FieldEditor
-                      field={{
-                        name: row.name,
-                        kind: row.kind,
-                        value: row.value,
-                        options: row.options,
-                      }}
-                      onCommit={row.onCommit}
-                    />
+                    {/* Editing is a write — guests/lapsed see the value read-only. */}
+                    {canWrite ? (
+                      <FieldEditor
+                        field={{
+                          name: row.name,
+                          kind: row.kind,
+                          value: row.value,
+                          options: row.options,
+                        }}
+                        onCommit={row.onCommit}
+                      />
+                    ) : (
+                      <CustomFieldValueDisplay
+                        type={row.kind}
+                        value={row.value}
+                        options={row.options}
+                      />
+                    )}
                   </div>
                 </div>
               );
@@ -394,22 +406,26 @@ export default function VideoGameBoxDetail({
           <div className={`${styles.card} ${localStyles.gamesCard}`}>
             <div className={styles.caphdr}>
               <span className={styles.caphdrTitle}>Video Games</span>
-              <div className={localStyles.headActions}>
-                <button
-                  type="button"
-                  className={localStyles.newBtn}
-                  onClick={() => setAddingExisting(true)}
-                >
-                  <PlusIcon aria-hidden="true" /> Add Existing Game
-                </button>
-                <button
-                  type="button"
-                  className={localStyles.newBtn}
-                  onClick={() => setCreating(true)}
-                >
-                  <PlusIcon aria-hidden="true" /> New Video Game
-                </button>
-              </div>
+              {/* Adding games (existing or new) is a write — only an active
+                  (Paid) account sees these controls. */}
+              {canWrite && (
+                <div className={localStyles.headActions}>
+                  <button
+                    type="button"
+                    className={localStyles.newBtn}
+                    onClick={() => setAddingExisting(true)}
+                  >
+                    <PlusIcon aria-hidden="true" /> Add Existing Game
+                  </button>
+                  <button
+                    type="button"
+                    className={localStyles.newBtn}
+                    onClick={() => setCreating(true)}
+                  >
+                    <PlusIcon aria-hidden="true" /> New Video Game
+                  </button>
+                </div>
+              )}
               <span className={`${styles.caphdrCount} ${localStyles.count}`}>
                 <b>{games.length}</b> {games.length === 1 ? "game" : "games"}
               </span>
@@ -458,7 +474,8 @@ export default function VideoGameBoxDetail({
                       </div>
                     </div>
 
-                    {games.length > 1 && (
+                    {/* Removing a game is a write — hidden for guests/lapsed. */}
+                    {canWrite && games.length > 1 && (
                       <div className={localStyles.delwrap}>
                         <button
                           type="button"

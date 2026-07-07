@@ -19,6 +19,8 @@ import DataTable, {
 } from "@/components/data-table/DataTable";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
+import { useSession } from "@/components/auth/SessionProvider";
+import { bffFetch } from "@/lib/bffClient";
 import BeginnerHint from "@/components/BeginnerHint";
 import { BEGINNER_HINTS } from "@/components/beginnerHints";
 import { PlusIcon } from "@/components/custom-fields/icons";
@@ -142,7 +144,7 @@ async function searchToysClient(
   filters: FilterRequestDto[],
   signal?: AbortSignal,
 ): Promise<Toy[]> {
-  const res = await fetch("/api/toys/search", {
+  const res = await bffFetch("/api/toys/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ filters }),
@@ -188,7 +190,12 @@ export default function ToysManager({
   const router = useRouter();
   const { showToast, showSnackbar } = useToast();
   const { settings } = useUiSettings();
+  const { canWrite } = useSession();
+  // Inline (mass) editing is a write, so it's available only to an active (Paid)
+  // account — even when the mass-edit UI setting is on, guests/lapsed see the
+  // grid read-only.
   const massEditMode = settings.massEditMode;
+  const massEditable = massEditMode && canWrite;
   const standardFields = settings.standardFields.toy;
   const [toys, setToys] = useState<Toy[]>([]);
   const [definitions, setDefinitions] = useState<CustomField[]>([]);
@@ -362,7 +369,7 @@ export default function ToysManager({
           set: field === "set" ? next : toy.set,
           customFieldValues: toy.customFieldValues,
         };
-        const res = await fetch(`/api/toys/${toy.id}`, {
+        const res = await bffFetch(`/api/toys/${toy.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(input),
@@ -420,7 +427,7 @@ export default function ToysManager({
           set: toy.set,
           customFieldValues,
         };
-        const res = await fetch(`/api/toys/${toy.id}`, {
+        const res = await bffFetch(`/api/toys/${toy.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(input),
@@ -455,7 +462,7 @@ export default function ToysManager({
     async (input: UpdateToyInput): Promise<boolean> => {
       setSaving(true);
       try {
-        const res = await fetch("/api/toys", {
+        const res = await bffFetch("/api/toys", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(input),
@@ -504,7 +511,7 @@ export default function ToysManager({
         width: 272,
         frozen: true,
         seam: true,
-        render: massEditMode
+        render: massEditable
           ? (toy) => renderEditable(toy, "name")
           : (toy) => toy.name,
       },
@@ -512,7 +519,7 @@ export default function ToysManager({
         key: "set",
         label: "Set",
         width: 200,
-        render: massEditMode
+        render: massEditable
           ? (toy) => renderEditable(toy, "set")
           : (toy) => toy.set,
       },
@@ -532,7 +539,7 @@ export default function ToysManager({
       const value = toy.customFieldValues.find(
         (cv) => cv.customFieldId === def.id,
       )?.value;
-      if (massEditMode && editableInline.includes(def.type)) {
+      if (massEditable && editableInline.includes(def.type)) {
         return (
           <FieldEditor
             field={{
@@ -573,7 +580,7 @@ export default function ToysManager({
     return [...base.filter((col) => !hidden.has(col.key)), ...dynamic];
   }, [
     definitions,
-    massEditMode,
+    massEditable,
     standardFields,
     editing,
     startEdit,
@@ -590,7 +597,7 @@ export default function ToysManager({
         <div className={styles.titleWrap}>
           <div className={styles.titleRow}>
             <h2 className={styles.entName}>{loading || searching ? "Loading…" : <><b>{toys.length}</b> {toys.length === 1 ? "Toy" : "Toys"}</>}</h2>
-            {massEditMode && (
+            {massEditable && (
               <BeginnerHint
                 placement="bottom-start"
                 text={BEGINNER_HINTS.massEdit}
@@ -610,11 +617,13 @@ export default function ToysManager({
           sorts={canSort ? sorts : undefined}
           onSortsChange={canSort ? setSorts : undefined}
         />
-        <div className={styles.actions}>
-          <Button className={styles.newBtn} onClick={() => setCreating(true)}>
-            <PlusIcon /> New
-          </Button>
-        </div>
+        {canWrite && (
+          <div className={styles.actions}>
+            <Button className={styles.newBtn} onClick={() => setCreating(true)}>
+              <PlusIcon /> New
+            </Button>
+          </div>
+        )}
       </div>
 
       <DataTable
@@ -630,11 +639,11 @@ export default function ToysManager({
         // the whole row navigates to the toy's detail page. Both routes are the
         // same — they just differ in affordance per mode.
         onOpenDetails={
-          massEditMode ? (toy) => router.push(`/toys/${toy.id}`) : undefined
+          massEditable ? (toy) => router.push(`/toys/${toy.id}`) : undefined
         }
         detailsLabel={(toy) => `View ${toy.name}`}
         onRowClick={
-          massEditMode ? undefined : (toy) => router.push(`/toys/${toy.id}`)
+          massEditable ? undefined : (toy) => router.push(`/toys/${toy.id}`)
         }
         rowClickLabel={(toy) => `View ${toy.name}`}
       />

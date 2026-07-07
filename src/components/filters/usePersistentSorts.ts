@@ -8,6 +8,7 @@ import {
   type SetStateAction,
 } from "react";
 import { newFilterId } from "./ids";
+import { SORTS_STORAGE_PREFIX } from "./persistedViews";
 import type { ActiveSort, SortDirection } from "./types";
 
 // A collection page's applied sort levels persist in localStorage so they survive
@@ -15,8 +16,9 @@ import type { ActiveSort, SortDirection } from "./types";
 // is a browser-only display preference (the per-entity *default* sort lives in the
 // backend ui store; this is only the page's own override), so localStorage is the
 // right home. Keyed per page (e.g. "sorts:toy") so each collection remembers its
-// own sort independently.
-const PREFIX = "sorts:";
+// own sort independently. The prefix is shared so a showcase switch can clear
+// these keys (see clearPersistedCollectionViews).
+const PREFIX = SORTS_STORAGE_PREFIX;
 
 // The minimal per-level shape stored: enough to rebuild the chip and the sort
 // request. The UI-local id is dropped (regenerated on restore) and the label is

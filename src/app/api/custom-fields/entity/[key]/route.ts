@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { listCustomFieldsByEntity, type EntityKey } from "@/lib/api";
+import { errorResponse } from "@/lib/bffError";
+import { listCustomFieldsByEntityOrEmpty, type EntityKey } from "@/lib/api";
 
 export async function GET(
   _request: Request,
@@ -7,11 +8,15 @@ export async function GET(
 ) {
   const { key } = await params;
   try {
-    const data = await listCustomFieldsByEntity(key as EntityKey);
+    // The OrEmpty variant degrades a 401/403 to "no custom fields": under the
+    // backend's `secured` profile /custom_fields requires a token, but this
+    // read feeds table columns and filter options for pages that anonymous
+    // visitors legitimately browse (the default showcase and public
+    // showcases). Rendering without custom columns beats failing the whole
+    // page load.
+    const data = await listCustomFieldsByEntityOrEmpty(key as EntityKey);
     return NextResponse.json({ status: "ok", data });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to load custom fields";
-    return NextResponse.json({ status: "error", message }, { status: 502 });
+    return errorResponse(error, "Failed to load custom fields");
   }
 }

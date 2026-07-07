@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import BeginnerHint from "./BeginnerHint";
+import AccountMenu from "./auth/AccountMenu";
+import { useSession } from "./auth/SessionProvider";
 import styles from "./Sidebar.module.css";
 import {
   VideoGamesIcon,
@@ -16,6 +18,14 @@ import {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  // While viewing a public showcase, Options (the VIEWER's own UI settings) is
+  // hidden — it isn't part of the collection on screen. Custom Fields stays: a
+  // showcase's fields are collection data, shown read-only like Systems and the
+  // rest (write controls are gated on canWrite, which is false in showcase mode).
+  // Options also requires a logged-in account — it manages the viewer's own
+  // settings and backups, which a guest has none of.
+  const { activeShowcase, isAuthenticated } = useSession();
+  const showcaseMode = activeShowcase != null;
 
   // Marks a nav link active when it matches the current URL, via both a style
   // hook and aria-current so the state is exposed to assistive tech.
@@ -68,10 +78,12 @@ export default function Sidebar() {
           <CustomFieldsIcon />
           Custom Fields
         </Link>
-        <Link href="/options" {...navProps("/options")}>
-          <OptionsIcon />
-          Options
-        </Link>
+        {showcaseMode || !isAuthenticated ? null : (
+          <Link href="/options" {...navProps("/options")}>
+            <OptionsIcon />
+            Options
+          </Link>
+        )}
       </nav>
 
       <BeginnerHint
@@ -79,6 +91,8 @@ export default function Sidebar() {
         placement="top-start"
         text="Beginner mode is on, click on this symbol to learn more about the best ways to use the pensieve, turn beginner mode off on the options page."
       />
+
+      <AccountMenu />
 
       <div className={styles.sideFoot}>A Seth Condie Project</div>
     </aside>

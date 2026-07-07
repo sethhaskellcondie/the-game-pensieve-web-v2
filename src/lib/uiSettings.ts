@@ -5,6 +5,7 @@
 // import shapes/defaults from "./uiSettings.types" instead.
 
 import { apiGetOrNull, apiPatch, apiPost } from "./api";
+import { resolveActiveShowcase } from "./serverShowcase";
 import {
   DEFAULT_UI_SETTINGS,
   UI_SETTINGS_KEY,
@@ -49,8 +50,24 @@ export async function updateUiSettings(settings: UiSettings): Promise<void> {
 // Reads the ui-settings metadata, creating it with all-false defaults if it does
 // not yet exist. Never throws: if the backend is unreachable or returns garbage,
 // it falls back to the defaults so the app always renders.
+//
+// While a public showcase is active the read is showcase-scoped (`X-Showcase`),
+// so the backend serves the fixed guest ui-settings for that read-only view
+// instead of the viewer's own. A showcase view is scoped to the owner as GUEST
+// and cannot write, so the create-if-missing branch is skipped there (an
+// anonymous POST would be a doomed write into the owner's namespace).
 export async function loadUiSettings(): Promise<UiSettings> {
   try {
+    const showcase = await resolveActiveShowcase();
+    if (showcase && !showcase.stale) {
+      const guest = await apiGetOrNull<MetadataRecord>(METADATA_PATH, {
+        showcaseScoped: true,
+      });
+      return guest
+        ? parseUiSettingsValue(guest.value)
+        : { ...DEFAULT_UI_SETTINGS };
+    }
+
     const existing = await apiGetOrNull<MetadataRecord>(METADATA_PATH);
     if (existing) {
       return parseUiSettingsValue(existing.value);

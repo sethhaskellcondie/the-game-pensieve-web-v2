@@ -19,6 +19,8 @@ import DataTable, {
 } from "@/components/data-table/DataTable";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
+import { useSession } from "@/components/auth/SessionProvider";
+import { bffFetch } from "@/lib/bffClient";
 import BeginnerHint from "@/components/BeginnerHint";
 import { BEGINNER_HINTS } from "@/components/beginnerHints";
 import { PlusIcon } from "@/components/custom-fields/icons";
@@ -141,7 +143,7 @@ async function searchSystemsClient(
   filters: FilterRequestDto[],
   signal?: AbortSignal,
 ): Promise<System[]> {
-  const res = await fetch("/api/systems/search", {
+  const res = await bffFetch("/api/systems/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ filters }),
@@ -187,7 +189,12 @@ export default function SystemsManager({
   const router = useRouter();
   const { showToast, showSnackbar } = useToast();
   const { settings } = useUiSettings();
+  const { canWrite } = useSession();
+  // Inline (mass) editing is a write, so it's available only to an active (Paid)
+  // account — even when the mass-edit UI setting is on, guests/lapsed see the
+  // grid read-only.
   const massEditMode = settings.massEditMode;
+  const massEditable = massEditMode && canWrite;
   const standardFields = settings.standardFields.system;
   const [systems, setSystems] = useState<System[]>([]);
   const [definitions, setDefinitions] = useState<CustomField[]>([]);
@@ -352,7 +359,7 @@ export default function SystemsManager({
           handheld: next.handheld,
           customFieldValues: next.customFieldValues,
         };
-        const res = await fetch(`/api/systems/${next.id}`, {
+        const res = await bffFetch(`/api/systems/${next.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(input),
@@ -443,7 +450,7 @@ export default function SystemsManager({
     async (input: UpdateSystemInput): Promise<boolean> => {
       setSaving(true);
       try {
-        const res = await fetch("/api/systems", {
+        const res = await bffFetch("/api/systems", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(input),
@@ -481,7 +488,7 @@ export default function SystemsManager({
         width: 272,
         frozen: true,
         seam: true,
-        render: massEditMode
+        render: massEditable
           ? (system) => (
               <EditableNameCell
                 system={system}
@@ -498,7 +505,7 @@ export default function SystemsManager({
         label: "Generation",
         width: MIN_COL,
         align: "right",
-        render: massEditMode
+        render: massEditable
           ? (system) => (
               <FieldEditor
                 field={{
@@ -520,7 +527,7 @@ export default function SystemsManager({
         key: "handheld",
         label: "Handheld",
         width: MIN_COL,
-        render: massEditMode
+        render: massEditable
           ? (system) => (
               <FieldEditor
                 field={{
@@ -554,7 +561,7 @@ export default function SystemsManager({
       const value = system.customFieldValues.find(
         (cv) => cv.customFieldId === def.id,
       )?.value;
-      if (massEditMode && editableInline.includes(def.type)) {
+      if (massEditable && editableInline.includes(def.type)) {
         return (
           <FieldEditor
             field={{
@@ -592,7 +599,7 @@ export default function SystemsManager({
     return [...base.filter((col) => !hidden.has(col.key)), ...dynamic];
   }, [
     definitions,
-    massEditMode,
+    massEditable,
     standardFields,
     editingId,
     commitName,
@@ -609,7 +616,7 @@ export default function SystemsManager({
         <div className={styles.titleWrap}>
           <div className={styles.titleRow}>
             <h2 className={styles.entName}>{loading || searching ? "Loading…" : <><b>{systems.length}</b> {systems.length === 1 ? "System" : "Systems"}</>}</h2>
-            {massEditMode && (
+            {massEditable && (
               <BeginnerHint
                 placement="bottom-start"
                 text={BEGINNER_HINTS.massEdit}
@@ -629,11 +636,13 @@ export default function SystemsManager({
           sorts={canSort ? sorts : undefined}
           onSortsChange={canSort ? setSorts : undefined}
         />
-        <div className={styles.actions}>
-          <Button className={styles.newBtn} onClick={() => setCreating(true)}>
-            <PlusIcon /> New
-          </Button>
-        </div>
+        {canWrite && (
+          <div className={styles.actions}>
+            <Button className={styles.newBtn} onClick={() => setCreating(true)}>
+              <PlusIcon /> New
+            </Button>
+          </div>
+        )}
       </div>
 
       <DataTable
@@ -651,13 +660,13 @@ export default function SystemsManager({
         // the whole row navigates to the system's detail page. Both routes are
         // the same — they just differ in affordance per mode.
         onOpenDetails={
-          massEditMode
+          massEditable
             ? (system) => router.push(`/systems/${system.id}`)
             : undefined
         }
         detailsLabel={(system) => `View ${system.name}`}
         onRowClick={
-          massEditMode
+          massEditable
             ? undefined
             : (system) => router.push(`/systems/${system.id}`)
         }

@@ -8,6 +8,8 @@ import type {
 } from "@/lib/api";
 import Button from "@/components/Button";
 import { useToast } from "@/components/ToastProvider";
+import { useSession } from "@/components/auth/SessionProvider";
+import { bffFetch } from "@/lib/bffClient";
 import { DEFAULT_ENTITY, ENTITY_META } from "./registry";
 import EntitySelect from "./EntitySelect";
 import KindBadge from "./KindBadge";
@@ -105,6 +107,9 @@ function loadErrorMessage(error: unknown): string {
 
 export default function CustomFieldsManager() {
   const { showToast, showSnackbar } = useToast();
+  // Custom fields are owner data: only an active (Paid) account may create,
+  // rename, reorder, or delete them. Guests/lapsed see the list read-only.
+  const { canWrite } = useSession();
   const [entityKey, setEntityKey] = useState<EntityKey>(DEFAULT_ENTITY);
   const [fields, setFields] = useState<CustomField[]>([]);
   const [loading, setLoading] = useState(true);
@@ -192,12 +197,12 @@ export default function CustomFieldsManager() {
     try {
       const res =
         payload.mode === "create"
-          ? await fetch("/api/custom-fields", {
+          ? await bffFetch("/api/custom-fields", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(payload.input),
             })
-          : await fetch(`/api/custom-fields/${payload.id}`, {
+          : await bffFetch(`/api/custom-fields/${payload.id}`, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(payload.input),
@@ -230,7 +235,7 @@ export default function CustomFieldsManager() {
     // Delete is applied optimistically, then resync on failure.
     setFields((fs) => fs.filter((f) => f.id !== field.id));
     try {
-      const res = await fetch(`/api/custom-fields/${field.id}`, {
+      const res = await bffFetch(`/api/custom-fields/${field.id}`, {
         method: "DELETE",
       });
       if (!res.ok) {
@@ -276,7 +281,7 @@ export default function CustomFieldsManager() {
     setFields((fs) => fs.map((f) => (f.id === field.id ? { ...f, name } : f)));
     try {
       const input: UpdateCustomFieldInput = { name, order: field.order };
-      const res = await fetch(`/api/custom-fields/${field.id}`, {
+      const res = await bffFetch(`/api/custom-fields/${field.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
@@ -310,7 +315,7 @@ export default function CustomFieldsManager() {
     const results = await Promise.allSettled(
       changed.map((f) => {
         const input: UpdateCustomFieldInput = { name: f.name, order: f.order };
-        return fetch(`/api/custom-fields/${f.id}`, {
+        return bffFetch(`/api/custom-fields/${f.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(input),
@@ -415,12 +420,15 @@ export default function CustomFieldsManager() {
             value={entityKey}
             onChange={handleEntityChange}
           />
-          <Button
-            className={styles.newBtn}
-            onClick={() => setModal({ mode: "create" })}
-          >
-            <PlusIcon /> New
-          </Button>
+          {/* Creating fields is a write — hidden for guests/lapsed. */}
+          {canWrite && (
+            <Button
+              className={styles.newBtn}
+              onClick={() => setModal({ mode: "create" })}
+            >
+              <PlusIcon /> New
+            </Button>
+          )}
         </div>
       </div>
 
@@ -497,28 +505,45 @@ export default function CustomFieldsManager() {
                     }}
                   >
                     <td
-                      className={`${styles.cell} ${styles.frozen} ${styles.orderCell}`}
+                      className={`${styles.cell} ${styles.frozen} ${styles.orderCell}${
+                        canWrite ? "" : ` ${styles.orderCellStatic}`
+                      }`}
                       style={{ left: frozenLeft.order }}
-                      draggable
-                      onDragStart={(e) => {
-                        setDragId(field.id);
-                        e.dataTransfer.effectAllowed = "move";
-                        e.dataTransfer.setData("text/plain", String(field.id));
-                        const tr = e.currentTarget.closest("tr");
-                        if (tr) e.dataTransfer.setDragImage(tr, 24, 18);
-                      }}
-                      onDragEnd={() => {
-                        setDragId(null);
-                        setOverInfo(null);
-                      }}
+                      // Reordering is a write — only draggable for Paid users.
+                      draggable={canWrite}
+                      onDragStart={
+                        canWrite
+                          ? (e) => {
+                              setDragId(field.id);
+                              e.dataTransfer.effectAllowed = "move";
+                              e.dataTransfer.setData(
+                                "text/plain",
+                                String(field.id),
+                              );
+                              const tr = e.currentTarget.closest("tr");
+                              if (tr) e.dataTransfer.setDragImage(tr, 24, 18);
+                            }
+                          : undefined
+                      }
+                      onDragEnd={
+                        canWrite
+                          ? () => {
+                              setDragId(null);
+                              setOverInfo(null);
+                            }
+                          : undefined
+                      }
                     >
                       <span className={styles.orderWrap}>
-                        <span
-                          className={styles.grip}
-                          aria-label={`Reorder ${field.name}`}
-                        >
-                          <GripIcon />
-                        </span>
+                        {/* The drag handle only appears when reordering is allowed. */}
+                        {canWrite && (
+                          <span
+                            className={styles.grip}
+                            aria-label={`Reorder ${field.name}`}
+                          >
+                            <GripIcon />
+                          </span>
+                        )}
                         <span className={styles.orderNum}>{i + 1}</span>
                       </span>
                     </td>
@@ -526,6 +551,8 @@ export default function CustomFieldsManager() {
                       className={`${styles.nameCell} ${styles.frozen} ${styles.seam}`}
                       style={{ left: frozenLeft.name }}
                     >
+                      {/* Renaming is a write: Paid users get the click-to-edit
+                          input; guests/lapsed see the name as plain text. */}
                       {editingNameId === field.id ? (
                         <input
                           className={styles.nameInput}
@@ -544,7 +571,7 @@ export default function CustomFieldsManager() {
                           }}
                           onBlur={() => void commitEditName(field)}
                         />
-                      ) : (
+                      ) : canWrite ? (
                         <button
                           type="button"
                           className={styles.name}
@@ -552,22 +579,34 @@ export default function CustomFieldsManager() {
                         >
                           {field.name}
                         </button>
+                      ) : (
+                        <span className={styles.name}>{field.name}</span>
                       )}
                     </td>
                     <td className={styles.cell}>
                       <KindBadge type={field.type} />
                     </td>
                     <td className={`${styles.cell} ${styles.optCell}`}>
-                      <button
-                        type="button"
-                        className={styles.optTrigger}
-                        aria-label={`Edit ${field.name}`}
-                        onClick={() => setModal({ mode: "edit", field })}
-                      >
+                      {/* Opening the edit modal is a write affordance: Paid
+                          users get the trigger, others see options read-only. */}
+                      {canWrite ? (
+                        <button
+                          type="button"
+                          className={styles.optTrigger}
+                          aria-label={`Edit ${field.name}`}
+                          onClick={() => setModal({ mode: "edit", field })}
+                        >
+                          <OptionList options={field.options} />
+                        </button>
+                      ) : (
                         <OptionList options={field.options} />
-                      </button>
+                      )}
                     </td>
                     <td className={styles.delCol}>
+                      {/* Deleting is a write — the control and its confirmation
+                          are hidden for guests/lapsed. */}
+                      {canWrite && (
+                        <>
                       <button
                         type="button"
                         className={styles.del}
@@ -616,6 +655,8 @@ export default function CustomFieldsManager() {
                             Delete
                           </button>
                         </div>
+                      )}
+                        </>
                       )}
                     </td>
                     <td className={styles.filler} />
