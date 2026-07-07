@@ -5,6 +5,7 @@
 // import shapes/helpers from "./savedFilters.types" instead.
 
 import { apiGetOrNull, apiPatch, apiPost } from "./api";
+import { resolveActiveShowcase } from "./serverShowcase";
 import {
   SAVED_FILTERS_KEY,
   DEFAULT_SAVED_FILTERS,
@@ -54,8 +55,25 @@ export async function updateSavedFilters(
 // Reads the saved filters, creating the (empty) entry if it does not yet exist.
 // Never throws: if the backend is unreachable or returns garbage, it falls back
 // to an empty list so the home page always renders.
+//
+// While a public showcase is active the read is showcase-scoped (`X-Showcase`),
+// so RLS returns the OWNER's saved filters — a guest sees, and stays in sync
+// with, whatever filters the owner has configured for the showcase. A showcase
+// view is scoped to the owner as GUEST and cannot write, so the create-if-missing
+// branch is skipped there (an anonymous POST would be a doomed write into the
+// owner's namespace); an owner with no entry falls back to an empty list.
 export async function loadSavedFilters(): Promise<StoredFilter[]> {
   try {
+    const showcase = await resolveActiveShowcase();
+    if (showcase && !showcase.stale) {
+      const owners = await apiGetOrNull<MetadataRecord>(METADATA_PATH, {
+        showcaseScoped: true,
+      });
+      return owners
+        ? parseSavedFiltersValue(owners.value)
+        : normalizeFilters([]);
+    }
+
     const existing = await apiGetOrNull<MetadataRecord>(METADATA_PATH);
     if (existing) {
       return parseSavedFiltersValue(existing.value);

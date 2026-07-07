@@ -6,6 +6,7 @@
 // "./defaultSortOptions.types" instead.
 
 import { apiGetOrNull, apiPatch, apiPost } from "./api";
+import { resolveActiveShowcase } from "./serverShowcase";
 import {
   DEFAULT_SORT_OPTIONS_KEY,
   EMPTY_DEFAULT_SORT_OPTIONS,
@@ -54,8 +55,25 @@ export async function updateDefaultSortOptions(
 // Reads the default_sort_options metadata, creating it with no defaults if it
 // does not yet exist. Never throws: if the backend is unreachable or returns
 // garbage, it falls back to no defaults so the collection pages always render.
+//
+// While a public showcase is active the read is showcase-scoped (`X-Showcase`),
+// so RLS returns the OWNER's default_sort_options row — a guest mirrors, and
+// stays in sync with, whatever sort the owner has configured. A showcase view is
+// scoped to the owner as GUEST and cannot write, so the create-if-missing branch
+// is skipped there (an anonymous POST would be a doomed write into the owner's
+// namespace); an owner with no row set just falls back to no defaults.
 export async function loadDefaultSortOptions(): Promise<DefaultSortOptions> {
   try {
+    const showcase = await resolveActiveShowcase();
+    if (showcase && !showcase.stale) {
+      const owners = await apiGetOrNull<MetadataRecord>(METADATA_PATH, {
+        showcaseScoped: true,
+      });
+      return owners
+        ? parseDefaultSortOptionsValue(owners.value)
+        : { ...EMPTY_DEFAULT_SORT_OPTIONS };
+    }
+
     const existing = await apiGetOrNull<MetadataRecord>(METADATA_PATH);
     if (existing) {
       return parseDefaultSortOptionsValue(existing.value);

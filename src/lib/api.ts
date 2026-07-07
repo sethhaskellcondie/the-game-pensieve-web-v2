@@ -81,11 +81,13 @@ function resolveActAsOwner(): Promise<number | null> {
 // + src/instrumentation.ts). The default resolves to no showcase. The header is
 // attached ONLY to calls that opt in with `showcaseScoped: true` — collection
 // data (entity search/get, filter specs, custom-field definitions feeding table
-// columns). Personal routes (auth, admin, ui-settings, saved filters, backup,
-// import) must never send it: `X-Showcase` scopes the WHOLE request to the
-// showcase owner as GUEST, so a metadata call carrying it would read the
-// owner's settings instead of the viewer's. Opt-in (rather than a URL denylist)
-// keeps new endpoints personal by default.
+// columns) and the read-only showcase metadata views the loaders scope while a
+// showcase is active (ui-settings, default_sort_options, saved-filters,
+// saved-filter-categories) so a guest sees the OWNER's configured showcase.
+// Truly personal routes (auth, admin, backup, import) must never send it:
+// `X-Showcase` scopes the WHOLE request to the showcase owner as GUEST, so a
+// call carrying it reads the owner's data, not the viewer's. Opt-in (rather than
+// a URL denylist) keeps new endpoints personal by default.
 type ShowcaseResolver = () => Promise<string | null>;
 
 const DEFAULT_SHOWCASE_RESOLVER: ShowcaseResolver = async () => null;
