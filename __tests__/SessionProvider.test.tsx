@@ -34,6 +34,7 @@ function renderWith(
   const view: SessionView = {
     isImpersonating: false,
     impersonatedEmail: null,
+    accessUntil: null,
     activeShowcase: null,
     ...initial,
   };

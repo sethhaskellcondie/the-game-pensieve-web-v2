@@ -135,7 +135,7 @@ describe("POST /api/showcase/select", () => {
       impersonatingUserId: 42,
       impersonatedEmail: "user@x.z",
     });
-    mockFetchMe.mockResolvedValue({ role: "admin", impersonatedEmail: null });
+    mockFetchMe.mockResolvedValue({ role: "admin", impersonatedEmail: null, accessUntil: null });
 
     const res = await POST(selectRequest({ slug: "showcase-two" }));
     expect(res.status).toBe(200);

@@ -19,10 +19,14 @@ export async function POST() {
   session.impersonatingUserId = undefined;
   session.impersonatedEmail = undefined;
 
-  // Restore the admin's own effective role. On a transient probe failure we keep
-  // the stale role; the next token refresh (now header-free) corrects it.
+  // Restore the admin's own effective role (and plan expiry). On a transient
+  // probe failure we keep the stale role; the next token refresh (now
+  // header-free) corrects it.
   const me = await fetchMe(session.accessToken);
-  if (me) session.role = me.role;
+  if (me) {
+    session.role = me.role;
+    session.accessUntil = me.accessUntil ?? undefined;
+  }
   await session.save();
 
   return NextResponse.json({ status: "ok", data: toSessionView(session) });

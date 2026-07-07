@@ -46,6 +46,7 @@ export async function loadSessionView(): Promise<SessionView> {
       email: null,
       isImpersonating: false,
       impersonatedEmail: null,
+      accessUntil: null,
       activeShowcase,
     };
   }

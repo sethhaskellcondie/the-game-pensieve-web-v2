@@ -16,6 +16,7 @@ function renderWith(
     email: null,
     isImpersonating: false,
     impersonatedEmail: null,
+    accessUntil: null,
     activeShowcase: null,
     ...initial,
   };

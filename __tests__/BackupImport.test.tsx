@@ -489,6 +489,7 @@ describe("BackupImport", () => {
             email: "a@b.c",
             isImpersonating: false,
             impersonatedEmail: null,
+            accessUntil: null,
             activeShowcase: null,
           }}
         >

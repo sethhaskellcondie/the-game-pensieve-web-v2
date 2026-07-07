@@ -34,14 +34,24 @@ describe("fetchMe", () => {
   it("returns the caller's own role on a normal request (no act-as header)", async () => {
     const mockFetch = jest.fn(async () =>
       jsonResponse({
-        data: { id: 1, email: "me@x.com", role: "PAID", impersonating: null },
+        data: {
+          id: 1,
+          email: "me@x.com",
+          role: "PAID",
+          accessUntil: 1785484800000,
+          impersonating: null,
+        },
         errors: null,
       }),
     );
     global.fetch = mockFetch as unknown as typeof fetch;
 
     const me = await fetchMe("tok");
-    expect(me).toEqual({ role: "paid", impersonatedEmail: null });
+    expect(me).toEqual({
+      role: "paid",
+      impersonatedEmail: null,
+      accessUntil: 1785484800000,
+    });
 
     const [, init] = mockFetch.mock.calls[0] as unknown as [string, RequestInit];
     expect((init.headers as Record<string, string>)["X-Act-As-Owner"]).toBeUndefined();
@@ -54,6 +64,7 @@ describe("fetchMe", () => {
           id: 1,
           email: "admin@x.com",
           role: "ADMIN",
+          accessUntil: 1785484800000,
           impersonating: { id: 42, email: "user@x.com", role: "LAPSED" },
         },
         errors: null,
@@ -63,7 +74,12 @@ describe("fetchMe", () => {
 
     const me = await fetchMe("tok", 42);
     // Effective role is the target's (LAPSED), and we surface the target email.
-    expect(me).toEqual({ role: "lapsed", impersonatedEmail: "user@x.com" });
+    // accessUntil stays the primary (admin's) window, matching the identity.
+    expect(me).toEqual({
+      role: "lapsed",
+      impersonatedEmail: "user@x.com",
+      accessUntil: 1785484800000,
+    });
 
     const [url, init] = mockFetch.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("http://backend.test/v1/auth/me");
@@ -76,6 +92,8 @@ describe("fetchMe", () => {
     // can detect the no-op and back out.
     const mockFetch = jest.fn(async () =>
       jsonResponse({
+        // No accessUntil on the payload — an admin-pinned account has no window,
+        // so fetchMe must surface null (not undefined).
         data: { id: 1, email: "admin@x.com", role: "ADMIN", impersonating: null },
         errors: null,
       }),
@@ -83,7 +101,7 @@ describe("fetchMe", () => {
     global.fetch = mockFetch as unknown as typeof fetch;
 
     const me = await fetchMe("tok", 999);
-    expect(me).toEqual({ role: "admin", impersonatedEmail: null });
+    expect(me).toEqual({ role: "admin", impersonatedEmail: null, accessUntil: null });
   });
 
   it("returns null on a non-OK response (transient) so callers keep their role", async () => {

@@ -4,13 +4,20 @@ import OptionsPage from "@/app/options/page";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
 import { readShowcaseSlug } from "@/lib/serverShowcase";
+import { loadSessionView } from "@/lib/session";
 import { redirect } from "next/navigation";
 
-// The page is an async server component only because of its showcase-mode
-// redirect check; with the cookie read mocked it resolves synchronously and the
-// rendered tree stays coverable here (per the project's testing notes).
+// The page is an async server component only because of its showcase-mode and
+// auth redirect checks; with the cookie read and session view mocked it
+// resolves synchronously and the rendered tree stays coverable here (per the
+// project's testing notes). @/lib/session is mocked to keep iron-session (an
+// ESM-only dep) out of the jsdom test runtime.
 jest.mock("@/lib/serverShowcase", () => ({
   readShowcaseSlug: jest.fn(),
+}));
+
+jest.mock("@/lib/session", () => ({
+  loadSessionView: jest.fn(),
 }));
 
 jest.mock("next/navigation", () => ({
@@ -22,11 +29,24 @@ jest.mock("next/navigation", () => ({
 const mockReadShowcaseSlug = readShowcaseSlug as jest.MockedFunction<
   typeof readShowcaseSlug
 >;
+const mockLoadSessionView = loadSessionView as jest.MockedFunction<
+  typeof loadSessionView
+>;
 const mockRedirect = redirect as unknown as jest.Mock;
 
 describe("OptionsPage", () => {
   beforeEach(() => {
     mockReadShowcaseSlug.mockResolvedValue(null);
+    // Options is authenticated-only; default the render tests to a signed-in
+    // account so the page renders instead of redirecting to /login.
+    mockLoadSessionView.mockResolvedValue({
+      role: "paid",
+      email: "collector@example.com",
+      isImpersonating: false,
+      impersonatedEmail: null,
+      accessUntil: null,
+      activeShowcase: null,
+    });
     mockRedirect.mockClear();
     // The Default Sort Options section fetches its data on mount; a pending
     // promise keeps it in its initial (disabled) state for these render tests.
@@ -95,5 +115,18 @@ describe("OptionsPage", () => {
     mockReadShowcaseSlug.mockResolvedValue("showcase-one");
     await expect(OptionsPage()).rejects.toThrow("NEXT_REDIRECT");
     expect(mockRedirect).toHaveBeenCalledWith("/");
+  });
+
+  it("redirects a guest to login (Options is authenticated-only)", async () => {
+    mockLoadSessionView.mockResolvedValue({
+      role: "guest",
+      email: null,
+      isImpersonating: false,
+      impersonatedEmail: null,
+      accessUntil: null,
+      activeShowcase: null,
+    });
+    await expect(OptionsPage()).rejects.toThrow("NEXT_REDIRECT");
+    expect(mockRedirect).toHaveBeenCalledWith("/login");
   });
 });

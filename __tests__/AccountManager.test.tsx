@@ -15,6 +15,7 @@ function renderWith(
   const view: SessionView = {
     isImpersonating: false,
     impersonatedEmail: null,
+    accessUntil: null,
     activeShowcase: null,
     ...initial,
   };
@@ -53,5 +54,42 @@ describe("AccountManager", () => {
     expect(
       screen.queryByRole("link", { name: "Admin Dashboard" }),
     ).not.toBeInTheDocument();
+  });
+
+  const DAY = 24 * 60 * 60 * 1000;
+
+  it("shows how long a paid plan stays active, without a hint when far off", () => {
+    renderWith({
+      role: "paid",
+      email: "collector@example.com",
+      accessUntil: Date.now() + 400 * DAY,
+    });
+    expect(screen.getByText("Active until")).toBeInTheDocument();
+    // More than 30 days out: the date alone, no "days left" hint.
+    expect(screen.queryByText(/left/)).not.toBeInTheDocument();
+  });
+
+  it("adds a days-left hint for a trial ending within 30 days", () => {
+    renderWith({
+      role: "trial",
+      email: "collector@example.com",
+      accessUntil: Date.now() + 10 * DAY,
+    });
+    expect(screen.getByText("Active until")).toBeInTheDocument();
+    expect(screen.getByText(/days left/)).toBeInTheDocument();
+  });
+
+  it("hides the active-until row for a lapsed account", () => {
+    renderWith({
+      role: "lapsed",
+      email: "collector@example.com",
+      accessUntil: Date.now() - 5 * DAY,
+    });
+    expect(screen.queryByText("Active until")).not.toBeInTheDocument();
+  });
+
+  it("hides the active-until row for an admin (no window)", () => {
+    renderWith({ role: "admin", email: "boss@example.com", accessUntil: null });
+    expect(screen.queryByText("Active until")).not.toBeInTheDocument();
   });
 });

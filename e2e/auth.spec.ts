@@ -73,6 +73,10 @@ test.describe("Trial tier (new account)", () => {
     ).toBeVisible();
     await expect(page.getByText(email)).toBeVisible();
     await expect(page.getByLabel("Plan: Trial")).toBeVisible();
+    // A trial account shows how long the plan stays active. The default trial
+    // window is 30 days, so the days-left hint renders alongside the date.
+    await expect(page.getByText("Active until")).toBeVisible();
+    await expect(page.getByText(/left\)/)).toBeVisible();
 
     // Write controls are available to TRIAL users.
     await page.goto("/toys");
@@ -81,9 +85,39 @@ test.describe("Trial tier (new account)", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.keyboard.press("Escape");
 
-    // Logout returns to Guest.
+    // Seed a persisted collection view, as if this trial session had filtered
+    // or sorted a page. Logout must drop these — they reference the user's own
+    // (possibly custom) fields, which the default showcase doesn't define.
+    await page.evaluate(() => {
+      localStorage.setItem("filters:toy", "[]");
+      localStorage.setItem("sorts:toy", "[]");
+    });
+
+    // Logout returns to Guest and hard-navigates home, so the page reloads as
+    // the default showcase (its own metadata + filters), not the user's data.
     await page.getByRole("button", { name: "Log out" }).click();
     await expect(page.getByLabel("Plan: Guest")).toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
+
+    // The logged-in session's persisted filters/sorts were cleared on the way
+    // out, so nothing stale reloads for the default showcase.
+    const leftoverViews = await page.evaluate(() =>
+      Object.keys(localStorage).filter(
+        (k) => k.startsWith("filters:") || k.startsWith("sorts:"),
+      ),
+    );
+    expect(leftoverViews).toEqual([]);
+
+    // The reloaded collection view is the default showcase's, read-only: no
+    // write control, but a guest may still filter it.
+    await page.goto("/toys");
+    await expect(
+      page.getByText("You’re viewing the public showcase."),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "New" })).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Add filter" }),
+    ).toBeEnabled();
   });
 });
 

@@ -76,7 +76,10 @@ export async function POST(request: Request) {
     session.impersonatingUserId = undefined;
     session.impersonatedEmail = undefined;
     const me = await fetchMe(session.accessToken);
-    if (me) session.role = me.role;
+    if (me) {
+      session.role = me.role;
+      session.accessUntil = me.accessUntil ?? undefined;
+    }
     await session.save();
   }
 

@@ -61,9 +61,11 @@ export async function POST(request: Request) {
   }
 
   // Store the EFFECTIVE (target's) role so the capability matrix mirrors what
-  // the backend will allow, plus the target's email for the banner.
+  // the backend will allow, plus the target's email for the banner. accessUntil
+  // stays the admin's own window (the backend reports the primary identity's).
   session.role = me.role;
   session.impersonatedEmail = me.impersonatedEmail;
+  session.accessUntil = me.accessUntil ?? undefined;
   await session.save();
 
   // Impersonation and a showcase view are mutually exclusive states (the

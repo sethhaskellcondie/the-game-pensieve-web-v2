@@ -280,8 +280,9 @@ paths:
         - Authentication
       summary: Get the current caller's identity and effective role
       description: |
-        Return the authenticated caller's `id`, `email`, and effective `role`. The role is resolved per-request
-        the same way every other request resolves it, so the caller never has to re-derive it from billing state.
+        Return the authenticated caller's `id`, `email`, effective `role`, and `accessUntil` (the access-window
+        expiry, epoch milliseconds, or `null` for no window). The role is resolved per-request the same way every
+        other request resolves it, so the caller never has to re-derive it from billing state.
         Under the `secured` profile this requires a valid `Bearer` access token (an anonymous call returns 401).
         In the default (unsecured) build there is no authentication, so the request resolves to the seeded public
         showcase owner and always reports the `GUEST` role.
@@ -306,6 +307,7 @@ paths:
                       id: 42
                       email: "collector@example.com"
                       role: "TRIAL"
+                      accessUntil: 1785484800000
                       impersonating: null
                     errors: null
                     roundTripMs: 6
@@ -316,6 +318,7 @@ paths:
                       id: 1
                       email: "admin@example.com"
                       role: "ADMIN"
+                      accessUntil: null
                       impersonating:
                         id: 42
                         email: "collector@example.com"
@@ -2646,6 +2649,14 @@ components:
           type: string
           enum: [GUEST, TRIAL, PAID, LAPSED, ADMIN]
           description: The caller's effective per-request role. Always `ADMIN` while impersonating.
+        accessUntil:
+          type: integer
+          format: int64
+          nullable: true
+          description: |
+            The caller's access-window expiry as epoch milliseconds, or `null` for no window (e.g. an
+            admin-pinned account). This is the same `access_until` that drives the TRIAL/PAID/LAPSED derivation.
+            While impersonating, this is the **admin's** window (matching the primary `id`/`email`/`role`).
         impersonating:
           nullable: true
           description: |

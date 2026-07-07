@@ -22,7 +22,9 @@ export default function Sidebar() {
   // hidden — it isn't part of the collection on screen. Custom Fields stays: a
   // showcase's fields are collection data, shown read-only like Systems and the
   // rest (write controls are gated on canWrite, which is false in showcase mode).
-  const { activeShowcase } = useSession();
+  // Options also requires a logged-in account — it manages the viewer's own
+  // settings and backups, which a guest has none of.
+  const { activeShowcase, isAuthenticated } = useSession();
   const showcaseMode = activeShowcase != null;
 
   // Marks a nav link active when it matches the current URL, via both a style
@@ -76,7 +78,7 @@ export default function Sidebar() {
           <CustomFieldsIcon />
           Custom Fields
         </Link>
-        {showcaseMode ? null : (
+        {showcaseMode || !isAuthenticated ? null : (
           <Link href="/options" {...navProps("/options")}>
             <OptionsIcon />
             Options

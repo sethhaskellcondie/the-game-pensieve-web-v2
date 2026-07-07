@@ -75,6 +75,9 @@ type SessionContextValue = Capabilities & {
   isImpersonating: boolean;
   // The impersonated user's email (for the banner), or null when not active.
   impersonatedEmail: string | null;
+  // The logged-in account's plan expiry (epoch ms), or null when there's no
+  // window (guest, or an admin-pinned role). Surfaced on the account page.
+  accessUntil: number | null;
   // The public showcase currently being viewed (read-only), or null in the
   // home state (own collection / default showcase).
   activeShowcase: ActiveShowcase | null;
@@ -111,6 +114,7 @@ const SessionContext = createContext<SessionContextValue>({
   isAuthenticated: true,
   isImpersonating: false,
   impersonatedEmail: null,
+  accessUntil: null,
   activeShowcase: null,
   selectShowcase: async () => false,
   stopImpersonating: async () => {},
@@ -146,6 +150,9 @@ export function SessionProvider({
   const [impersonatedEmail, setImpersonatedEmail] = useState<string | null>(
     initial.impersonatedEmail,
   );
+  const [accessUntil, setAccessUntil] = useState<number | null>(
+    initial.accessUntil,
+  );
   const [activeShowcase, setActiveShowcase] = useState<ActiveShowcase | null>(
     initial.activeShowcase,
   );
@@ -170,6 +177,7 @@ export function SessionProvider({
         setEmail(body.data.email);
         setIsImpersonating(body.data.isImpersonating);
         setImpersonatedEmail(body.data.impersonatedEmail);
+        setAccessUntil(body.data.accessUntil ?? null);
         setActiveShowcase(body.data.activeShowcase ?? null);
         return body.data.role;
       }
@@ -295,6 +303,7 @@ export function SessionProvider({
       isAuthenticated: role !== "guest",
       isImpersonating,
       impersonatedEmail,
+      accessUntil,
       activeShowcase,
       selectShowcase,
       stopImpersonating,
@@ -308,6 +317,7 @@ export function SessionProvider({
       email,
       isImpersonating,
       impersonatedEmail,
+      accessUntil,
       activeShowcase,
       selectShowcase,
       stopImpersonating,

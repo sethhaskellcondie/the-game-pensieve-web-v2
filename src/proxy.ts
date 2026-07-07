@@ -49,6 +49,8 @@ export async function proxy(request: NextRequest) {
     const me = await fetchMe(tokens.accessToken, session.impersonatingUserId);
     if (me) {
       session.role = me.role;
+      // Keep the plan expiry fresh too — a purchase/renewal (or lapse) moves it.
+      session.accessUntil = me.accessUntil ?? undefined;
       if (session.impersonatingUserId != null) {
         if (me.impersonatedEmail) {
           session.impersonatedEmail = me.impersonatedEmail;

@@ -107,15 +107,22 @@ export type CurrentUser = {
   id: number;
   email: string;
   role: Role;
+  // The logged-in account's access-window expiry (epoch ms), or null for no
+  // window. Describes the primary identity — the admin's while impersonating.
+  accessUntil: number | null;
   impersonating: { id: number; email: string; role: Role } | null;
 };
 
 // The interpreted result of `GET /v1/auth/me`. `role` is the EFFECTIVE role to
 // store/gate on — the target's while impersonating, the caller's own otherwise.
 // `impersonatedEmail` is the target's email while impersonating, else null.
+// `accessUntil` is the logged-in account's plan expiry (epoch ms), or null when
+// there's no window (e.g. an admin-pinned role); it tracks the primary identity
+// like `email`, so it's the admin's value while impersonating.
 export type ResolvedMe = {
   role: StoredRole;
   impersonatedEmail: string | null;
+  accessUntil: number | null;
 };
 
 function resolveRole(raw: string | undefined): StoredRole | null {
@@ -160,11 +167,14 @@ export async function fetchMe(
       console.warn(`[auth] GET /v1/auth/me returned no data; role could not be resolved.`);
       return null;
     }
+    const accessUntil = data.accessUntil ?? null;
     if (data.impersonating) {
       // The backend confirmed an active impersonation — render as the target.
+      // accessUntil stays the primary (admin's) window, matching the identity.
       return {
         role: resolveRole(data.impersonating.role) ?? "unknown",
         impersonatedEmail: data.impersonating.email,
+        accessUntil,
       };
     }
     const resolved = resolveRole(data.role);
@@ -175,7 +185,7 @@ export async function fetchMe(
       );
       return null;
     }
-    return { role: resolved, impersonatedEmail: null };
+    return { role: resolved, impersonatedEmail: null, accessUntil };
   } catch (error) {
     console.warn(`[auth] GET /v1/auth/me request errored; role could not be resolved.`, error);
     return null;

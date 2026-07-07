@@ -27,6 +27,7 @@ function renderFor(role: Role) {
         email: null,
         isImpersonating: false,
         impersonatedEmail: null,
+        accessUntil: null,
         activeShowcase: null,
       }}
     >

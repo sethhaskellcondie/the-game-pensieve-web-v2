@@ -30,43 +30,49 @@ describe("toSessionView", () => {
       email: null,
       isImpersonating: false,
       impersonatedEmail: null,
+      accessUntil: null,
       activeShowcase: null,
     });
   });
 
-  it("maps an authenticated session to its role + email", () => {
+  it("maps an authenticated session to its role, email, and plan expiry", () => {
     const session: SessionData = {
       accessToken: "a",
       refreshToken: "r",
       email: "collector@example.com",
       role: "lapsed",
+      accessUntil: 1785484800000,
     };
     expect(toSessionView(session)).toEqual({
       role: "lapsed",
       email: "collector@example.com",
       isImpersonating: false,
       impersonatedEmail: null,
+      accessUntil: 1785484800000,
       activeShowcase: null,
     });
   });
 
-  it("omits the email when not authenticated even if one lingers", () => {
-    expect(toSessionView({ email: "x@y.z" })).toEqual({
+  it("omits the email and expiry when not authenticated even if they linger", () => {
+    expect(toSessionView({ email: "x@y.z", accessUntil: 1785484800000 })).toEqual({
       role: "guest",
       email: null,
       isImpersonating: false,
       impersonatedEmail: null,
+      accessUntil: null,
       activeShowcase: null,
     });
   });
 
-  it("reports impersonation with the admin email and target's effective role", () => {
-    // While impersonating, `email` stays the admin's and `role` is the target's
-    // (the BFF overwrote it); the view exposes the target via impersonatedEmail.
+  it("reports impersonation with the admin email, expiry, and target's role", () => {
+    // While impersonating, `email`/`accessUntil` stay the admin's and `role` is
+    // the target's (the BFF overwrote it); the view exposes the target via
+    // impersonatedEmail.
     const session: SessionData = {
       accessToken: "a",
       email: "admin@example.com",
       role: "paid",
+      accessUntil: 1785484800000,
       impersonatingUserId: 42,
       impersonatedEmail: "user@example.com",
     };
@@ -75,6 +81,7 @@ describe("toSessionView", () => {
       email: "admin@example.com",
       isImpersonating: true,
       impersonatedEmail: "user@example.com",
+      accessUntil: 1785484800000,
       activeShowcase: null,
     });
   });
@@ -86,6 +93,7 @@ describe("toSessionView", () => {
       email: null,
       isImpersonating: false,
       impersonatedEmail: null,
+      accessUntil: null,
       activeShowcase: active,
     });
     // Authenticated viewers browse showcases too — the selection is orthogonal
@@ -97,6 +105,7 @@ describe("toSessionView", () => {
       email: "c@x.z",
       isImpersonating: false,
       impersonatedEmail: null,
+      accessUntil: null,
       activeShowcase: active,
     });
   });
@@ -109,6 +118,7 @@ describe("toSessionView", () => {
       email: null,
       isImpersonating: false,
       impersonatedEmail: null,
+      accessUntil: null,
       activeShowcase: null,
     });
   });

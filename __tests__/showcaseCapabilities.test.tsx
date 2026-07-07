@@ -74,6 +74,7 @@ describe("SessionProvider with an active showcase", () => {
       email: "collector@example.com",
       isImpersonating: false,
       impersonatedEmail: null,
+      accessUntil: null,
       activeShowcase: ACTIVE,
     };
     render(

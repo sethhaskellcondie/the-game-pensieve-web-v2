@@ -1,8 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "./SessionProvider";
+import { clearPersistedCollectionViews } from "@/components/filters/persistedViews";
 import PlanBadge from "./PlanBadge";
 import styles from "./AccountMenu.module.css";
 
@@ -10,8 +10,7 @@ import styles from "./AccountMenu.module.css";
 // relevant auth actions (log in/sign up for guests; log out — plus an upgrade
 // nudge when lapsed or on a trial — for authenticated users).
 export default function AccountMenu() {
-  const router = useRouter();
-  const { role, email, isAuthenticated, refresh } = useSession();
+  const { role, email, isAuthenticated } = useSession();
   // Lapsed accounts upgrade to regain write/filter; trials upgrade to unlock
   // import (and lock in before the window ends).
   const showUpgrade = role === "lapsed" || role === "trial";
@@ -20,11 +19,18 @@ export default function AccountMenu() {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } catch {
-      // ignore — we clear client state regardless below
+      // ignore — we hard-navigate below regardless
     }
-    await refresh();
-    router.push("/");
-    router.refresh();
+    // Logging out swaps the home context from the user's own collection to the
+    // default public showcase, which has its own fields — drop the previous
+    // session's persisted filters/sorts so a stale custom-field condition isn't
+    // reapplied against a collection that lacks that field.
+    clearPersistedCollectionViews();
+    // Full navigation (not router.refresh): every server component must
+    // re-render as a guest so the home page reloads the default showcase's
+    // metadata (ui_settings, sort options) and filters (saved filters, custom
+    // fields) cleanly.
+    window.location.assign("/");
   }
 
   return (

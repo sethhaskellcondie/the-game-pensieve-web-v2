@@ -37,6 +37,10 @@ export type SessionData = {
   accessTokenExpiresAt?: number;
   email?: string;
   role?: StoredRole;
+  // The logged-in account's plan expiry (`access_until`) as epoch ms, or absent
+  // for no window. Like `email` it describes the primary identity — the admin's
+  // while impersonating — and is re-read from GET /v1/auth/me on every refresh.
+  accessUntil?: number;
   impersonatingUserId?: number;
   impersonatedEmail?: string;
 };
@@ -68,6 +72,10 @@ export type SessionView = {
   email: string | null;
   isImpersonating: boolean;
   impersonatedEmail: string | null;
+  // The logged-in account's plan expiry (epoch ms), or null when there's no
+  // window (guest, or an admin-pinned role). Drives the account page's "active
+  // until" line.
+  accessUntil: number | null;
   activeShowcase: ActiveShowcase | null;
 };
 
@@ -121,6 +129,7 @@ export function toSessionView(
     email: authed ? (session.email ?? null) : null,
     isImpersonating: impersonating,
     impersonatedEmail: impersonating ? (session.impersonatedEmail ?? null) : null,
+    accessUntil: authed ? (session.accessUntil ?? null) : null,
     activeShowcase,
   };
 }
