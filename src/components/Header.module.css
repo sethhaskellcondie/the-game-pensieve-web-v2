@@ -186,3 +186,52 @@
   color: rgba(var(--white-rgb), 0.82);
   letter-spacing: 0.5px;
 }
+
+/* Compact hero below the mobile breakpoint (keep in sync with
+   MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts): the desktop padding and
+   88px mark would eat most of a phone screen before any content appears.
+   Mobile shows only the icon and title — the tagline is dropped, and header
+   children (the List/Shelf cluster, home-page stats) flow inline after the
+   hero, wrapping left underneath it when they don't fit. */
+@media (max-width: 767px) {
+  .header {
+    padding: 18px 16px;
+  }
+
+  .content {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 14px;
+    row-gap: 12px;
+  }
+
+  .heroTop {
+    gap: 14px;
+  }
+
+  .heroMark {
+    flex: 0 0 56px;
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+  }
+
+  .heroMark svg {
+    width: 30px;
+    height: 30px;
+  }
+
+  .heroMark img {
+    width: 48px;
+    height: 48px;
+  }
+
+  .heroTitle {
+    font-size: 20px;
+  }
+
+  .tag {
+    display: none;
+  }
+}

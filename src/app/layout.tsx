@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Press_Start_2P } from "next/font/google";
 import Sidebar from "@/components/Sidebar";
+import MobileNav from "@/components/MobileNav";
 import { ToastProvider } from "@/components/ToastProvider";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { SessionProvider } from "@/components/auth/SessionProvider";
@@ -65,6 +66,9 @@ export default async function RootLayout({
           <SessionProvider initial={sessionView}>
             <UiSettingsProvider initial={uiSettings}>
               <div className={styles.layout}>
+                {/* Exactly one of these is shown, switched purely in CSS at the
+                    mobile breakpoint — see layout.module.css. */}
+                <MobileNav />
                 <Sidebar />
                 <div className={styles.main}>
                   <ImpersonationBanner />

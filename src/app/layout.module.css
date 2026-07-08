@@ -12,3 +12,17 @@
   flex-direction: column;
   min-width: 0;
 }
+
+/* Mobile shell (keep in sync with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts):
+   the row of [rail | main] becomes a column of [top bar / main]. min-height: 0
+   is the column-direction analogue of .main's min-width: 0 — it lets the inner
+   panels keep their own scrolling inside the locked-height shell. */
+@media (max-width: 767px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .main {
+    min-height: 0;
+  }
+}

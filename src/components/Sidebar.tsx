@@ -16,7 +16,11 @@ import {
   OptionsIcon,
 } from "./icons";
 
-export default function Sidebar() {
+// The nav content shared by the desktop rail (below) and the mobile drawer
+// (MobileNav): brand, grouped links, beginner hint, account panel, footer.
+// Keeping one component guarantees the two form factors expose identical
+// links, gating, and active states.
+export function SidebarContent() {
   const pathname = usePathname();
   // While viewing a public showcase, Options (the VIEWER's own UI settings) is
   // hidden — it isn't part of the collection on screen. Custom Fields stays: a
@@ -38,7 +42,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className={styles.sidebar}>
+    <>
       <Link href="/" className={styles.brand}>
         <Image
           className={styles.brandLogo}
@@ -95,6 +99,16 @@ export default function Sidebar() {
       <AccountMenu />
 
       <div className={styles.sideFoot}>A Seth Condie Project</div>
+    </>
+  );
+}
+
+// Desktop-only rail; below the mobile breakpoint the CSS hides it and
+// MobileNav (top bar + drawer) presents the same SidebarContent instead.
+export default function Sidebar() {
+  return (
+    <aside className={styles.sidebar}>
+      <SidebarContent />
     </aside>
   );
 }

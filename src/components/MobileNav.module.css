@@ -1,0 +1,129 @@
+/* Mobile-only shell navigation: hidden entirely above the breakpoint (keep in
+   sync with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts), where the desktop
+   sidebar rail renders instead. */
+.mobileNav {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .mobileNav {
+    display: block;
+    flex: 0 0 auto;
+  }
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--black);
+  color: var(--white-pure);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px;
+  border-radius: 10px;
+  transition: 0.15s;
+}
+
+.brand:hover {
+  background: rgba(var(--white-rgb), 0.05);
+}
+
+.brandLogo {
+  width: 36px;
+  height: 36px;
+  display: block;
+}
+
+.brandText {
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--white-pure);
+  white-space: nowrap;
+}
+
+.brandAccent {
+  color: var(--mm-cyan-bright);
+}
+
+/* 44px square hit target for the hamburger. */
+.menuButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--white-pure);
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+.menuButton:hover,
+.menuButton[aria-expanded="true"] {
+  background: rgba(var(--white-rgb), 0.1);
+}
+
+.menuButton svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Drawer + backdrop sit above page content and the fixed popovers (the app's
+   highest routine layer is 80 for popovers; the toast container's 1000 stays
+   on top). Closed state uses the `hidden` attribute, which also removes the
+   drawer from the accessibility tree. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(var(--ink-navy-rgb), 0.55);
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 91;
+  width: min(300px, 85vw);
+  display: flex;
+  flex-direction: column;
+  padding: 26px 16px;
+  overflow-y: auto;
+  background: var(--black);
+  color: var(--white-pure);
+  box-shadow: 12px 0 40px -18px rgba(var(--ink-navy-rgb), 0.9);
+  outline: none;
+  animation: slide-in 0.18s ease;
+}
+
+.drawer[hidden],
+.backdrop[hidden] {
+  display: none;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer {
+    animation: none;
+  }
+}

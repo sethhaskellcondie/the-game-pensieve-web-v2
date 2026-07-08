@@ -7,6 +7,15 @@
   color: var(--white-pure);
 }
 
+/* Below the mobile breakpoint (keep in sync with MOBILE_BREAKPOINT in
+   src/lib/useMediaQuery.ts) the rail gives way to MobileNav's top bar +
+   drawer, which renders the same SidebarContent. */
+@media (max-width: 767px) {
+  .sidebar {
+    display: none;
+  }
+}
+
 .brand {
   display: flex;
   align-items: center;

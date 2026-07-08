@@ -57,3 +57,21 @@
   outline: 2px solid var(--mm-cyan-bright);
   outline-offset: -4px;
 }
+
+/* Below the mobile breakpoint (keep in sync with MOBILE_BREAKPOINT in
+   src/lib/useMediaQuery.ts) there's no room to the right of the hero — render
+   in flow (the host cluster drops its pinning too, see the collection pages'
+   .viewControls) at roughly 2/3 scale, keeping the desktop pill proportions
+   rather than stretching across the row. */
+@media (max-width: 767px) {
+  .toggle {
+    position: static;
+    transform: none;
+  }
+
+  .segment {
+    min-width: 64px;
+    padding: 9px 12px;
+    font-size: 9px;
+  }
+}

@@ -35,3 +35,14 @@
 .viewHint {
   --beginner-hint-color: var(--field-green-bg);
 }
+
+/* Mobile (keep in sync with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts):
+   no room right of the hero — the cluster joins Header's wrapping content row
+   (wrapping beneath the title), keeping the desktop right-edge alignment. */
+@media (max-width: 767px) {
+  .viewControls {
+    position: static;
+    transform: none;
+    margin-left: auto;
+  }
+}
