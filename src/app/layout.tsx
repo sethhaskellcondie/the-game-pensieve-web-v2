@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Press_Start_2P } from "next/font/google";
 import Sidebar from "@/components/Sidebar";
 import { ToastProvider } from "@/components/ToastProvider";
@@ -25,6 +25,14 @@ const pressStart2P = Press_Start_2P({
 export const metadata: Metadata = {
   title: "The Game Pensieve",
   description: "Welcome to the Game Pensieve!",
+};
+
+// Next emits this viewport meta tag by default, but the mobile layout depends
+// on it (localFiles/adaptive_rollout.md), so pin it explicitly. Zoom stays
+// enabled — capping maximumScale/userScalable hurts accessibility.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 // Every route fetches live data from the backend (this layout loads UI settings,

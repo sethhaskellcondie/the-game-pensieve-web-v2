@@ -16,10 +16,16 @@ export default defineConfig({
     // Collect a trace when retrying a failed test.
     trace: "on-first-retry",
   },
+  // Form-factor convention (see localFiles/adaptive_rollout.md, Phase 0):
+  // untagged specs are desktop-only and run on the three desktop projects;
+  // specs with "@mobile" in their title run only on the mobile project.
+  // Mobile coverage is added as "@mobile" twins of the desktop specs rather
+  // than by rerunning desktop specs at a phone size.
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-    { name: "webkit", use: { ...devices["Desktop Safari"] } },
+    { name: "chromium", use: { ...devices["Desktop Chrome"] }, grepInvert: /@mobile/ },
+    { name: "firefox", use: { ...devices["Desktop Firefox"] }, grepInvert: /@mobile/ },
+    { name: "webkit", use: { ...devices["Desktop Safari"] }, grepInvert: /@mobile/ },
+    { name: "mobile-chromium", use: { ...devices["Pixel 7"] }, grep: /@mobile/ },
   ],
   // Start the Next.js dev server before the tests, reusing one if already running.
   webServer: {
