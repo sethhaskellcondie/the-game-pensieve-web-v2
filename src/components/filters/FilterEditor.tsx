@@ -60,8 +60,8 @@ export default function FilterEditor({
   );
 
   const panelRef = useRef<HTMLDivElement>(null);
-  // Below the breakpoint the popover becomes a full-screen panel (Phase 4 of
-  // the mobile rollout): no anchor alignment, a visible title, and stacked
+  // Below the breakpoint the popover becomes a full-screen panel: no anchor
+  // alignment, a visible title, and stacked
   // controls. The footer's Cancel/Apply already covers dismissal.
   const isMobile = useIsMobile();
 

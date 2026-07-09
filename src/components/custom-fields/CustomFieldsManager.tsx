@@ -148,11 +148,11 @@ export default function CustomFieldsManager() {
     "custom-fields",
     COLS,
   );
-  // Below the breakpoint the table is replaced by a card per field (Phase 3 of
-  // the mobile rollout). Unlike the entity cards these stay interactive —
+  // Below the breakpoint the table is replaced by a card per field.
+  // Unlike the entity cards these stay interactive —
   // custom fields have no detail page, so reorder, delete, and edit must live
   // on the card. Conditionally mounted — never both — so the hidden twin can't
-  // leak duplicate queryable content into the DOM (Phase 1 lesson).
+  // leak duplicate queryable content into the DOM.
   const isMobile = useIsMobile();
 
   // Refetch the current scope after a mutation. Runs from event handlers, so a

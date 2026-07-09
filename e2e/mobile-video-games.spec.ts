@@ -3,7 +3,7 @@ import { AUTH_STATE } from "./authState";
 import { seedVideoGameBox } from "./apiSeed";
 import { DEFAULT_STANDARD_FIELDS } from "../src/lib/uiSettings.types";
 
-// Phase 3 slice 1 (localFiles/adaptive_rollout.md): at a phone viewport the
+// At a phone viewport the
 // video games list and the shelf of boxes render as tappable cards instead of
 // the data table. Cards are read/navigate-only — the whole card opens the
 // detail page; there is no delete action and no mass edit on mobile.

@@ -456,9 +456,9 @@ export default function BoardGameBoxesManager({
   // get the inline boolean editor. Board Game and Base Set stay read-only —
   // those relationships are picked by id on the detail pages, not committed by
   // name in a grid cell.
-  // Below the breakpoint the grid is replaced by the card list (Phase 3 of the
-  // mobile rollout). Conditionally mounted — never both — so the hidden twin
-  // can't leak duplicate queryable content into the DOM (Phase 1 lesson).
+  // Below the breakpoint the grid is replaced by the card list.
+  // Conditionally mounted — never both — so the hidden twin
+  // can't leak duplicate queryable content into the DOM.
   const isMobile = useIsMobile();
 
   // The standard fields the user hid via Options → Show/Hide Standard Fields;

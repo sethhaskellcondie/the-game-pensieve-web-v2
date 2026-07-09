@@ -6,7 +6,7 @@ import styles from "./UpgradePrompt.module.css";
 
 // Shown when the backend reports the account has lapsed (402 on a filter, 403 on
 // a write). Explains why the action was blocked and points to the pricing page.
-// Rendered by SessionProvider; payment integration is stubbed for now (Phase 7).
+// Rendered by SessionProvider; payment integration is stubbed for now.
 export default function UpgradePrompt({
   open,
   message,

@@ -44,8 +44,8 @@ export default function SortControl({
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const wrapRef = useRef<HTMLSpanElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  // Below the breakpoint the popover becomes a full-screen panel (Phase 4 of
-  // the mobile rollout): no trigger anchoring, and a Done header instead of
+  // Below the breakpoint the popover becomes a full-screen panel: no trigger
+  // anchoring, and a Done header instead of
   // outside-click dismissal (there is no outside to click).
   const isMobile = useIsMobile();
 

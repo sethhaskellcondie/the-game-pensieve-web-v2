@@ -1,7 +1,7 @@
 import type { CustomField, CustomFieldValue } from "@/lib/api";
 import { buildCardCustomFields } from "@/components/card-list/cardFields";
 
-// The card adapter's contract (adaptive_rollout.md, Phase 3): first boolean
+// The card adapter's contract: first boolean
 // with a value → corner glyph; further booleans → boolean pills; progress →
 // bar rows; dropdown/radio/number/text → tone pills; unset/invalid → omitted.
 

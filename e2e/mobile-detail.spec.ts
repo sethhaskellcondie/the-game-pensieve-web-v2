@@ -3,10 +3,10 @@ import { AUTH_STATE } from "./authState";
 import { seedBoardGameBox, seedToy } from "./apiSeed";
 import { DEFAULT_STANDARD_FIELDS } from "../src/lib/uiSettings.types";
 
-// Phase 5 (localFiles/adaptive_rollout.md): at a phone viewport the detail
+// At a phone viewport the detail
 // pages stack their field rows (label above value) and the create modals grow
 // into full-screen sheets. Light edit stays in scope on mobile — inline
-// detail-page edits work by tap (the Phase 2 always-visible pencil marks
+// detail-page edits work by tap (the always-visible pencil marks
 // them).
 //
 // Detail pages are server-rendered (page.route can't stub them), so these

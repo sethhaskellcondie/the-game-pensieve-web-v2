@@ -3,7 +3,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 
 // Single source of truth for the responsive breakpoint: below this width the
-// app renders its mobile variants (see localFiles/adaptive_rollout.md). CSS
+// app renders its mobile variants. CSS
 // modules can't read TS constants, so width media queries hard-code the same
 // value — keep `@media (max-width: 767px)` rules in sync with this number.
 export const MOBILE_BREAKPOINT = 768;

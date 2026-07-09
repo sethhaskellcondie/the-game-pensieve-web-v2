@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-// Phase 4 auth/tier coverage.
+// Auth/tier coverage.
 //
 // GUEST behavior is driven purely by the FRONTEND session (a fresh browser has
 // no session cookie → guest), so it runs against any backend that can serve the

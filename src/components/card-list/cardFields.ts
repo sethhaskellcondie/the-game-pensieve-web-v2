@@ -1,8 +1,8 @@
 import type { CustomField, CustomFieldValue } from "@/lib/api";
 import { normalizeFieldValue } from "@/components/toys/toyFieldEditors";
 
-// Maps an entity's custom-field values onto the mobile card's slots (see
-// localFiles/adaptive_rollout.md, Phase 3): the first boolean with a value
+// Maps an entity's custom-field values onto the mobile card's slots: the first
+// boolean with a value
 // becomes the card's corner badge, each progress field gets its own bar row,
 // and everything else lands in the single pill row — colored by type with the
 // same palette the grid/detail values use (gold dropdown, red radio, purple

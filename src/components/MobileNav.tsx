@@ -14,7 +14,7 @@ function HamburgerIcon() {
   );
 }
 
-// Mobile shell navigation (Phase 1, localFiles/adaptive_rollout.md): below the
+// Mobile shell navigation: below the
 // 768px breakpoint the sidebar rail is hidden and this top bar takes over,
 // exposing the same SidebarContent through a slide-in drawer. Rendered
 // unconditionally and shown/hidden purely in CSS so the server render never

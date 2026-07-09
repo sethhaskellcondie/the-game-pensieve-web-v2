@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { AUTH_STATE } from "./authState";
 
-// Phase 6 (localFiles/adaptive_rollout.md): the remaining pages — options,
+// The remaining pages — options,
 // account, and the home dashboard — render usable phone layouts. Options and
 // account are login-gated, so the file runs with the authenticated session
 // (their guest redirects are covered by mobile-smoke.spec.ts).

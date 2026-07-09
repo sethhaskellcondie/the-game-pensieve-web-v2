@@ -43,7 +43,7 @@ const TONE_CLASS: Record<PillTone, string> = {
   blue: styles.pillBlue,
 };
 
-// The DataTable's mobile twin (localFiles/adaptive_rollout.md, Phase 3): one
+// The DataTable's mobile twin: one
 // roomy tappable card per row instead of a wide scrolling table. Purely
 // presentational — the manager supplies the same rows it gives the table plus
 // a `card` accessor describing what each card face shows.

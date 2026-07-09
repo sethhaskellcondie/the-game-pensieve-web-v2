@@ -2,7 +2,7 @@ import { test, expect, type Page, type Route } from "@playwright/test";
 import { AUTH_STATE } from "./authState";
 import { DEFAULT_STANDARD_FIELDS } from "../src/lib/uiSettings.types";
 
-// Phase 3 remaining slices (localFiles/adaptive_rollout.md): at a phone
+// At a phone
 // viewport the toys, systems, board games, and board game boxes lists render
 // as tappable read-only cards instead of the data table. Card slots follow
 // the settled design: standard fields on the face, first boolean (or the

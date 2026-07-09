@@ -2,7 +2,7 @@ import { test, expect, type Page, type Route } from "@playwright/test";
 import { AUTH_STATE } from "./authState";
 import { DEFAULT_STANDARD_FIELDS } from "../src/lib/uiSettings.types";
 
-// Phase 4 (localFiles/adaptive_rollout.md): at a phone viewport the anchored
+// At a phone viewport the anchored
 // Sort and Filter popovers become full-screen panels (decided over a bottom
 // sheet) — a visible title, stacked controls, and a Done/Cancel affordance
 // instead of outside-click dismissal. Same fields, operators, and chips as

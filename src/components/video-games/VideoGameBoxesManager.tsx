@@ -200,9 +200,9 @@ export default function VideoGameBoxesManager({
   const canSort = useMemo(() => supportsSorting(spec), [spec]);
   // The row whose Title cell is being inline-edited, or null when idle.
   const [editingId, setEditingId] = useState<number | null>(null);
-  // Below the breakpoint the grid is replaced by the card list (Phase 3 of the
-  // mobile rollout). Conditionally mounted — never both — so the hidden twin
-  // can't leak duplicate queryable content into the DOM (Phase 1 lesson).
+  // Below the breakpoint the grid is replaced by the card list.
+  // Conditionally mounted — never both — so the hidden twin
+  // can't leak duplicate queryable content into the DOM.
   const isMobile = useIsMobile();
 
   // The unified field list (standard spec fields + custom fields) the filter

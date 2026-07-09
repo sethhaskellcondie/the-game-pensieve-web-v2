@@ -494,9 +494,9 @@ export default function ToysManager({
   // Name and Set are always first; the rest of the columns are the toy custom
   // fields, in their defined order. Each cell maps the toy's values by field id.
   // In mass-edit mode, Name and Set become inline-editable.
-  // Below the breakpoint the grid is replaced by the card list (Phase 3 of the
-  // mobile rollout). Conditionally mounted — never both — so the hidden twin
-  // can't leak duplicate queryable content into the DOM (Phase 1 lesson).
+  // Below the breakpoint the grid is replaced by the card list.
+  // Conditionally mounted — never both — so the hidden twin
+  // can't leak duplicate queryable content into the DOM.
   const isMobile = useIsMobile();
 
   // The standard fields the user hid via Options → Show/Hide Standard Fields;

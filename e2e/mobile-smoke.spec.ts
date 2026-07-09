@@ -1,9 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 
-// Phase 0 of the mobile rollout (localFiles/adaptive_rollout.md): every page
+// Every page
 // must load at a phone viewport with its real h1 and without horizontally
 // overflowing the document. This spec is the permanent regression guard for
-// "nothing overflows" — when a rollout phase makes a page truly mobile-friendly,
+// "nothing overflows" — when a page is made truly mobile-friendly,
 // its behavior here must keep passing.
 //
 // Runs as a guest (no login): the mobile experience primarily targets guests

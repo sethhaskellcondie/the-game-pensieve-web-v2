@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { AUTH_STATE } from "./authState";
 
 // Saved-filter card reorder on the home dashboard. Regression pin for a bug
-// found during the Phase 6 touch-drag verification: onDragEnd read the final
+// found during touch-drag verification: onDragEnd read the final
 // arrangement back out of a setRows updater, which React defers — so the
 // save never fired and the reorder silently reverted on the next load. The
 // drag runs against the real metadata store (page.route can't stub the
@@ -13,7 +13,7 @@ test.use({ storageState: AUTH_STATE });
 // POST replaces it wholesale — three browsers running this spec in parallel
 // clobber each other's seeds (the CLAUDE.md shared-state rule). One browser is
 // enough for the persistence pin; drag activation itself was verified in all
-// three engines (and via touch) during Phase 6.
+// three engines (and via touch).
 test.skip(
   ({ browserName }) => browserName !== "chromium",
   "shared saved-filters store: run the drag-persistence pin in one browser",

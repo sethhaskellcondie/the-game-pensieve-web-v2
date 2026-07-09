@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 };
 
 // Next emits this viewport meta tag by default, but the mobile layout depends
-// on it (localFiles/adaptive_rollout.md), so pin it explicitly. Zoom stays
+// on it, so pin it explicitly. Zoom stays
 // enabled — capping maximumScale/userScalable hurts accessibility.
 export const viewport: Viewport = {
   width: "device-width",

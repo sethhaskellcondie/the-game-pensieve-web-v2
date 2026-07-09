@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-// Mobile twin of navigation.spec.ts (Phase 1, localFiles/adaptive_rollout.md):
+// Mobile twin of navigation.spec.ts:
 // at a phone viewport the sidebar rail is replaced by a top bar whose hamburger
 // opens a slide-in drawer with the same nav.
 

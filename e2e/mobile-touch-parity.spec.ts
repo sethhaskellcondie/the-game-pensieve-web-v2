@@ -3,10 +3,10 @@ import { AUTH_STATE } from "./authState";
 import { seedToy } from "./apiSeed";
 import { SEED, stubCustomFields } from "./customFieldsStub";
 
-// Phase 2 touch parity (localFiles/adaptive_rollout.md): affordances that
+// Touch parity: affordances that
 // desktop reveals on hover must be reachable by tap at a phone viewport —
-// the custom-fields delete and up/down reorder buttons (on the mobile cards
-// since Phase 3; the desktop table keeps the same controls), and entity
+// the custom-fields delete and up/down reorder buttons (on the mobile cards;
+// the desktop table keeps the same controls), and entity
 // delete on the detail page (the only entity-delete path on mobile; the data
 // tables' row delete stays desktop-only by decision).
 //
