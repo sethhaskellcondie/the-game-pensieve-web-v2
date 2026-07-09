@@ -329,12 +329,13 @@ export default function SavedFiltersDashboard({
     }
     const activeId = String(active.id);
     const overId = String(over.id);
-    let committed: FilterCategory[] | null = null;
-    setRows((prev) => {
-      committed = moveFilterTo(prev, activeId, overId);
-      return committed;
-    });
-    if (committed && snapshot && !sameArrangement(committed, snapshot)) {
+    // Compute the final arrangement from the current rows directly. It used
+    // to be read back out of a setRows updater, but React defers updaters, so
+    // the save check ran while it was still null — the reorder looked applied
+    // and then silently reverted on the next load.
+    const committed = moveFilterTo(rows, activeId, overId);
+    setRows(committed);
+    if (snapshot && !sameArrangement(committed, snapshot)) {
       void commitFilters(committed, snapshot);
     }
   };

@@ -7,3 +7,16 @@
   flex-direction: column;
   gap: 32px;
 }
+
+/* Phone layout (Phase 6 of the mobile rollout). Import/export is desktop-only
+   (decided) — the wrapper hides the whole Backup & Import section. Keep in
+   sync with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
+@media (max-width: 767px) {
+  .content {
+    padding: 16px 12px 40px;
+  }
+
+  .desktopOnly {
+    display: none;
+  }
+}

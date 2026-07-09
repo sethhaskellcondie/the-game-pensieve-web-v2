@@ -37,7 +37,11 @@ export default async function OptionsPage() {
         <UiSettings />
         <DefaultSortSettings />
         <ApiHeartbeat />
-        <BackupImport />
+        {/* Import/export is bulk data work — desktop-only by decision; the
+            wrapper hides the whole section below the breakpoint. */}
+        <div className={styles.desktopOnly}>
+          <BackupImport />
+        </div>
       </main>
     </>
   );

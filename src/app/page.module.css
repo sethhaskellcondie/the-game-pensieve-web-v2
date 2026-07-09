@@ -4,3 +4,11 @@
   overflow-y: auto;
   background: var(--paper);
 }
+
+/* Phone layout (Phase 6 of the mobile rollout). Keep in sync with
+   MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
+@media (max-width: 767px) {
+  .content {
+    padding: 16px 12px 40px;
+  }
+}

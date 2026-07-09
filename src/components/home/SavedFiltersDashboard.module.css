@@ -55,3 +55,13 @@
   flex-direction: column;
   gap: 22px;
 }
+
+/* Phone layout (Phase 6 of the mobile rollout): the greeting and the New
+   Category button share a row until they can't. Keep in sync with
+   MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
+@media (max-width: 767px) {
+  .header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}
