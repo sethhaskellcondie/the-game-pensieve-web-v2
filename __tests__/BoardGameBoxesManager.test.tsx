@@ -18,6 +18,22 @@ import BoardGameBoxesManager from "@/components/board-games/BoardGameBoxesManage
 import { ToastProvider } from "@/components/ToastProvider";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
+import { MOBILE_MEDIA_QUERY } from "@/lib/useMediaQuery";
+
+// Make useIsMobile() report a phone viewport for the duration of a test;
+// returns the restore function (the jest.setup default is desktop/no-match).
+function installMobileViewport() {
+  const original = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    media: query,
+    matches: query === MOBILE_MEDIA_QUERY,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as unknown as typeof window.matchMedia;
+  return () => {
+    window.matchMedia = original;
+  };
+}
 
 jest.mock("next/navigation", () => ({
   useRouter: jest.fn(),
@@ -244,6 +260,51 @@ describe("BoardGameBoxesManager", () => {
 
   afterEach(() => {
     mockFetch.mockReset();
+  });
+
+  describe("on a phone viewport", () => {
+    let restoreViewport: () => void;
+    beforeEach(() => {
+      restoreViewport = installMobileViewport();
+    });
+    afterEach(() => {
+      restoreViewport();
+    });
+
+    it("renders tappable cards with Expansion as the corner badge", async () => {
+      renderManager();
+
+      expect(
+        await screen.findByRole("link", { name: "Set-A-Watch Doomed Run" }),
+      ).toHaveAttribute("href", "/board-game-boxes/32");
+      expect(screen.queryByRole("table")).not.toBeInTheDocument();
+
+      // The expansion box: board game + base set in the subtitle, the corner
+      // badge is always Expansion, Stand Alone leads the pill row.
+      const expansion = screen
+        .getByRole("link", { name: "Set-A-Watch Doomed Run" })
+        .closest("li")!;
+      expect(
+        within(expansion).getByText("Set-A-Watch · Base: Set-A-Watch Base Box"),
+      ).toBeInTheDocument();
+      expect(
+        within(expansion).getByRole("img", { name: "Expansion: Yes" }),
+      ).toBeInTheDocument();
+      expect(
+        within(expansion).getByRole("img", { name: "Stand Alone: No" }),
+      ).toBeInTheDocument();
+
+      // The base box: no base set in the subtitle, its Notes text is a pill.
+      const base = screen
+        .getByRole("link", { name: "Set-A-Watch Base Box" })
+        .closest("li")!;
+      expect(within(base).getByText("Set-A-Watch")).toBeInTheDocument();
+      expect(
+        within(base).getByRole("img", { name: "Expansion: No" }),
+      ).toBeInTheDocument();
+      expect(within(base).getByText("Sleeved")).toBeInTheDocument();
+      expect(within(base).queryAllByRole("button")).toHaveLength(0);
+    });
   });
 
   it("hides only the standard columns turned off in the settings", async () => {

@@ -1,4 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
+import { AUTH_STATE } from "./authState";
+
+// /options requires a logged-in account (guests are redirected to /login), so
+// this whole file runs with the shared authenticated session from auth.setup.ts.
+test.use({ storageState: AUTH_STATE });
 
 // The Default Sort Options section fires a fan-out of fetches on mount (the
 // stored defaults plus a filter spec and custom-field list per entity). Stub

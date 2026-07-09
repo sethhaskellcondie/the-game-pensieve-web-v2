@@ -6,6 +6,22 @@ import VideoGamesManager from "@/components/video-games/VideoGamesManager";
 import { ToastProvider } from "@/components/ToastProvider";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
+import { MOBILE_MEDIA_QUERY } from "@/lib/useMediaQuery";
+
+// Make useIsMobile() report a phone viewport for the duration of a test;
+// returns the restore function (the jest.setup default is desktop/no-match).
+function installMobileViewport() {
+  const original = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    media: query,
+    matches: query === MOBILE_MEDIA_QUERY,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as unknown as typeof window.matchMedia;
+  return () => {
+    window.matchMedia = original;
+  };
+}
 
 jest.mock("next/navigation", () => ({
   useRouter: jest.fn(),
@@ -232,6 +248,60 @@ describe("VideoGamesManager", () => {
 
   afterEach(() => {
     mockFetch.mockReset();
+  });
+
+  describe("on a phone viewport", () => {
+    let restoreViewport: () => void;
+    beforeEach(() => {
+      restoreViewport = installMobileViewport();
+    });
+    afterEach(() => {
+      restoreViewport();
+    });
+
+    it("renders tappable cards instead of the table, with the custom fields in their slots", async () => {
+      renderManager();
+
+      // The card's title links to the game's detail page; no table exists.
+      expect(
+        await screen.findByRole("link", { name: "Super Mario Bros." }),
+      ).toHaveAttribute("href", "/video-games/1");
+      expect(screen.queryByRole("table")).not.toBeInTheDocument();
+
+      const card = screen
+        .getByRole("link", { name: "Super Mario Bros." })
+        .closest("li")!;
+      // System + box count fold into the subtitle; the boolean takes the
+      // corner glyph and the dropdown value lands in the pill row.
+      expect(within(card).getByText("NES · 2 boxes")).toBeInTheDocument();
+      expect(
+        within(card).getByRole("img", { name: "Favorite: Yes" }),
+      ).toBeInTheDocument();
+      expect(within(card).getByText("Action")).toBeInTheDocument();
+    });
+
+    it("keeps cards read-only even with mass edit mode on", async () => {
+      renderManager(true);
+
+      const card = (
+        await screen.findByRole("link", { name: "Super Mario Bros." })
+      ).closest("li")!;
+      // No inline editors: the title is a link, not a click-to-edit button.
+      expect(within(card).queryAllByRole("button")).toHaveLength(0);
+    });
+
+    it("drops hidden standard fields from the card subtitle", async () => {
+      renderManager(false, {
+        ...DEFAULT_UI_SETTINGS.standardFields,
+        videoGame: { system: false, boxes: true },
+      });
+
+      const card = (
+        await screen.findByRole("link", { name: "Super Mario Bros." })
+      ).closest("li")!;
+      expect(within(card).getByText("2 boxes")).toBeInTheDocument();
+      expect(within(card).queryByText(/NES/)).not.toBeInTheDocument();
+    });
   });
 
   it("hides only the standard columns turned off in the settings", async () => {

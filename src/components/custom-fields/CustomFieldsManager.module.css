@@ -77,6 +77,139 @@
   background: #1e8a36;
 }
 
+/* On a phone the single header row can't hold the title, scope picker, and
+   New button — let it wrap (.actions already right-aligns via margin auto).
+   Keep in sync with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
+@media (max-width: 767px) {
+  .head {
+    flex-wrap: wrap;
+  }
+}
+
+/* ============ MOBILE CARDS ============ */
+/* One interactive card per field (rendered below the breakpoint instead of
+   the table): order + name + reorder/delete controls up top, and the type +
+   options body as the tap-to-edit target. Same visual language as the
+   entity CardList. */
+.cards {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0;
+  padding: 2px 2px 24px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fieldCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  box-shadow: 0 1px 2px rgba(var(--ink-navy-rgb), 0.05);
+}
+
+.fieldCardHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardOrderNum {
+  flex: 0 0 auto;
+  color: var(--gray-500);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.cardName {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink-navy);
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Touch-sized reorder buttons (the table's tiny hover carets don't cut it on
+   a phone). */
+.cardMoveBtn {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--gray-500);
+  cursor: pointer;
+}
+
+.cardMoveBtn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.cardMoveBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Always-visible delete — the same red pill as the detail pages' trash. */
+.cardDel {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--field-red-border);
+  border-radius: 8px;
+  background: var(--field-red-bg);
+  color: var(--field-red-text);
+  cursor: pointer;
+}
+
+.cardDel[aria-expanded="true"] {
+  border-color: var(--field-red-text);
+  background: #f8d7d3;
+}
+
+/* The tap-to-edit body (type badge + option chips); plain layout twin for
+   read-only viewers. */
+.cardEdit,
+.cardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.cardEdit {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.cardsEmpty {
+  padding: 12px 4px;
+  color: var(--gray-500);
+  font-size: 13px;
+}
+
 /* ============ CARD ============ */
 .card {
   flex: 1;
@@ -172,6 +305,9 @@
   height: 100%;
   cursor: col-resize;
   z-index: 7;
+  /* The pointer-event drag owns this handle — without this a touch drag would
+     scroll the table instead of resizing the column. */
+  touch-action: none;
 }
 
 .resize::after {
@@ -260,6 +396,55 @@
 
 .row:hover .grip {
   opacity: 1;
+}
+
+/* Up/down reorder buttons, stacked beside the order number. Hover-revealed
+   like the grip on pointer devices, but always in the DOM so keyboard focus
+   reveals them (focus-within) and they stay tabbable. */
+.moveBtns {
+  display: inline-flex;
+  flex-direction: column;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.row:hover .moveBtns,
+.moveBtns:focus-within {
+  opacity: 1;
+}
+
+.moveBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 15px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.moveBtn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.moveBtn:hover:not(:disabled) {
+  background: #eaf1ff;
+  color: var(--primary-600);
+}
+
+.moveBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* CaretIcon points down; the up arrow is the same glyph flipped. */
+.caretUp {
+  transform: rotate(180deg);
 }
 
 .dragging td {
@@ -459,8 +644,41 @@
 @media (prefers-reduced-motion: reduce) {
   .grip,
   .del,
+  .moveBtns,
+  .moveBtn,
   .name,
   .newBtn {
     transition: none;
+  }
+}
+
+/* Touch devices have no hover to reveal the row affordances: keep the delete
+   and reorder buttons always visible, and drop the grip — HTML5 drag never
+   fires on touch, so the up/down buttons are the touch reorder path. */
+@media (hover: none) {
+  .grip {
+    display: none;
+  }
+
+  .del,
+  .moveBtns {
+    opacity: 1;
+  }
+}
+
+/* On a phone the frozen Order + Name columns are sticky over nearly the whole
+   viewport, permanently covering the columns (and the delete button) behind
+   them. Release the horizontal freeze so the table scrolls as one unit; the
+   header row keeps its vertical stickiness. Keep in sync with
+   MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
+@media (max-width: 767px) {
+  .frozen {
+    position: static;
+  }
+
+  .table thead th.frozen {
+    position: sticky;
+    /* !important to release the inline left offset the component sets. */
+    left: auto !important;
   }
 }

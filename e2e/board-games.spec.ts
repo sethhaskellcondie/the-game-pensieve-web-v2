@@ -1,4 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
+import { AUTH_STATE } from "./authState";
+import { seedBoardGameBox } from "./apiSeed";
+
+// These specs exercise write flows (create dialogs, inline edits, deletes)
+// that the guest UI hides, so the whole file runs with the authenticated
+// session from auth.setup.ts. All backend data is stubbed via page.route —
+// only the session (and the server-loaded ui_settings) is real.
+test.use({ storageState: AUTH_STATE });
 import { DEFAULT_STANDARD_FIELDS } from "../src/lib/uiSettings.types";
 
 type StubField = {
@@ -289,7 +297,10 @@ test("offers no New button and no per-row delete controls", async ({ page }) => 
 test("the board game detail page shows the Fields and Boxes cards and links back", async ({
   page,
 }) => {
-  await page.goto("/board-games/1");
+  // The detail page fetches server-side (page.route can't stub it); board
+  // games are created inline through a box, so seed one and visit its game.
+  const box = await seedBoardGameBox(page);
+  await page.goto(`/board-games/${box.boardGame.id}`);
 
   // The Fields card with the fixed Title row is the heart of the screen; the
   // Boxes card lists the game's boxes with a create button.

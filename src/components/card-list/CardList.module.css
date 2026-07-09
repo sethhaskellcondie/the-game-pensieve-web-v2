@@ -1,0 +1,231 @@
+/* The DataTable's mobile card twin (localFiles/adaptive_rollout.md, Phase 3).
+   Styled after localFiles/initial-card-design.png: one roomy white card per
+   row, title + subtitle, a corner yes/no glyph, real progress bars, and a
+   single clipped pill row. Rendered only below the 768px breakpoint (the
+   manager mounts CardList instead of DataTable), so these styles are
+   phone-first by construction. */
+
+/* Fills the space DataTable's card would take and scrolls internally, so the
+   page keeps its fixed 100dvh shell. */
+.wrap {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* Bottom padding keeps the last card clear of the home-indicator area. */
+  padding: 2px 2px 24px;
+}
+
+/* Always-visible toggle: prefix pills/bars with their custom field's name.
+   Deliberately plain — it gets a proper look in a later phase. */
+.namesToggle {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--white);
+  color: var(--ink-navy);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.namesToggle[aria-pressed="true"] {
+  border-color: var(--primary-600);
+  color: var(--primary-600);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* position: relative anchors the title's stretched-link overlay, which makes
+   the whole card the tap target (same pattern as the home dashboard cards). */
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  box-shadow: 0 1px 2px rgba(var(--ink-navy-rgb), 0.05);
+}
+
+.card:active {
+  background: #f6faff;
+}
+
+/* ---- title row + corner glyph ---- */
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.title {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink-navy);
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Stretch the title link over the whole card. */
+.title::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+/* The corner badge is the full labelled boolean pill (shape/tone come from
+   .pill + .pillYes/.pillNo below); it just refuses to shrink so the title
+   truncates first. */
+.glyph {
+  flex: 0 0 auto;
+}
+
+/* ---- subtitle (secondary standard fields) ---- */
+.subtitle {
+  margin: -4px 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--gray-500);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- progress bar rows ---- */
+.bar {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.barHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.barStage {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-navy);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barCount {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--gray-500);
+}
+
+.barTrack {
+  display: block;
+  height: 7px;
+  border-radius: 999px;
+  background: #e8edf4;
+  overflow: hidden;
+}
+
+.barFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary-600);
+}
+
+/* The final stage reads as "complete" — green, like the design mock. */
+.barFillDone {
+  background: var(--field-green);
+}
+
+/* ---- pill row (single line, clipped — decided) ---- */
+.pills {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.pill {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pill svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* Type tones, mirroring the grid/detail value palette. */
+.pillGold {
+  background: var(--field-gold-bg);
+  border-color: var(--field-gold-border);
+  color: var(--field-gold-text);
+}
+
+.pillRed {
+  background: var(--field-red-bg);
+  border-color: var(--field-red-border);
+  color: var(--field-red-text);
+}
+
+.pillPurple {
+  background: var(--field-purple-bg);
+  color: var(--field-purple-text);
+}
+
+.pillBlue {
+  background: var(--field-blue-bg);
+  color: var(--field-blue-text);
+}
+
+/* Boolean pills: label + check/x, green when yes, muted when no. */
+.pillYes {
+  background: var(--field-mint-bg);
+  color: var(--field-mint-text);
+}
+
+.pillNo {
+  background: #eef1f6;
+  color: var(--gray-500);
+}
+
+/* ---- loading / empty ---- */
+.empty {
+  margin: 0;
+  padding: 18px 4px;
+  font-size: 13px;
+  color: var(--gray-500);
+}

@@ -17,6 +17,9 @@ import DataTable, {
   MIN_COL,
   type ColumnDef,
 } from "@/components/data-table/DataTable";
+import CardList, { type CardData } from "@/components/card-list/CardList";
+import { buildCardCustomFields } from "@/components/card-list/cardFields";
+import { useIsMobile } from "@/lib/useMediaQuery";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import { useSession } from "@/components/auth/SessionProvider";
@@ -185,6 +188,10 @@ export default function VideoGamesManager({
   const canSort = useMemo(() => supportsSorting(spec), [spec]);
   // The row whose Title cell is being inline-edited, or null when idle.
   const [editingId, setEditingId] = useState<number | null>(null);
+  // Below the breakpoint the grid is replaced by the card list (Phase 3 of the
+  // mobile rollout). Conditionally mounted — never both — so the hidden twin
+  // can't leak duplicate queryable content into the DOM (Phase 1 lesson).
+  const isMobile = useIsMobile();
 
   // The unified field list (standard spec fields + custom fields) the filter
   // bar offers. The system_id entry gets a friendlier label and the systems
@@ -423,6 +430,18 @@ export default function VideoGamesManager({
     [persist],
   );
 
+  // The standard fields the user hid via Options → Show/Hide Standard Fields;
+  // dropped from the grid's columns and the mobile card's subtitle alike.
+  const hiddenStandard = useMemo(
+    () =>
+      new Set(
+        Object.entries(standardFields)
+          .filter(([, shown]) => !shown)
+          .map(([key]) => key),
+      ),
+    [standardFields],
+  );
+
   // Title, System, and Boxes are always first; the rest of the columns are the
   // video game custom fields, in their defined order. In mass-edit mode the
   // Title cell becomes click-to-edit and System becomes a dropdown of all
@@ -528,22 +547,41 @@ export default function VideoGamesManager({
     // Drop the standard columns the user hid via Options → Show/Hide Standard
     // Fields. Column keys match the setting keys, and the title column has no
     // setting, so it is never hidden.
-    const hidden = new Set(
-      Object.entries(standardFields)
-        .filter(([, shown]) => !shown)
-        .map(([key]) => key),
-    );
-    return [...base.filter((col) => !hidden.has(col.key)), ...dynamic];
+    return [...base.filter((col) => !hiddenStandard.has(col.key)), ...dynamic];
   }, [
     definitions,
     massEditable,
-    standardFields,
+    hiddenStandard,
     editingId,
     systemOptions,
     commitTitle,
     commitSystem,
     commitFieldValue,
   ]);
+
+  // What a mobile card shows for one game: title, the visible secondary
+  // standard fields joined into the subtitle, and the custom fields in their
+  // per-type card slots (corner glyph / bars / pills). Cards are
+  // read/navigate-only — mass edit is desktop-only by decision.
+  const gameCard = useCallback(
+    (game: VideoGame): CardData => {
+      const boxes = game.videoGameBoxes?.length ?? 0;
+      const subtitle = [
+        hiddenStandard.has("system") ? null : game.system?.name,
+        hiddenStandard.has("boxes")
+          ? null
+          : `${boxes} ${boxes === 1 ? "box" : "boxes"}`,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      return {
+        title: game.title,
+        subtitle: subtitle || undefined,
+        ...buildCardCustomFields(definitions, game.customFieldValues),
+      };
+    },
+    [definitions, hiddenStandard],
+  );
 
   const hasFilters = filters.length > 0;
 
@@ -584,36 +622,52 @@ export default function VideoGamesManager({
         </div>
       </div>
 
-      <DataTable
-        storageKey="video-games"
-        columns={columns}
-        rows={games}
-        getRowKey={(game) => game.id}
-        loading={loading}
-        loadingMessage="Loading video games…"
-        emptyMessage={
-          hasFilters
-            ? "No video games match your filters."
-            : "No video games yet."
-        }
-        // No onDelete: the backend has no video game delete endpoint (games are
-        // removed through their boxes), so the delete column is omitted.
-        // The leading details column only appears in mass edit mode; otherwise
-        // the whole row navigates to the game's detail page. Both routes are
-        // the same — they just differ in affordance per mode.
-        onOpenDetails={
-          massEditable
-            ? (game) => router.push(`/video-games/${game.id}`)
-            : undefined
-        }
-        detailsLabel={(game) => `View ${game.title}`}
-        onRowClick={
-          massEditable
-            ? undefined
-            : (game) => router.push(`/video-games/${game.id}`)
-        }
-        rowClickLabel={(game) => `View ${game.title}`}
-      />
+      {isMobile ? (
+        <CardList
+          rows={games}
+          getRowKey={(game) => game.id}
+          loading={loading}
+          loadingMessage="Loading video games…"
+          emptyMessage={
+            hasFilters
+              ? "No video games match your filters."
+              : "No video games yet."
+          }
+          getHref={(game) => `/video-games/${game.id}`}
+          card={gameCard}
+        />
+      ) : (
+        <DataTable
+          storageKey="video-games"
+          columns={columns}
+          rows={games}
+          getRowKey={(game) => game.id}
+          loading={loading}
+          loadingMessage="Loading video games…"
+          emptyMessage={
+            hasFilters
+              ? "No video games match your filters."
+              : "No video games yet."
+          }
+          // No onDelete: the backend has no video game delete endpoint (games are
+          // removed through their boxes), so the delete column is omitted.
+          // The leading details column only appears in mass edit mode; otherwise
+          // the whole row navigates to the game's detail page. Both routes are
+          // the same — they just differ in affordance per mode.
+          onOpenDetails={
+            massEditable
+              ? (game) => router.push(`/video-games/${game.id}`)
+              : undefined
+          }
+          detailsLabel={(game) => `View ${game.title}`}
+          onRowClick={
+            massEditable
+              ? undefined
+              : (game) => router.push(`/video-games/${game.id}`)
+          }
+          rowClickLabel={(game) => `View ${game.title}`}
+        />
+      )}
     </div>
   );
 }

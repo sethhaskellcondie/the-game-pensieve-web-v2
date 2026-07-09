@@ -68,6 +68,35 @@
   box-shadow: 0 0 0 3px rgba(var(--ink-navy-rgb), 0.1);
 }
 
+/* On a phone the bar can't share the header row: it shrinks (min-width: 0)
+   while its fixed-size buttons overflow it and paint over the New button. Give
+   it the full width of its own row (order 2 keeps the entity count + New
+   button together on the first row) and let the search go fluid. Interim
+   until the Phase 4 mobile filter sheet. Keep in sync with MOBILE_BREAKPOINT
+   in src/lib/useMediaQuery.ts. */
+@media (max-width: 767px) {
+  .bar {
+    flex: 1 1 100%;
+    order: 2;
+    flex-wrap: wrap;
+  }
+
+  .controls {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .search {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .searchInput {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
 /* Positioning context so the editor popover anchors under its chip / add btn. */
 .anchor {
   position: relative;

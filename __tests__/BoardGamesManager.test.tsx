@@ -6,6 +6,22 @@ import BoardGamesManager from "@/components/board-games/BoardGamesManager";
 import { ToastProvider } from "@/components/ToastProvider";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
+import { MOBILE_MEDIA_QUERY } from "@/lib/useMediaQuery";
+
+// Make useIsMobile() report a phone viewport for the duration of a test;
+// returns the restore function (the jest.setup default is desktop/no-match).
+function installMobileViewport() {
+  const original = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    media: query,
+    matches: query === MOBILE_MEDIA_QUERY,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as unknown as typeof window.matchMedia;
+  return () => {
+    window.matchMedia = original;
+  };
+}
 
 jest.mock("next/navigation", () => ({
   useRouter: jest.fn(),
@@ -201,6 +217,37 @@ describe("BoardGamesManager", () => {
 
   afterEach(() => {
     mockFetch.mockReset();
+  });
+
+  describe("on a phone viewport", () => {
+    let restoreViewport: () => void;
+    beforeEach(() => {
+      restoreViewport = installMobileViewport();
+    });
+    afterEach(() => {
+      restoreViewport();
+    });
+
+    it("renders tappable cards with the board game's fields in their slots", async () => {
+      renderManager();
+
+      expect(
+        await screen.findByRole("link", { name: "Set-A-Watch" }),
+      ).toHaveAttribute("href", "/board-games/1");
+      expect(screen.queryByRole("table")).not.toBeInTheDocument();
+
+      const card = screen
+        .getByRole("link", { name: "Set-A-Watch" })
+        .closest("li")!;
+      // The box count is the subtitle; Has App (first boolean) takes the
+      // corner badge; the rest are pills.
+      expect(within(card).getByText("2 boxes")).toBeInTheDocument();
+      expect(
+        within(card).getByRole("img", { name: "Has App: Yes" }),
+      ).toBeInTheDocument();
+      expect(within(card).getByText("Light")).toBeInTheDocument();
+      expect(within(card).queryAllByRole("button")).toHaveLength(0);
+    });
   });
 
   it("hides the Boxes column when it is hidden in the standard-field settings", async () => {

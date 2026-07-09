@@ -1,4 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
+import { AUTH_STATE } from "./authState";
+import { seedToy } from "./apiSeed";
+
+// These specs exercise write flows (create dialogs, inline edits, deletes)
+// that the guest UI hides, so the whole file runs with the authenticated
+// session from auth.setup.ts. All backend data is stubbed via page.route —
+// only the session (and the server-loaded ui_settings) is real.
+test.use({ storageState: AUTH_STATE });
 import { DEFAULT_STANDARD_FIELDS } from "../src/lib/uiSettings.types";
 
 type StubField = {
@@ -369,11 +377,21 @@ test("auto-opens a dropdown field's menu on focus", async ({ page }) => {
   await page.getByRole("button", { name: "New" }).click();
   const dialog = page.getByRole("dialog", { name: "Create Toy" });
 
+  // The dialog focuses the open Name editor as its final mount step; waiting
+  // for that settles the mount re-renders. Focusing the dropdown any earlier
+  // races them — the trigger node gets replaced and the focus (and the
+  // auto-open it triggers) is lost.
+  await expect(dialog.getByRole("textbox", { name: "Name" })).toBeFocused();
+
   // Focusing the dropdown trigger opens its listbox — no click/Enter needed.
-  await dialog.getByRole("button", { name: "Condition" }).focus();
-  await expect(
-    dialog.getByRole("listbox", { name: "Condition" }),
-  ).toBeVisible();
+  // Retried because a straggling mount re-render can still steal the first
+  // focus under load; the behavior under test is focus → listbox opens.
+  await expect(async () => {
+    await dialog.getByRole("button", { name: "Condition" }).focus();
+    await expect(
+      dialog.getByRole("listbox", { name: "Condition" }),
+    ).toBeVisible({ timeout: 1000 });
+  }).toPass();
 });
 
 test("radio/progress options wrap within the create dialog", async ({ page }) => {
@@ -437,7 +455,10 @@ test("closes the New dialog without creating on Cancel", async ({ page }) => {
 test("the toy detail page shows the Fields card and links back to the list", async ({
   page,
 }) => {
-  await page.goto("/toys/1");
+  // The detail page fetches server-side (page.route can't stub it), so it
+  // needs a real toy in the e2e account.
+  const toy = await seedToy(page);
+  await page.goto(`/toys/${toy.id}`);
 
   // The Fields card with the fixed Name + Set rows is the heart of the screen.
   await expect(page.getByText("Fields", { exact: true })).toBeVisible();

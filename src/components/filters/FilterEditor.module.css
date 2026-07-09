@@ -47,6 +47,20 @@
   gap: 8px;
 }
 
+/* On a phone the one-line editor is wider than the screen: cap the popover at
+   the viewport and let the controls wrap into a stack. (Phase 4 replaces this
+   with a mobile sheet.) Keep in sync with MOBILE_BREAKPOINT in
+   src/lib/useMediaQuery.ts. */
+@media (max-width: 767px) {
+  .popover {
+    max-width: calc(100vw - 24px);
+  }
+
+  .controls {
+    flex-wrap: wrap;
+  }
+}
+
 .fieldListbox {
   min-width: 150px;
 }

@@ -1,5 +1,22 @@
 import "@testing-library/jest-dom";
 
+// jsdom doesn't implement matchMedia; default every query to "no match" so
+// components using useMediaQuery/useIsMobile render their desktop form in
+// tests. A test that needs the mobile variant (or change events) installs its
+// own richer stand-in over this (see useMediaQuery.test.tsx).
+if (typeof window !== "undefined" && typeof window.matchMedia !== "function") {
+  window.matchMedia = ((query: string) => ({
+    media: query,
+    matches: false,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia;
+}
+
 // jsdom (as bundled with jest-environment-jsdom) doesn't implement Blob.text(),
 // which our file-import flow relies on. Polyfill it so components using the
 // standard, browser-supported API are testable. Reads via FileReader, which

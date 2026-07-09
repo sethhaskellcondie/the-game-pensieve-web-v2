@@ -17,6 +17,9 @@ import DataTable, {
   MIN_COL,
   type ColumnDef,
 } from "@/components/data-table/DataTable";
+import CardList, { type CardData } from "@/components/card-list/CardList";
+import { buildCardCustomFields } from "@/components/card-list/cardFields";
+import { useIsMobile } from "@/lib/useMediaQuery";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import { useSession } from "@/components/auth/SessionProvider";
@@ -480,6 +483,23 @@ export default function SystemsManager({
   // are the system custom fields, in their defined order. In mass-edit mode the
   // Name cell becomes click-to-edit and Generation/Handheld get the same inline
   // editors as number/boolean custom fields.
+  // Below the breakpoint the grid is replaced by the card list (Phase 3 of the
+  // mobile rollout). Conditionally mounted — never both — so the hidden twin
+  // can't leak duplicate queryable content into the DOM (Phase 1 lesson).
+  const isMobile = useIsMobile();
+
+  // The standard fields the user hid via Options → Show/Hide Standard Fields;
+  // dropped from the grid's columns and the mobile card's slots alike.
+  const hiddenStandard = useMemo(
+    () =>
+      new Set(
+        Object.entries(standardFields)
+          .filter(([, shown]) => !shown)
+          .map(([key]) => key),
+      ),
+    [standardFields],
+  );
+
   const columns = useMemo<ColumnDef<System>[]>(() => {
     const base: ColumnDef<System>[] = [
       {
@@ -591,22 +611,44 @@ export default function SystemsManager({
     // Drop the standard columns the user hid via Options → Show/Hide Standard
     // Fields. Column keys match the setting keys, and the name column has no
     // setting, so it is never hidden.
-    const hidden = new Set(
-      Object.entries(standardFields)
-        .filter(([, shown]) => !shown)
-        .map(([key]) => key),
-    );
-    return [...base.filter((col) => !hidden.has(col.key)), ...dynamic];
+    return [...base.filter((col) => !hiddenStandard.has(col.key)), ...dynamic];
   }, [
     definitions,
     massEditable,
-    standardFields,
+    hiddenStandard,
     editingId,
     commitName,
     commitGeneration,
     commitHandheld,
     commitFieldValue,
   ]);
+
+  // What a mobile card shows for one system: name, the generation as the
+  // subtitle, and the custom fields in their per-type card slots. The corner
+  // badge is always the Handheld standard field (same pattern as the video
+  // game boxes' Physical), so every boolean custom field goes to the pill
+  // row. Cards are read/navigate-only — mass edit is desktop-only by decision.
+  const systemCard = useCallback(
+    (system: System): CardData => {
+      const custom = buildCardCustomFields(
+        definitions,
+        system.customFieldValues,
+        { booleanGlyph: false },
+      );
+      return {
+        title: system.name,
+        subtitle: hiddenStandard.has("generation")
+          ? undefined
+          : `Generation ${system.generation}`,
+        glyph: hiddenStandard.has("handheld")
+          ? null
+          : { label: "Handheld", on: system.handheld },
+        bars: custom.bars,
+        pills: custom.pills,
+      };
+    },
+    [definitions, hiddenStandard],
+  );
 
   const hasFilters = filters.length > 0;
 
@@ -645,33 +687,47 @@ export default function SystemsManager({
         )}
       </div>
 
-      <DataTable
-        storageKey="systems"
-        columns={columns}
-        rows={systems}
-        getRowKey={(system) => system.id}
-        loading={loading}
-        loadingMessage="Loading systems…"
-        emptyMessage={
-          hasFilters ? "No systems match your filters." : "No systems yet."
-        }
-        // Deleting a system now lives on its detail page, not the grid row.
-        // The leading details column only appears in mass edit mode; otherwise
-        // the whole row navigates to the system's detail page. Both routes are
-        // the same — they just differ in affordance per mode.
-        onOpenDetails={
-          massEditable
-            ? (system) => router.push(`/systems/${system.id}`)
-            : undefined
-        }
-        detailsLabel={(system) => `View ${system.name}`}
-        onRowClick={
-          massEditable
-            ? undefined
-            : (system) => router.push(`/systems/${system.id}`)
-        }
-        rowClickLabel={(system) => `View ${system.name}`}
-      />
+      {isMobile ? (
+        <CardList
+          rows={systems}
+          getRowKey={(system) => system.id}
+          loading={loading}
+          loadingMessage="Loading systems…"
+          emptyMessage={
+            hasFilters ? "No systems match your filters." : "No systems yet."
+          }
+          getHref={(system) => `/systems/${system.id}`}
+          card={systemCard}
+        />
+      ) : (
+        <DataTable
+          storageKey="systems"
+          columns={columns}
+          rows={systems}
+          getRowKey={(system) => system.id}
+          loading={loading}
+          loadingMessage="Loading systems…"
+          emptyMessage={
+            hasFilters ? "No systems match your filters." : "No systems yet."
+          }
+          // Deleting a system now lives on its detail page, not the grid row.
+          // The leading details column only appears in mass edit mode; otherwise
+          // the whole row navigates to the system's detail page. Both routes are
+          // the same — they just differ in affordance per mode.
+          onOpenDetails={
+            massEditable
+              ? (system) => router.push(`/systems/${system.id}`)
+              : undefined
+          }
+          detailsLabel={(system) => `View ${system.name}`}
+          onRowClick={
+            massEditable
+              ? undefined
+              : (system) => router.push(`/systems/${system.id}`)
+          }
+          rowClickLabel={(system) => `View ${system.name}`}
+        />
+      )}
 
       {creating && (
         <SystemCreateModal

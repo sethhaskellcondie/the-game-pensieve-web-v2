@@ -16,17 +16,18 @@ import KindBadge from "./KindBadge";
 import OptionList from "./OptionList";
 import FieldModal, { type FieldModalSave } from "./FieldModal";
 import { usePersistentColumnWidths } from "@/components/data-table/usePersistentColumnWidths";
-import { GripIcon, PlusIcon, TrashIcon } from "./icons";
+import { useIsMobile } from "@/lib/useMediaQuery";
+import { CaretIcon, GripIcon, PlusIcon, TrashIcon } from "./icons";
 import styles from "./CustomFieldsManager.module.css";
 
 type ColKey = "order" | "name" | "kind" | "options";
 type Column = { key: ColKey; label: string; width: number; min?: number; frozen?: boolean; seam?: boolean };
 
 const COLS: Column[] = [
-  // Order is the narrowest column (just a grip + number), so it gets a smaller
-  // resize floor than MIN_COL — otherwise dragging it would snap up past its
-  // own default width.
-  { key: "order", label: "Order", width: 80, min: 56, frozen: true },
+  // Order is the narrowest column (a grip + number + up/down buttons), so it
+  // gets a smaller resize floor than MIN_COL — otherwise dragging it would
+  // snap up past its own default width.
+  { key: "order", label: "Order", width: 96, min: 56, frozen: true },
   { key: "name", label: "Name", width: 272, frozen: true, seam: true },
   { key: "kind", label: "Custom Field Type", width: 226 },
   { key: "options", label: "Options (* = default)", width: 380 },
@@ -48,19 +49,24 @@ type OverInfo = { id: number; pos: "before" | "after" };
 // Column resize lives at module scope so it can imperatively drive
 // document.body during the drag without tripping the in-component
 // immutability rules. setWidths is the state setter passed in by the caller.
+// Pointer events (not mouse*) so the drag also works with touch and pen; the
+// pointerId guard keeps a second finger from steering someone else's drag,
+// and pointercancel (e.g. the browser reclaiming the gesture) ends it cleanly.
 function beginColumnResize(
   key: ColKey,
-  e: React.MouseEvent,
+  e: React.PointerEvent,
   startW: number,
   minW: number,
   setWidths: React.Dispatch<React.SetStateAction<Record<ColKey, number>>>,
 ) {
   e.preventDefault();
   e.stopPropagation();
+  const { pointerId } = e;
   const startX = e.clientX;
   document.body.style.userSelect = "none";
   document.body.style.cursor = "col-resize";
-  const onMove = (ev: MouseEvent) =>
+  const onMove = (ev: PointerEvent) => {
+    if (ev.pointerId !== pointerId) return;
     setWidths((ws) => ({
       ...ws,
       [key]: Math.max(
@@ -68,14 +74,18 @@ function beginColumnResize(
         Math.min(MAX_COL, Math.round(startW + (ev.clientX - startX))),
       ),
     }));
-  const onUp = () => {
-    document.removeEventListener("mousemove", onMove);
-    document.removeEventListener("mouseup", onUp);
+  };
+  const onEnd = (ev: PointerEvent) => {
+    if (ev.pointerId !== pointerId) return;
+    document.removeEventListener("pointermove", onMove);
+    document.removeEventListener("pointerup", onEnd);
+    document.removeEventListener("pointercancel", onEnd);
     document.body.style.userSelect = "";
     document.body.style.cursor = "";
   };
-  document.addEventListener("mousemove", onMove);
-  document.addEventListener("mouseup", onUp);
+  document.addEventListener("pointermove", onMove);
+  document.addEventListener("pointerup", onEnd);
+  document.addEventListener("pointercancel", onEnd);
 }
 
 async function readJson<T>(res: Response): Promise<T> {
@@ -132,6 +142,12 @@ export default function CustomFieldsManager() {
     "custom-fields",
     COLS,
   );
+  // Below the breakpoint the table is replaced by a card per field (Phase 3 of
+  // the mobile rollout). Unlike the entity cards these stay interactive —
+  // custom fields have no detail page, so reorder, delete, and edit must live
+  // on the card. Conditionally mounted — never both — so the hidden twin can't
+  // leak duplicate queryable content into the DOM (Phase 1 lesson).
+  const isMobile = useIsMobile();
 
   // Refetch the current scope after a mutation. Runs from event handlers, so a
   // post-await setState here is fine (it's the load effect that must avoid it).
@@ -180,14 +196,28 @@ export default function CustomFieldsManager() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
     };
+    // The opening click focuses the trash button, and when that button sits at
+    // the edge of the scroll container the browser then asynchronously scrolls
+    // it fully into view — that stray scroll must not dismiss the menu it just
+    // opened. Arm the scroll closer two frames later, past the focus scroll.
+    let scrollArmed = false;
+    const arm = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        scrollArmed = true;
+      });
+    });
+    const onScroll = () => {
+      if (scrollArmed) close();
+    };
     document.addEventListener("click", close);
     document.addEventListener("keydown", onKey);
-    window.addEventListener("scroll", close, true);
+    window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", close);
     return () => {
+      cancelAnimationFrame(arm);
       document.removeEventListener("click", close);
       document.removeEventListener("keydown", onKey);
-      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", close);
     };
   }, [deleteConfirm]);
@@ -364,9 +394,42 @@ export default function CustomFieldsManager() {
     void persistReorder(next, prev);
   };
 
+  // Open/close a field's "Are you sure?" delete menu, anchored to the trash
+  // button that was pressed (shared by the table rows and the mobile cards).
+  const toggleDeleteConfirm = (
+    field: CustomField,
+    e: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    e.stopPropagation();
+    if (deleteConfirm?.id === field.id) {
+      setDeleteConfirm(null);
+      return;
+    }
+    const r = e.currentTarget.getBoundingClientRect();
+    setDeleteConfirm({
+      id: field.id,
+      top: r.bottom + 7,
+      right: window.innerWidth - r.right,
+    });
+  };
+
+  // Swap a row with its neighbor — the tap/keyboard alternative to dragging
+  // (HTML5 drag never fires on touch). Renumbers and persists exactly like a
+  // drop, through persistReorder.
+  const moveField = (index: number, delta: -1 | 1) => {
+    const target = index + delta;
+    if (target < 0 || target >= fields.length) return;
+    const prev = fields;
+    const arr = [...prev];
+    [arr[index], arr[target]] = [arr[target], arr[index]];
+    const next = arr.map((f, idx) => ({ ...f, order: idx }));
+    setFields(next);
+    void persistReorder(next, prev);
+  };
+
   // Drag a header's right edge to resize that column (spreadsheet feel). Each
   // column may set its own resize floor (Order's is below MIN_COL).
-  const startResize = (key: ColKey, e: React.MouseEvent) => {
+  const startResize = (key: ColKey, e: React.PointerEvent) => {
     const minW = COLS.find((c) => c.key === key)?.min ?? MIN_COL;
     beginColumnResize(key, e, widths[key], minW, setWidths);
   };
@@ -432,6 +495,111 @@ export default function CustomFieldsManager() {
         </div>
       </div>
 
+      {isMobile ? (
+        <ul className={styles.cards} aria-label="Custom fields">
+          {fields.map((field, i) => (
+            <li key={field.id} className={styles.fieldCard}>
+              <div className={styles.fieldCardHead}>
+                <span className={styles.cardOrderNum}>{i + 1}</span>
+                <span className={styles.cardName}>{field.name}</span>
+                {/* Reordering and deleting are writes — hidden for
+                    guests/lapsed, like the table's controls. */}
+                {canWrite && (
+                  <>
+                    <button
+                      type="button"
+                      className={styles.cardMoveBtn}
+                      aria-label={`Move ${field.name} up`}
+                      disabled={i === 0}
+                      onClick={() => moveField(i, -1)}
+                    >
+                      <CaretIcon className={styles.caretUp} />
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.cardMoveBtn}
+                      aria-label={`Move ${field.name} down`}
+                      disabled={i === fields.length - 1}
+                      onClick={() => moveField(i, 1)}
+                    >
+                      <CaretIcon />
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.cardDel}
+                      aria-label={`Delete ${field.name}`}
+                      aria-haspopup="menu"
+                      aria-expanded={deleteConfirm?.id === field.id}
+                      onClick={(e) => toggleDeleteConfirm(field, e)}
+                    >
+                      <TrashIcon />
+                    </button>
+                    {deleteConfirm?.id === field.id && (
+                      <div
+                        role="menu"
+                        aria-label={`Delete ${field.name}?`}
+                        className={styles.confirm}
+                        style={{
+                          top: deleteConfirm.top,
+                          right: deleteConfirm.right,
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className={styles.confirmText}>
+                          Are you sure?
+                        </span>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className={styles.confirmDelete}
+                          onClick={() => {
+                            setDeleteConfirm(null);
+                            void handleDelete(field);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+              {/* The type + options body is the tap-to-edit target, opening
+                  the same modal as the desktop options cell (which also
+                  covers renaming — the card has no inline name editor). An
+                  option-less field shows just its type badge — no "N/A"
+                  filler (that's a table-column convention). */}
+              {canWrite ? (
+                <button
+                  type="button"
+                  className={styles.cardEdit}
+                  aria-label={`Edit ${field.name}`}
+                  onClick={() => setModal({ mode: "edit", field })}
+                >
+                  <KindBadge type={field.type} />
+                  {field.options.length > 0 && (
+                    <OptionList options={field.options} />
+                  )}
+                </button>
+              ) : (
+                <div className={styles.cardMeta}>
+                  <KindBadge type={field.type} />
+                  {field.options.length > 0 && (
+                    <OptionList options={field.options} />
+                  )}
+                </div>
+              )}
+            </li>
+          ))}
+          {fields.length === 0 && (
+            <li className={styles.cardsEmpty}>
+              {loading
+                ? "Loading custom fields…"
+                : "No custom fields for this record type."}
+            </li>
+          )}
+        </ul>
+      ) : (
       <div className={styles.card}>
         <div className={styles.scroll}>
           <table className={styles.table}>
@@ -463,7 +631,7 @@ export default function CustomFieldsManager() {
                       <span
                         className={styles.resize}
                         title="Drag to resize"
-                        onMouseDown={(e) => startResize(c.key, e)}
+                        onPointerDown={(e) => startResize(c.key, e)}
                       />
                     </th>
                   );
@@ -545,6 +713,30 @@ export default function CustomFieldsManager() {
                           </span>
                         )}
                         <span className={styles.orderNum}>{i + 1}</span>
+                        {/* Up/down buttons: the reorder path for touch (where
+                            HTML5 drag never fires) and keyboard users. */}
+                        {canWrite && (
+                          <span className={styles.moveBtns}>
+                            <button
+                              type="button"
+                              className={styles.moveBtn}
+                              aria-label={`Move ${field.name} up`}
+                              disabled={i === 0}
+                              onClick={() => moveField(i, -1)}
+                            >
+                              <CaretIcon className={styles.caretUp} />
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.moveBtn}
+                              aria-label={`Move ${field.name} down`}
+                              disabled={i === fields.length - 1}
+                              onClick={() => moveField(i, 1)}
+                            >
+                              <CaretIcon />
+                            </button>
+                          </span>
+                        )}
                       </span>
                     </td>
                     <td
@@ -613,19 +805,7 @@ export default function CustomFieldsManager() {
                         aria-label={`Delete ${field.name}`}
                         aria-haspopup="menu"
                         aria-expanded={deleteConfirm?.id === field.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (deleteConfirm?.id === field.id) {
-                            setDeleteConfirm(null);
-                            return;
-                          }
-                          const r = e.currentTarget.getBoundingClientRect();
-                          setDeleteConfirm({
-                            id: field.id,
-                            top: r.bottom + 7,
-                            right: window.innerWidth - r.right,
-                          });
-                        }}
+                        onClick={(e) => toggleDeleteConfirm(field, e)}
                       >
                         <TrashIcon />
                       </button>
@@ -681,6 +861,7 @@ export default function CustomFieldsManager() {
           </table>
         </div>
       </div>
+      )}
 
       {modal && (
         <FieldModal

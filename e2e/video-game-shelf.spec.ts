@@ -1,4 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
+import { AUTH_STATE } from "./authState";
+import { seedVideoGameBox } from "./apiSeed";
+
+// These specs exercise write flows (create dialogs, inline edits, deletes)
+// that the guest UI hides, so the whole file runs with the authenticated
+// session from auth.setup.ts. All backend data is stubbed via page.route —
+// only the session (and the server-loaded ui_settings) is real.
+test.use({ storageState: AUTH_STATE });
 import { DEFAULT_STANDARD_FIELDS } from "../src/lib/uiSettings.types";
 
 type StubSystem = {
@@ -318,6 +326,11 @@ test("filters the shelf via the search box on Enter", async ({ page }) => {
 test("creates a box through the New dialog with a new game and an existing game", async ({
   page,
 }) => {
+  // The longest flow in the suite (two stacked dialogs, a picker search, and a
+  // create) — give it the tripled slow-test budget so full-matrix contention
+  // (three browsers against one dev server) can't time it out.
+  test.slow();
+
   // More specific than stubShelf's catch-alls, and registered later, so these
   // win: the picker's game search returns real rows, and the create POST is
   // captured (the exact glob skips /search and /:id).
@@ -364,7 +377,15 @@ test("creates a box through the New dialog with a new game and an existing game"
   await dialog.getByRole("textbox", { name: "Title" }).fill("Mega Man Collection");
   await dialog.getByRole("textbox", { name: "Title" }).press("Enter");
   await dialog.getByRole("button", { name: "System" }).click();
-  await page.getByRole("option", { name: "NES", exact: true }).click();
+  // NES is the first option and opens highlighted, with focus in the dropdown's
+  // filter input — Enter selects it. Selected by keyboard because the list
+  // auto-scrolls its highlighted option into view on hover changes, which
+  // fights the click actionability (stability) check under full-matrix load.
+  // The create-POST assertion below still verifies the right system was picked.
+  await expect(
+    page.getByRole("option", { name: "NES", exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press("Enter");
   await expect(dialog.getByText("Add at least one game.")).toBeVisible();
   await expect(create).toBeDisabled();
 
@@ -460,7 +481,10 @@ test("Escape closes the stacked game dialog but not the box dialog", async ({
 test("the box detail page shows the Fields and Video Games cards and links back to the shelf", async ({
   page,
 }) => {
-  await page.goto("/video-game-boxes/1");
+  // The detail page fetches server-side (page.route can't stub it), so it
+  // needs a real box in the e2e account.
+  const box = await seedVideoGameBox(page);
+  await page.goto(`/video-game-boxes/${box.id}`);
 
   // The Fields card with the fixed Title + System + Physical rows is the heart
   // of the screen; the Video Games card lists the games inside the box.
@@ -511,7 +535,11 @@ test("deletes a box from its detail page after the Are-you-sure confirmation", a
     });
   });
 
-  await page.goto("/video-game-boxes/1");
+  // The detail page fetches server-side (page.route can't stub it), so it
+  // needs a real box; the DELETE itself stays stubbed above, so the row is
+  // never actually removed.
+  const box = await seedVideoGameBox(page);
+  await page.goto(`/video-game-boxes/${box.id}`);
 
   // The red delete button sits at the bottom of the detail page and confirms
   // before deleting. Dismissing the menu deletes nothing.
@@ -527,5 +555,5 @@ test("deletes a box from its detail page after the Are-you-sure confirmation", a
   await menu.getByRole("menuitem", { name: "Delete" }).click();
 
   await expect(page).toHaveURL("/video-games?view=shelf");
-  expect(String(deletedUrl)).toContain("/api/video-game-boxes/1");
+  expect(String(deletedUrl)).toContain(`/api/video-game-boxes/${box.id}`);
 });

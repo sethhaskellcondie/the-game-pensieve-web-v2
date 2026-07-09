@@ -98,6 +98,9 @@
   height: 100%;
   cursor: col-resize;
   z-index: 7;
+  /* The pointer-event drag owns this handle — without this a touch drag would
+     scroll the table instead of resizing the column. */
+  touch-action: none;
 }
 
 .resize::after {

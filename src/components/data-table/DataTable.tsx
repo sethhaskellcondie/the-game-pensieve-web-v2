@@ -72,19 +72,24 @@ const DETAIL_W = 52;
 // Column resize lives at module scope so it can imperatively drive
 // document.body during the drag without tripping the in-component
 // immutability rules. setWidths is the state setter passed in by the caller.
+// Pointer events (not mouse*) so the drag also works with touch and pen; the
+// pointerId guard keeps a second finger from steering someone else's drag,
+// and pointercancel (e.g. the browser reclaiming the gesture) ends it cleanly.
 function beginColumnResize(
   key: string,
-  e: React.MouseEvent,
+  e: React.PointerEvent,
   startW: number,
   minW: number,
   setWidths: React.Dispatch<React.SetStateAction<Record<string, number>>>,
 ) {
   e.preventDefault();
   e.stopPropagation();
+  const { pointerId } = e;
   const startX = e.clientX;
   document.body.style.userSelect = "none";
   document.body.style.cursor = "col-resize";
-  const onMove = (ev: MouseEvent) =>
+  const onMove = (ev: PointerEvent) => {
+    if (ev.pointerId !== pointerId) return;
     setWidths((ws) => ({
       ...ws,
       [key]: Math.max(
@@ -92,14 +97,18 @@ function beginColumnResize(
         Math.min(MAX_COL, Math.round(startW + (ev.clientX - startX))),
       ),
     }));
-  const onUp = () => {
-    document.removeEventListener("mousemove", onMove);
-    document.removeEventListener("mouseup", onUp);
+  };
+  const onEnd = (ev: PointerEvent) => {
+    if (ev.pointerId !== pointerId) return;
+    document.removeEventListener("pointermove", onMove);
+    document.removeEventListener("pointerup", onEnd);
+    document.removeEventListener("pointercancel", onEnd);
     document.body.style.userSelect = "";
     document.body.style.cursor = "";
   };
-  document.addEventListener("mousemove", onMove);
-  document.addEventListener("mouseup", onUp);
+  document.addEventListener("pointermove", onMove);
+  document.addEventListener("pointerup", onEnd);
+  document.addEventListener("pointercancel", onEnd);
 }
 
 export default function DataTable<Row>({
@@ -137,21 +146,36 @@ export default function DataTable<Row>({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
     };
+    // The opening click focuses the delete button, and when that button sits
+    // at the edge of the scroll container the browser then asynchronously
+    // scrolls it fully into view — that stray scroll must not dismiss the menu
+    // it just opened. Arm the scroll closer two frames later, past the focus
+    // scroll.
+    let scrollArmed = false;
+    const arm = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        scrollArmed = true;
+      });
+    });
+    const onScroll = () => {
+      if (scrollArmed) close();
+    };
     document.addEventListener("click", close);
     document.addEventListener("keydown", onKey);
-    window.addEventListener("scroll", close, true);
+    window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", close);
     return () => {
+      cancelAnimationFrame(arm);
       document.removeEventListener("click", close);
       document.removeEventListener("keydown", onKey);
-      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", close);
     };
   }, [confirming]);
 
   // Drag a header's right edge to resize that column (spreadsheet feel). Each
   // column may set its own resize floor.
-  const startResize = (key: string, e: React.MouseEvent) => {
+  const startResize = (key: string, e: React.PointerEvent) => {
     const col = columns.find((c) => c.key === key);
     const minW = col?.min ?? MIN_COL;
     const startW = widths[key] ?? col?.width ?? minW;
@@ -217,7 +241,7 @@ export default function DataTable<Row>({
                     <span
                       className={styles.resize}
                       title="Drag to resize"
-                      onMouseDown={(e) => startResize(c.key, e)}
+                      onPointerDown={(e) => startResize(c.key, e)}
                     />
                   </th>
                 );

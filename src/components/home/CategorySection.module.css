@@ -90,6 +90,18 @@
   opacity: 0.4;
 }
 
+/* Touch devices have no hover to reveal the header controls — keep them
+   visible (dimmed when not actionable). */
+@media (hover: none) {
+  .headBtn {
+    opacity: 1;
+  }
+
+  .headBtn:disabled {
+    opacity: 0.4;
+  }
+}
+
 /* CaretIcon points down; the up arrow is the same glyph flipped. */
 .caretUp {
   transform: rotate(180deg);

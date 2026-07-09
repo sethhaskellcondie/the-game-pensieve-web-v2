@@ -4,19 +4,14 @@ import { useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
-  KeyboardSensor,
   MeasuringStrategy,
-  PointerSensor,
   closestCorners,
   pointerWithin,
-  useSensor,
-  useSensors,
   type CollisionDetection,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import BeginnerHint from "@/components/BeginnerHint";
 import Button from "@/components/Button";
 import { PlusIcon } from "@/components/custom-fields/icons";
@@ -27,6 +22,7 @@ import type { StoredFilter } from "@/lib/savedFilters.types";
 import CategorySection from "./CategorySection";
 import SavedFilterCard from "./SavedFilterCard";
 import SavedFilterDialog from "./SavedFilterDialog";
+import { useDashboardSensors } from "./dndSensors";
 import {
   findCategoryIndex,
   moveFilter as moveFilterTo,
@@ -131,15 +127,9 @@ export default function SavedFiltersDashboard({
   const dragSnapshot = useRef<FilterCategory[] | null>(null);
   const { showSnackbar } = useToast();
 
-  // A click on a card opens its link; a real drag has to clear an 8px threshold
-  // first, so the two never collide. Keyboard dragging follows the horizontal
-  // sortable order.
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
+  // Per-input drag activation (mouse threshold, touch long-press, keyboard) —
+  // see dndSensors.ts for the rationale behind each constraint.
+  const sensors = useDashboardSensors();
 
   // The summary counts only real categories — the always-present Uncategorized
   // row is a catch-all bucket, not a category the user created.

@@ -17,6 +17,12 @@ import DataTable, {
   MIN_COL,
   type ColumnDef,
 } from "@/components/data-table/DataTable";
+import CardList, { type CardData } from "@/components/card-list/CardList";
+import {
+  buildCardCustomFields,
+  type CardPill,
+} from "@/components/card-list/cardFields";
+import { useIsMobile } from "@/lib/useMediaQuery";
 import { PlusIcon } from "@/components/custom-fields/icons";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
@@ -450,6 +456,23 @@ export default function BoardGameBoxesManager({
   // get the inline boolean editor. Board Game and Base Set stay read-only —
   // those relationships are picked by id on the detail pages, not committed by
   // name in a grid cell.
+  // Below the breakpoint the grid is replaced by the card list (Phase 3 of the
+  // mobile rollout). Conditionally mounted — never both — so the hidden twin
+  // can't leak duplicate queryable content into the DOM (Phase 1 lesson).
+  const isMobile = useIsMobile();
+
+  // The standard fields the user hid via Options → Show/Hide Standard Fields;
+  // dropped from the grid's columns and the mobile card's slots alike.
+  const hiddenStandard = useMemo(
+    () =>
+      new Set(
+        Object.entries(standardFields)
+          .filter(([, shown]) => !shown)
+          .map(([key]) => key),
+      ),
+    [standardFields],
+  );
+
   const columns = useMemo<ColumnDef<BoardGameBox>[]>(() => {
     const base: ColumnDef<BoardGameBox>[] = [
       {
@@ -579,16 +602,11 @@ export default function BoardGameBoxesManager({
     // Drop the standard columns the user hid via Options → Show/Hide Standard
     // Fields. Column keys match the setting keys, and the title column has no
     // setting, so it is never hidden.
-    const hidden = new Set(
-      Object.entries(standardFields)
-        .filter(([, shown]) => !shown)
-        .map(([key]) => key),
-    );
-    return [...base.filter((col) => !hidden.has(col.key)), ...dynamic];
+    return [...base.filter((col) => !hiddenStandard.has(col.key)), ...dynamic];
   }, [
     definitions,
     massEditable,
-    standardFields,
+    hiddenStandard,
     editingId,
     baseSetTitleById,
     commitTitle,
@@ -596,6 +614,54 @@ export default function BoardGameBoxesManager({
     commitStandAlone,
     commitFieldValue,
   ]);
+
+  // What a mobile card shows for one box: title, the linked board game (and
+  // base set, when the box is an expansion of one) in the subtitle, and the
+  // custom fields in their per-type card slots. The corner badge is always the
+  // Expansion standard field (the box's salient flag — same pattern as the
+  // video game boxes' Physical); Stand Alone leads the pill row, and every
+  // boolean custom field joins it. Cards are read/navigate-only — mass edit
+  // is desktop-only by decision.
+  const boxCard = useCallback(
+    (box: BoardGameBox): CardData => {
+      const baseSet =
+        box.baseSetId == null ? null : baseSetTitleById.get(box.baseSetId);
+      const subtitle = [
+        hiddenStandard.has("boardGame") ? null : box.boardGame?.title,
+        hiddenStandard.has("baseSet") || baseSet == null
+          ? null
+          : `Base: ${baseSet}`,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      const custom = buildCardCustomFields(definitions, box.customFieldValues, {
+        booleanGlyph: false,
+      });
+      const pills: CardPill[] = [
+        ...(hiddenStandard.has("standAlone")
+          ? []
+          : [
+              {
+                key: "standAlone",
+                kind: "boolean" as const,
+                label: "Stand Alone",
+                on: box.isStandAlone,
+              },
+            ]),
+        ...custom.pills,
+      ];
+      return {
+        title: box.title,
+        subtitle: subtitle || undefined,
+        glyph: hiddenStandard.has("expansion")
+          ? null
+          : { label: "Expansion", on: box.isExpansion },
+        bars: custom.bars,
+        pills,
+      };
+    },
+    [definitions, hiddenStandard, baseSetTitleById],
+  );
 
   // Create a box from the dialog: POST it and prepend the saved box (with its
   // backend-assigned id) to both lists. Returns whether it succeeded; the
@@ -673,35 +739,51 @@ export default function BoardGameBoxesManager({
         )}
       </div>
 
-      <DataTable
-        storageKey="board-game-boxes"
-        columns={columns}
-        rows={boxes}
-        getRowKey={(box) => box.id}
-        loading={loading}
-        loadingMessage="Loading board game boxes…"
-        emptyMessage={
-          hasFilters
-            ? "No board game boxes match your filters."
-            : "No board game boxes yet."
-        }
-        // Deleting a box now lives on its detail page, not the grid row.
-        // The leading details column only appears in mass edit mode; otherwise
-        // the whole row navigates to the box's detail page. Both routes are
-        // the same — they just differ in affordance per mode.
-        onOpenDetails={
-          massEditable
-            ? (box) => router.push(`/board-game-boxes/${box.id}`)
-            : undefined
-        }
-        detailsLabel={(box) => `View ${box.title}`}
-        onRowClick={
-          massEditable
-            ? undefined
-            : (box) => router.push(`/board-game-boxes/${box.id}`)
-        }
-        rowClickLabel={(box) => `View ${box.title}`}
-      />
+      {isMobile ? (
+        <CardList
+          rows={boxes}
+          getRowKey={(box) => box.id}
+          loading={loading}
+          loadingMessage="Loading board game boxes…"
+          emptyMessage={
+            hasFilters
+              ? "No board game boxes match your filters."
+              : "No board game boxes yet."
+          }
+          getHref={(box) => `/board-game-boxes/${box.id}`}
+          card={boxCard}
+        />
+      ) : (
+        <DataTable
+          storageKey="board-game-boxes"
+          columns={columns}
+          rows={boxes}
+          getRowKey={(box) => box.id}
+          loading={loading}
+          loadingMessage="Loading board game boxes…"
+          emptyMessage={
+            hasFilters
+              ? "No board game boxes match your filters."
+              : "No board game boxes yet."
+          }
+          // Deleting a box now lives on its detail page, not the grid row.
+          // The leading details column only appears in mass edit mode; otherwise
+          // the whole row navigates to the box's detail page. Both routes are
+          // the same — they just differ in affordance per mode.
+          onOpenDetails={
+            massEditable
+              ? (box) => router.push(`/board-game-boxes/${box.id}`)
+              : undefined
+          }
+          detailsLabel={(box) => `View ${box.title}`}
+          onRowClick={
+            massEditable
+              ? undefined
+              : (box) => router.push(`/board-game-boxes/${box.id}`)
+          }
+          rowClickLabel={(box) => `View ${box.title}`}
+        />
+      )}
 
       {creating && (
         <BoardGameBoxCreateModal

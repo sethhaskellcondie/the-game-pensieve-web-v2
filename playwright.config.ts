@@ -21,11 +21,17 @@ export default defineConfig({
   // specs with "@mobile" in their title run only on the mobile project.
   // Mobile coverage is added as "@mobile" twins of the desktop specs rather
   // than by rerunning desktop specs at a phone size.
+  //
+  // The "setup" project registers a trial account and saves its storageState
+  // (e2e/auth.setup.ts); specs that write data opt in with
+  // `test.use({ storageState: AUTH_STATE })`. Anonymous browsers are guests
+  // (read-only showcase view), so guest specs simply don't opt in.
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] }, grepInvert: /@mobile/ },
-    { name: "firefox", use: { ...devices["Desktop Firefox"] }, grepInvert: /@mobile/ },
-    { name: "webkit", use: { ...devices["Desktop Safari"] }, grepInvert: /@mobile/ },
-    { name: "mobile-chromium", use: { ...devices["Pixel 7"] }, grep: /@mobile/ },
+    { name: "setup", testMatch: /auth\.setup\.ts/ },
+    { name: "chromium", use: { ...devices["Desktop Chrome"] }, grepInvert: /@mobile/, dependencies: ["setup"] },
+    { name: "firefox", use: { ...devices["Desktop Firefox"] }, grepInvert: /@mobile/, dependencies: ["setup"] },
+    { name: "webkit", use: { ...devices["Desktop Safari"] }, grepInvert: /@mobile/, dependencies: ["setup"] },
+    { name: "mobile-chromium", use: { ...devices["Pixel 7"] }, grep: /@mobile/, dependencies: ["setup"] },
   ],
   // Start the Next.js dev server before the tests, reusing one if already running.
   webServer: {

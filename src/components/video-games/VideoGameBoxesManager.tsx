@@ -18,6 +18,9 @@ import DataTable, {
   MIN_COL,
   type ColumnDef,
 } from "@/components/data-table/DataTable";
+import CardList, { type CardData } from "@/components/card-list/CardList";
+import { buildCardCustomFields } from "@/components/card-list/cardFields";
+import { useIsMobile } from "@/lib/useMediaQuery";
 import { PlusIcon } from "@/components/custom-fields/icons";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
@@ -197,6 +200,10 @@ export default function VideoGameBoxesManager({
   const canSort = useMemo(() => supportsSorting(spec), [spec]);
   // The row whose Title cell is being inline-edited, or null when idle.
   const [editingId, setEditingId] = useState<number | null>(null);
+  // Below the breakpoint the grid is replaced by the card list (Phase 3 of the
+  // mobile rollout). Conditionally mounted — never both — so the hidden twin
+  // can't leak duplicate queryable content into the DOM (Phase 1 lesson).
+  const isMobile = useIsMobile();
 
   // The unified field list (standard spec fields + custom fields) the filter
   // bar offers. The system_id entry gets a friendlier label and the systems
@@ -463,6 +470,18 @@ export default function VideoGameBoxesManager({
     [persist],
   );
 
+  // The standard fields the user hid via Options → Show/Hide Standard Fields;
+  // dropped from the grid's columns and the mobile card's slots alike.
+  const hiddenStandard = useMemo(
+    () =>
+      new Set(
+        Object.entries(standardFields)
+          .filter(([, shown]) => !shown)
+          .map(([key]) => key),
+      ),
+    [standardFields],
+  );
+
   // Title, System, Games, Physical, and Collection are always first; the rest
   // of the columns are the box custom fields, in their defined order. In
   // mass-edit mode the Title cell becomes click-to-edit, System becomes a
@@ -605,16 +624,11 @@ export default function VideoGameBoxesManager({
     // Drop the standard columns the user hid via Options → Show/Hide Standard
     // Fields. Column keys match the setting keys, and the title column has no
     // setting, so it is never hidden.
-    const hidden = new Set(
-      Object.entries(standardFields)
-        .filter(([, shown]) => !shown)
-        .map(([key]) => key),
-    );
-    return [...base.filter((col) => !hidden.has(col.key)), ...dynamic];
+    return [...base.filter((col) => !hiddenStandard.has(col.key)), ...dynamic];
   }, [
     definitions,
     massEditable,
-    standardFields,
+    hiddenStandard,
     editingId,
     systemOptions,
     commitTitle,
@@ -622,6 +636,40 @@ export default function VideoGameBoxesManager({
     commitPhysical,
     commitFieldValue,
   ]);
+
+  // What a mobile card shows for one box: title, the visible secondary
+  // standard fields joined into the subtitle, and the custom fields in their
+  // per-type card slots. The corner badge is always the Physical standard
+  // field (decided), so every boolean custom field goes to the pill row.
+  // Collection is deliberately absent — the games count in the subtitle
+  // already says it. Cards are read/navigate-only — mass edit is desktop-only
+  // by decision.
+  const boxCard = useCallback(
+    (box: VideoGameBox): CardData => {
+      const games = box.videoGames?.length ?? 0;
+      const subtitle = [
+        hiddenStandard.has("system") ? null : box.system?.name,
+        hiddenStandard.has("games")
+          ? null
+          : `${games} ${games === 1 ? "game" : "games"}`,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      const custom = buildCardCustomFields(definitions, box.customFieldValues, {
+        booleanGlyph: false,
+      });
+      return {
+        title: box.title,
+        subtitle: subtitle || undefined,
+        glyph: hiddenStandard.has("physical")
+          ? null
+          : { label: "Physical", on: box.isPhysical },
+        bars: custom.bars,
+        pills: custom.pills,
+      };
+    },
+    [definitions, hiddenStandard],
+  );
 
   // Create a box from the dialog: POST it and prepend the saved box (with its
   // backend-assigned id) to the list. Returns whether it succeeded; the dialog
@@ -696,35 +744,51 @@ export default function VideoGameBoxesManager({
         )}
       </div>
 
-      <DataTable
-        storageKey="video-game-boxes"
-        columns={columns}
-        rows={boxes}
-        getRowKey={(box) => box.id}
-        loading={loading}
-        loadingMessage="Loading video game boxes…"
-        emptyMessage={
-          hasFilters
-            ? "No video game boxes match your filters."
-            : "No video game boxes yet."
-        }
-        // Deleting a box now lives on its detail page, not the grid row.
-        // The leading details column only appears in mass edit mode; otherwise
-        // the whole row navigates to the box's detail page. Both routes are
-        // the same — they just differ in affordance per mode.
-        onOpenDetails={
-          massEditable
-            ? (box) => router.push(`/video-game-boxes/${box.id}`)
-            : undefined
-        }
-        detailsLabel={(box) => `View ${box.title}`}
-        onRowClick={
-          massEditable
-            ? undefined
-            : (box) => router.push(`/video-game-boxes/${box.id}`)
-        }
-        rowClickLabel={(box) => `View ${box.title}`}
-      />
+      {isMobile ? (
+        <CardList
+          rows={boxes}
+          getRowKey={(box) => box.id}
+          loading={loading}
+          loadingMessage="Loading video game boxes…"
+          emptyMessage={
+            hasFilters
+              ? "No video game boxes match your filters."
+              : "No video game boxes yet."
+          }
+          getHref={(box) => `/video-game-boxes/${box.id}`}
+          card={boxCard}
+        />
+      ) : (
+        <DataTable
+          storageKey="video-game-boxes"
+          columns={columns}
+          rows={boxes}
+          getRowKey={(box) => box.id}
+          loading={loading}
+          loadingMessage="Loading video game boxes…"
+          emptyMessage={
+            hasFilters
+              ? "No video game boxes match your filters."
+              : "No video game boxes yet."
+          }
+          // Deleting a box now lives on its detail page, not the grid row.
+          // The leading details column only appears in mass edit mode; otherwise
+          // the whole row navigates to the box's detail page. Both routes are
+          // the same — they just differ in affordance per mode.
+          onOpenDetails={
+            massEditable
+              ? (box) => router.push(`/video-game-boxes/${box.id}`)
+              : undefined
+          }
+          detailsLabel={(box) => `View ${box.title}`}
+          onRowClick={
+            massEditable
+              ? undefined
+              : (box) => router.push(`/video-game-boxes/${box.id}`)
+          }
+          rowClickLabel={(box) => `View ${box.title}`}
+        />
+      )}
 
       {creating && (
         <VideoGameBoxCreateModal

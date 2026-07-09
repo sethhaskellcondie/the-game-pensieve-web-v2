@@ -1,4 +1,5 @@
 import { test, expect, type Page, type Request } from "@playwright/test";
+import { AUTH_STATE } from "./authState";
 
 // Specs for the per-entity default sort options: edited from the Options
 // page's Default Sort Options section, stored under the default_sort_options
@@ -216,6 +217,9 @@ function names(page: Page) {
 }
 
 test.describe("Options page section", () => {
+  // /options requires a logged-in account (guests redirect to /login).
+  test.use({ storageState: AUTH_STATE });
+
   test("edits the Systems default sort and persists it", async ({ page }) => {
     await stub(page, []);
     await page.goto("/options");

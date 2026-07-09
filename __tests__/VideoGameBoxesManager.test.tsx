@@ -6,6 +6,22 @@ import VideoGameBoxesManager from "@/components/video-games/VideoGameBoxesManage
 import { ToastProvider } from "@/components/ToastProvider";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
+import { MOBILE_MEDIA_QUERY } from "@/lib/useMediaQuery";
+
+// Make useIsMobile() report a phone viewport for the duration of a test;
+// returns the restore function (the jest.setup default is desktop/no-match).
+function installMobileViewport() {
+  const original = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    media: query,
+    matches: query === MOBILE_MEDIA_QUERY,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as unknown as typeof window.matchMedia;
+  return () => {
+    window.matchMedia = original;
+  };
+}
 
 jest.mock("next/navigation", () => ({
   useRouter: jest.fn(),
@@ -245,6 +261,45 @@ describe("VideoGameBoxesManager", () => {
 
   afterEach(() => {
     mockFetch.mockReset();
+  });
+
+  describe("on a phone viewport", () => {
+    let restoreViewport: () => void;
+    beforeEach(() => {
+      restoreViewport = installMobileViewport();
+    });
+    afterEach(() => {
+      restoreViewport();
+    });
+
+    it("renders tappable cards with Physical as the corner badge", async () => {
+      renderManager();
+
+      expect(
+        await screen.findByRole("link", { name: "Super Mario All-Stars" }),
+      ).toHaveAttribute("href", "/video-game-boxes/31");
+      expect(screen.queryByRole("table")).not.toBeInTheDocument();
+
+      const card = screen
+        .getByRole("link", { name: "Super Mario All-Stars" })
+        .closest("li")!;
+      // System + game count fold into the subtitle; the corner badge is
+      // always the Physical standard field (full labelled pill), so the
+      // Sealed boolean custom field lands in the pill row alongside the rest.
+      expect(within(card).getByText("SNES · 2 games")).toBeInTheDocument();
+      const physical = within(card).getByRole("img", { name: "Physical: Yes" });
+      expect(physical).toHaveTextContent("Physical");
+      expect(within(card).getByText("Mint")).toBeInTheDocument();
+      expect(
+        within(card).getByRole("img", { name: "Sealed: No" }),
+      ).toBeInTheDocument();
+      // Collection is deliberately absent — the games count already says it.
+      expect(
+        within(card).queryByRole("img", { name: /Collection/ }),
+      ).not.toBeInTheDocument();
+      // Read-only: no buttons anywhere on the card.
+      expect(within(card).queryAllByRole("button")).toHaveLength(0);
+    });
   });
 
   it("hides only the standard columns turned off in the settings", async () => {

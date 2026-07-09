@@ -6,6 +6,22 @@ import ToysManager from "@/components/toys/ToysManager";
 import { ToastProvider } from "@/components/ToastProvider";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
+import { MOBILE_MEDIA_QUERY } from "@/lib/useMediaQuery";
+
+// Make useIsMobile() report a phone viewport for the duration of a test;
+// returns the restore function (the jest.setup default is desktop/no-match).
+function installMobileViewport() {
+  const original = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    media: query,
+    matches: query === MOBILE_MEDIA_QUERY,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as unknown as typeof window.matchMedia;
+  return () => {
+    window.matchMedia = original;
+  };
+}
 import { encodeFilterParam } from "@/components/filters/urlFilters";
 
 jest.mock("next/navigation", () => ({
@@ -203,6 +219,38 @@ describe("ToysManager", () => {
 
   afterEach(() => {
     mockFetch.mockReset();
+  });
+
+  describe("on a phone viewport", () => {
+    let restoreViewport: () => void;
+    beforeEach(() => {
+      restoreViewport = installMobileViewport();
+    });
+    afterEach(() => {
+      restoreViewport();
+    });
+
+    it("renders tappable cards with the toy's fields in their slots", async () => {
+      renderManager();
+
+      expect(
+        await screen.findByRole("link", { name: "R2-D2" }),
+      ).toHaveAttribute("href", "/toys/1");
+      expect(screen.queryByRole("table")).not.toBeInTheDocument();
+
+      const card = screen.getByRole("link", { name: "R2-D2" }).closest("li")!;
+      // The set is the subtitle; Boxed (first boolean) takes the corner
+      // badge; Build is a bar; the rest are pills.
+      expect(within(card).getByText("Star Wars")).toBeInTheDocument();
+      expect(
+        within(card).getByRole("img", { name: "Boxed: Yes" }),
+      ).toBeInTheDocument();
+      expect(
+        within(card).getByRole("img", { name: "Build: Opened (2 of 3)" }),
+      ).toBeInTheDocument();
+      expect(within(card).getByText("Original")).toBeInTheDocument();
+      expect(within(card).queryAllByRole("button")).toHaveLength(0);
+    });
   });
 
   it("hides the Set column when it is hidden in the standard-field settings", async () => {

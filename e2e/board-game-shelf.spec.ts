@@ -1,4 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
+import { AUTH_STATE } from "./authState";
+import { seedBoardGameBox } from "./apiSeed";
+
+// These specs exercise write flows (create dialogs, inline edits, deletes)
+// that the guest UI hides, so the whole file runs with the authenticated
+// session from auth.setup.ts. All backend data is stubbed via page.route —
+// only the session (and the server-loaded ui_settings) is real.
+test.use({ storageState: AUTH_STATE });
 import { DEFAULT_STANDARD_FIELDS } from "../src/lib/uiSettings.types";
 
 type StubSlimGame = {
@@ -525,7 +533,10 @@ test("Escape closes the stacked game dialog but not the box dialog", async ({
 test("the box detail page shows the Fields and Board Game cards and links back to the shelf", async ({
   page,
 }) => {
-  await page.goto("/board-game-boxes/1");
+  // The detail page fetches server-side (page.route can't stub it), so it
+  // needs a real box in the e2e account.
+  const box = await seedBoardGameBox(page);
+  await page.goto(`/board-game-boxes/${box.id}`);
 
   // The Fields card with the fixed Title + Expansion + Stand Alone rows is
   // the heart of the screen; the Board Game card shows the one linked game.

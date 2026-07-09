@@ -34,6 +34,12 @@
   box-shadow: 0 24px 60px -18px rgba(var(--ink-navy-rgb), 0.42);
   padding: 14px;
   animation: sort-pop 0.14s cubic-bezier(0.2, 0.7, 0.3, 1);
+  /* Viewport clamp: on a phone the sort rows are wider than the screen, so the
+     popover caps at the viewport and scrolls internally instead of bleeding
+     off the left edge. (Phase 4 replaces this with a mobile sheet.) */
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
 }
 
 @keyframes sort-pop {

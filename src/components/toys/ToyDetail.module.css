@@ -233,6 +233,14 @@
   opacity: 0.75;
 }
 
+/* Touch devices have no hover to reveal the pencil — keep it visible so
+   editable values stay discoverable. */
+@media (hover: none) {
+  .editPen {
+    opacity: 0.75;
+  }
+}
+
 .ph {
   color: #b4bcc8;
   font-style: italic;
@@ -331,6 +339,8 @@
   border-radius: 11px;
   box-shadow: 0 20px 48px -16px rgba(var(--ink-navy-rgb), 0.34);
   padding: 6px;
+  /* Never wider than a phone viewport, whatever the trigger's min-width. */
+  max-width: calc(100vw - 16px);
 }
 
 .dropFilter {

@@ -6,6 +6,22 @@ import SystemsManager from "@/components/systems/SystemsManager";
 import { ToastProvider } from "@/components/ToastProvider";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
+import { MOBILE_MEDIA_QUERY } from "@/lib/useMediaQuery";
+
+// Make useIsMobile() report a phone viewport for the duration of a test;
+// returns the restore function (the jest.setup default is desktop/no-match).
+function installMobileViewport() {
+  const original = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    media: query,
+    matches: query === MOBILE_MEDIA_QUERY,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as unknown as typeof window.matchMedia;
+  return () => {
+    window.matchMedia = original;
+  };
+}
 
 jest.mock("next/navigation", () => ({
   useRouter: jest.fn(),
@@ -184,6 +200,39 @@ describe("SystemsManager", () => {
 
   afterEach(() => {
     mockFetch.mockReset();
+  });
+
+  describe("on a phone viewport", () => {
+    let restoreViewport: () => void;
+    beforeEach(() => {
+      restoreViewport = installMobileViewport();
+    });
+    afterEach(() => {
+      restoreViewport();
+    });
+
+    it("renders tappable cards with Handheld as the corner badge", async () => {
+      renderManager();
+
+      expect(
+        await screen.findByRole("link", { name: "NES" }),
+      ).toHaveAttribute("href", "/systems/1");
+      expect(screen.queryByRole("table")).not.toBeInTheDocument();
+
+      const card = screen.getByRole("link", { name: "NES" }).closest("li")!;
+      // Generation folds into the subtitle; the corner badge is always the
+      // Handheld standard field, so the Modded boolean custom field lands in
+      // the pill row.
+      expect(within(card).getByText("Generation 3")).toBeInTheDocument();
+      expect(
+        within(card).getByRole("img", { name: "Handheld: No" }),
+      ).toBeInTheDocument();
+      expect(
+        within(card).getByRole("img", { name: "Modded: Yes" }),
+      ).toBeInTheDocument();
+      expect(within(card).getByText("NTSC")).toBeInTheDocument();
+      expect(within(card).queryAllByRole("button")).toHaveLength(0);
+    });
   });
 
   it("hides only the standard columns turned off in the settings", async () => {

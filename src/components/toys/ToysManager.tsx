@@ -17,6 +17,9 @@ import DataTable, {
   MIN_COL,
   type ColumnDef,
 } from "@/components/data-table/DataTable";
+import CardList, { type CardData } from "@/components/card-list/CardList";
+import { buildCardCustomFields } from "@/components/card-list/cardFields";
+import { useIsMobile } from "@/lib/useMediaQuery";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import { useSession } from "@/components/auth/SessionProvider";
@@ -491,6 +494,23 @@ export default function ToysManager({
   // Name and Set are always first; the rest of the columns are the toy custom
   // fields, in their defined order. Each cell maps the toy's values by field id.
   // In mass-edit mode, Name and Set become inline-editable.
+  // Below the breakpoint the grid is replaced by the card list (Phase 3 of the
+  // mobile rollout). Conditionally mounted — never both — so the hidden twin
+  // can't leak duplicate queryable content into the DOM (Phase 1 lesson).
+  const isMobile = useIsMobile();
+
+  // The standard fields the user hid via Options → Show/Hide Standard Fields;
+  // dropped from the grid's columns and the mobile card's slots alike.
+  const hiddenStandard = useMemo(
+    () =>
+      new Set(
+        Object.entries(standardFields)
+          .filter(([, shown]) => !shown)
+          .map(([key]) => key),
+      ),
+    [standardFields],
+  );
+
   const columns = useMemo<ColumnDef<Toy>[]>(() => {
     function renderEditable(toy: Toy, field: EditField) {
       return (
@@ -572,22 +592,30 @@ export default function ToysManager({
     // Drop the standard columns the user hid via Options → Show/Hide Standard
     // Fields. Column keys match the setting keys, and the name column has no
     // setting, so it is never hidden.
-    const hidden = new Set(
-      Object.entries(standardFields)
-        .filter(([, shown]) => !shown)
-        .map(([key]) => key),
-    );
-    return [...base.filter((col) => !hidden.has(col.key)), ...dynamic];
+    return [...base.filter((col) => !hiddenStandard.has(col.key)), ...dynamic];
   }, [
     definitions,
     massEditable,
-    standardFields,
+    hiddenStandard,
     editing,
     startEdit,
     cancelEdit,
     commitEdit,
     commitFieldValue,
   ]);
+
+  // What a mobile card shows for one toy: name, the set as the subtitle, and
+  // the custom fields in their per-type card slots (first boolean → corner
+  // badge). Cards are read/navigate-only — mass edit is desktop-only by
+  // decision.
+  const toyCard = useCallback(
+    (toy: Toy): CardData => ({
+      title: toy.name,
+      subtitle: hiddenStandard.has("set") ? undefined : toy.set || undefined,
+      ...buildCardCustomFields(definitions, toy.customFieldValues),
+    }),
+    [definitions, hiddenStandard],
+  );
 
   const hasFilters = filters.length > 0;
 
@@ -626,27 +654,41 @@ export default function ToysManager({
         )}
       </div>
 
-      <DataTable
-        storageKey="toys"
-        columns={columns}
-        rows={toys}
-        getRowKey={(toy) => toy.id}
-        loading={loading}
-        loadingMessage="Loading toys…"
-        emptyMessage={hasFilters ? "No toys match your filters." : "No toys yet."}
-        // Deleting a toy now lives on its detail page, not the grid row.
-        // The leading details column only appears in mass edit mode; otherwise
-        // the whole row navigates to the toy's detail page. Both routes are the
-        // same — they just differ in affordance per mode.
-        onOpenDetails={
-          massEditable ? (toy) => router.push(`/toys/${toy.id}`) : undefined
-        }
-        detailsLabel={(toy) => `View ${toy.name}`}
-        onRowClick={
-          massEditable ? undefined : (toy) => router.push(`/toys/${toy.id}`)
-        }
-        rowClickLabel={(toy) => `View ${toy.name}`}
-      />
+      {isMobile ? (
+        <CardList
+          rows={toys}
+          getRowKey={(toy) => toy.id}
+          loading={loading}
+          loadingMessage="Loading toys…"
+          emptyMessage={
+            hasFilters ? "No toys match your filters." : "No toys yet."
+          }
+          getHref={(toy) => `/toys/${toy.id}`}
+          card={toyCard}
+        />
+      ) : (
+        <DataTable
+          storageKey="toys"
+          columns={columns}
+          rows={toys}
+          getRowKey={(toy) => toy.id}
+          loading={loading}
+          loadingMessage="Loading toys…"
+          emptyMessage={hasFilters ? "No toys match your filters." : "No toys yet."}
+          // Deleting a toy now lives on its detail page, not the grid row.
+          // The leading details column only appears in mass edit mode; otherwise
+          // the whole row navigates to the toy's detail page. Both routes are the
+          // same — they just differ in affordance per mode.
+          onOpenDetails={
+            massEditable ? (toy) => router.push(`/toys/${toy.id}`) : undefined
+          }
+          detailsLabel={(toy) => `View ${toy.name}`}
+          onRowClick={
+            massEditable ? undefined : (toy) => router.push(`/toys/${toy.id}`)
+          }
+          rowClickLabel={(toy) => `View ${toy.name}`}
+        />
+      )}
 
       {creating && (
         <ToyCreateModal
