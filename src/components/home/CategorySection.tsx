@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -8,6 +8,8 @@ import {
 } from "@dnd-kit/sortable";
 import {
   CaretIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   PencilIcon,
   PlusIcon,
 } from "@/components/custom-fields/icons";
@@ -52,6 +54,53 @@ export default function CategorySection({
   // The whole card row is a drop target so empty categories (and the padding
   // past the last card) still accept a dragged card.
   const { setNodeRef } = useDroppable({ id: containerId(category.id) });
+
+  // Prev/next scroll arrows (shown on mobile — see CSS) for nudging the row one
+  // card at a time. We track whether the row can still scroll each way so the
+  // arrows disable at the ends and hide entirely when nothing overflows.
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  // One card (SavedFilterCard is a fixed 232px) plus the row's 14px gap.
+  const CARD_STEP = 246;
+
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // 1px slack absorbs sub-pixel rounding at the extremes.
+    setCanScrollLeft(el.scrollLeft > 1);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  }, []);
+
+  // Merge our scroll ref with dnd-kit's droppable ref onto the same node.
+  const setBodyRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      scrollRef.current = node;
+      setNodeRef(node);
+    },
+    [setNodeRef],
+  );
+
+  // Recompute on mount, on scroll, on viewport resize, and whenever the card
+  // count changes (which alters the scrollable width).
+  useEffect(() => {
+    updateScrollState();
+    const el = scrollRef.current;
+    if (el == null || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(updateScrollState);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [updateScrollState, count]);
+
+  const scrollByCard = (direction: -1 | 1) => {
+    scrollRef.current?.scrollBy({
+      left: direction * CARD_STEP,
+      behavior: "smooth",
+    });
+  };
+
+  const showArrows = canScrollLeft || canScrollRight;
 
   return (
     <section className={styles.category} aria-label={category.name}>
@@ -105,39 +154,70 @@ export default function CategorySection({
         </div>
       </div>
 
-      <div ref={setNodeRef} className={styles.body}>
-        <SortableContext
-          items={category.filters.map((f) => f.id)}
-          strategy={horizontalListSortingStrategy}
+      <div className={styles.bodyWrap}>
+        <div
+          ref={setBodyRef}
+          className={styles.body}
+          onScroll={updateScrollState}
         >
-          {count === 0 ? (
-            <div className={styles.empty}>
-              <span className={styles.emptyIcon} aria-hidden="true">
-                <FilterIcon />
-              </span>
-              <p className={styles.emptyText}>
-                No saved filters in this category yet.
-              </p>
-              <button
-                type="button"
-                className={styles.emptyBtn}
-                onClick={() => onNewFilter?.(category)}
-              >
-                <PlusIcon /> Add a filter
-              </button>
-            </div>
-          ) : (
-            <div className={styles.row}>
-              {category.filters.map((filter) => (
-                <SortableFilterCard
-                  key={filter.id}
-                  filter={filter}
-                  onEdit={onEditFilter}
-                />
-              ))}
-            </div>
-          )}
-        </SortableContext>
+          <SortableContext
+            items={category.filters.map((f) => f.id)}
+            strategy={horizontalListSortingStrategy}
+          >
+            {count === 0 ? (
+              <div className={styles.empty}>
+                <span className={styles.emptyIcon} aria-hidden="true">
+                  <FilterIcon />
+                </span>
+                <p className={styles.emptyText}>
+                  No saved filters in this category yet.
+                </p>
+                <button
+                  type="button"
+                  className={styles.emptyBtn}
+                  onClick={() => onNewFilter?.(category)}
+                >
+                  <PlusIcon /> Add a filter
+                </button>
+              </div>
+            ) : (
+              <div className={styles.row}>
+                {category.filters.map((filter) => (
+                  <SortableFilterCard
+                    key={filter.id}
+                    filter={filter}
+                    onEdit={onEditFilter}
+                  />
+                ))}
+              </div>
+            )}
+          </SortableContext>
+        </div>
+
+        {/* Mobile scroll arrows (hidden on desktop via CSS). Rendered only when
+            the row overflows; each disables at its end of the scroll range. */}
+        {showArrows && (
+          <>
+            <button
+              type="button"
+              className={`${styles.navBtn} ${styles.navLeft}`}
+              aria-label={`Scroll ${category.name} filters left`}
+              disabled={!canScrollLeft}
+              onClick={() => scrollByCard(-1)}
+            >
+              <ChevronLeftIcon />
+            </button>
+            <button
+              type="button"
+              className={`${styles.navBtn} ${styles.navRight}`}
+              aria-label={`Scroll ${category.name} filters right`}
+              disabled={!canScrollRight}
+              onClick={() => scrollByCard(1)}
+            >
+              <ChevronRightIcon />
+            </button>
+          </>
+        )}
       </div>
 
       {editable && editing && (

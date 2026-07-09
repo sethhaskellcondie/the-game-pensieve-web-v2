@@ -156,6 +156,12 @@
   white-space: nowrap;
 }
 
+/* Positioning context for the mobile scroll arrows, which must stay pinned to
+   the visible edges rather than scroll away with the row inside .body. */
+.bodyWrap {
+  position: relative;
+}
+
 /* The cards live in a white panel with rounded bottom corners; the row scrolls
    horizontally when the cards overflow. */
 .body {
@@ -171,6 +177,65 @@
   display: flex;
   align-items: flex-start;
   gap: 14px;
+}
+
+/* Prev/next scroll arrows: hidden on desktop (the trackpad/scrollbar suffice),
+   revealed on phones where they nudge the row one card at a time. Pinned to the
+   body's left/right edges and vertically centered over the card row. Keep in
+   sync with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
+.navBtn {
+  display: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--ink-navy);
+  box-shadow: 0 4px 12px -4px rgba(var(--ink-navy-rgb), 0.35);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, opacity 0.12s;
+}
+
+.navLeft {
+  left: 6px;
+}
+
+.navRight {
+  right: 6px;
+}
+
+.navBtn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.navBtn:not(:disabled):active {
+  background: var(--paper);
+  border-color: var(--gray-300);
+}
+
+/* Dimmed and inert at the end of the scroll range. */
+.navBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  box-shadow: none;
+}
+
+.navBtn:focus-visible {
+  outline: 2px solid var(--primary-600);
+  outline-offset: 2px;
+}
+
+@media (max-width: 767px) {
+  .navBtn {
+    display: inline-flex;
+  }
 }
 
 /* Empty category: a centered prompt so a category without filters (a freshly
