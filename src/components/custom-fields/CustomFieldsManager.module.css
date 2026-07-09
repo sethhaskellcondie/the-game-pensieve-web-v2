@@ -140,6 +140,47 @@
   white-space: nowrap;
 }
 
+/* Tap-to-rename trigger wrapping the name: an always-visible pencil marks it
+   editable (no hover on touch); the name span shrinks first so the pencil
+   never clips. */
+.cardNameBtn {
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: text;
+  text-align: left;
+}
+
+.cardNameBtn .cardName {
+  flex: 0 1 auto;
+}
+
+.cardNameBtn svg {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  color: var(--primary-600);
+  opacity: 0.6;
+}
+
+.cardNameInput {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--primary-600);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink-navy);
+  outline: none;
+}
+
 /* Touch-sized reorder buttons (the table's tiny hover carets don't cut it on
    a phone). */
 .cardMoveBtn {

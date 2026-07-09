@@ -17,7 +17,13 @@ import OptionList from "./OptionList";
 import FieldModal, { type FieldModalSave } from "./FieldModal";
 import { usePersistentColumnWidths } from "@/components/data-table/usePersistentColumnWidths";
 import { useIsMobile } from "@/lib/useMediaQuery";
-import { CaretIcon, GripIcon, PlusIcon, TrashIcon } from "./icons";
+import {
+  CaretIcon,
+  GripIcon,
+  PencilIcon,
+  PlusIcon,
+  TrashIcon,
+} from "./icons";
 import styles from "./CustomFieldsManager.module.css";
 
 type ColKey = "order" | "name" | "kind" | "options";
@@ -501,7 +507,39 @@ export default function CustomFieldsManager() {
             <li key={field.id} className={styles.fieldCard}>
               <div className={styles.fieldCardHead}>
                 <span className={styles.cardOrderNum}>{i + 1}</span>
-                <span className={styles.cardName}>{field.name}</span>
+                {/* Renaming reuses the table's inline editor state; the
+                    pencil is always visible — touch has no hover to reveal
+                    the affordance. Guests see the name as plain text. */}
+                {editingNameId === field.id ? (
+                  <input
+                    className={styles.cardNameInput}
+                    aria-label={`Name for ${field.name}`}
+                    value={draftName}
+                    autoFocus
+                    onChange={(e) => setDraftName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void commitEditName(field);
+                      } else if (e.key === "Escape") {
+                        e.preventDefault();
+                        cancelEditName();
+                      }
+                    }}
+                    onBlur={() => void commitEditName(field)}
+                  />
+                ) : canWrite ? (
+                  <button
+                    type="button"
+                    className={styles.cardNameBtn}
+                    onClick={() => startEditName(field)}
+                  >
+                    <span className={styles.cardName}>{field.name}</span>
+                    <PencilIcon aria-hidden="true" />
+                  </button>
+                ) : (
+                  <span className={styles.cardName}>{field.name}</span>
+                )}
                 {/* Reordering and deleting are writes — hidden for
                     guests/lapsed, like the table's controls. */}
                 {canWrite && (

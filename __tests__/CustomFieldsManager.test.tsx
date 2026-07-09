@@ -275,10 +275,12 @@ describe("CustomFieldsManager", () => {
       expect(cards).toHaveLength(2);
 
       // Each card keeps the write controls (custom fields have no detail
-      // page, so reorder/delete/edit must live here). No inline rename on
-      // cards — the edit modal covers it — so the name is plain text.
+      // page, so reorder/delete/edit/rename must all live here). The name is
+      // the tap-to-rename trigger, same as the desktop name cell.
       const card = cards[0];
-      expect(within(card).getByText("Designers")).toBeInTheDocument();
+      expect(
+        within(card).getByRole("button", { name: "Designers" }),
+      ).toBeInTheDocument();
       expect(
         within(card).getByRole("button", { name: "Move Designers up" }),
       ).toBeDisabled();
@@ -291,9 +293,6 @@ describe("CustomFieldsManager", () => {
       expect(
         within(card).getByRole("button", { name: "Edit Designers" }),
       ).toBeInTheDocument();
-      expect(
-        within(card).queryByRole("button", { name: "Designers" }),
-      ).not.toBeInTheDocument();
       // An option-less field (Designers is text) shows just its type badge —
       // no "N/A" filler on cards. The option-bearing Theme still lists its
       // options.
@@ -320,6 +319,34 @@ describe("CustomFieldsManager", () => {
           ),
         ).toHaveLength(2);
       });
+    });
+
+    it("renames a field inline from its card", async () => {
+      renderManager();
+      await screen.findByText("Designers");
+
+      fireEvent.click(screen.getByRole("button", { name: "Designers" }));
+      const input = screen.getByLabelText("Name for Designers");
+      fireEvent.change(input, { target: { value: "Designer" } });
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      await waitFor(() => {
+        expect(
+          mockFetch.mock.calls.some(
+            ([url, init]) =>
+              String(url).includes("/custom-fields/1") &&
+              (init as RequestInit)?.method === "PUT" &&
+              JSON.parse(String((init as RequestInit)?.body)).name ===
+                "Designer",
+          ),
+        ).toBe(true);
+      });
+      expect(
+        screen.getByRole("button", { name: "Designer" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByLabelText("Name for Designers"),
+      ).not.toBeInTheDocument();
     });
 
     it("deletes from a card through the confirmation menu", async () => {
