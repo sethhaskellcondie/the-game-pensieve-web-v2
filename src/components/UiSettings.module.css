@@ -99,3 +99,13 @@
   flex: 0 0 auto;
   width: 220px;
 }
+
+/* Phone layout: the 220px action-button width crowds the label column on a
+   narrow row, so it's reduced. Kept in step with the Sort and Heartbeat
+   buttons so the options page still lines up. Keep in sync with
+   MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
+@media (max-width: 767px) {
+  .actionButton {
+    width: 140px;
+  }
+}

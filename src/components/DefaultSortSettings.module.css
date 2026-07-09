@@ -40,3 +40,12 @@
   outline: 2px solid var(--primary-600);
   outline-offset: 2px;
 }
+
+/* Phone layout: reduce the fixed width so the label column keeps room on a
+   narrow row. Kept in step with the other options action buttons. Keep in sync
+   with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
+@media (max-width: 767px) {
+  .sortBtn {
+    width: 140px;
+  }
+}

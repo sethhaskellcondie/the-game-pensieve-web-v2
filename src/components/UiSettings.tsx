@@ -7,6 +7,8 @@ import StandardFieldsModal from "./StandardFieldsModal";
 import Toggle from "./Toggle";
 import { BeginnerModeIcon, BoardGamesIcon, VideoGamesIcon } from "./icons";
 import { useUiSettings } from "./UiSettingsProvider";
+import { useSession } from "./auth/SessionProvider";
+import { useIsMobile } from "@/lib/useMediaQuery";
 import type { CollectionView, UiSettings } from "@/lib/uiSettings.types";
 import styles from "./UiSettings.module.css";
 
@@ -112,18 +114,29 @@ const SETTINGS: SettingMeta[] = [
 
 export default function UiSettings() {
   const { settings, setSetting, saving } = useUiSettings();
+  const { isAdmin } = useSession();
   const [fieldsOpen, setFieldsOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const toggle = (key: SettingKey) => (next: boolean) => {
     void setSetting(key, next);
   };
+
+  // Mass Edit Mode drives in-line editing of the display chart, which the phone
+  // layout doesn't offer, so its toggle is hidden below the breakpoint. Developer
+  // Mode is an admin-only affordance, so it's hidden from everyone else.
+  const visibleSettings = SETTINGS.filter((setting) => {
+    if (setting.key === "massEditMode" && isMobile) return false;
+    if (setting.key === "developerMode" && !isAdmin) return false;
+    return true;
+  });
 
   return (
     <SettingsSection
       title="UI Settings"
       description="Interface preferences applied across the Pensieve."
     >
-      {SETTINGS.map((setting) => (
+      {visibleSettings.map((setting) => (
         <div key={setting.key} className={styles.row}>
           <span className={styles.icon}>{setting.icon}</span>
           <div className={styles.text}>
