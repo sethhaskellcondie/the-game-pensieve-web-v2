@@ -141,7 +141,6 @@ export default function CustomFieldsManager() {
   } | null>(null);
   const [dragId, setDragId] = useState<number | null>(null);
   const [overInfo, setOverInfo] = useState<OverInfo | null>(null);
-  // The row whose name is being edited inline, plus its working draft.
   const [editingNameId, setEditingNameId] = useState<number | null>(null);
   const [draftName, setDraftName] = useState("");
   const [widths, setWidths] = usePersistentColumnWidths<ColKey>(

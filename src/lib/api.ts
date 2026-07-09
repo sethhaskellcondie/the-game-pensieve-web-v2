@@ -1151,7 +1151,6 @@ export async function checkHeartbeat(
 
   if (debug) {
     const body = await res.clone().text();
-    //if debug mode is on, then display the response in the next.js console
     console.log(
       `[heartbeat] GET ${url} → ${res.status} ${res.statusText}: ${body}`,
     );

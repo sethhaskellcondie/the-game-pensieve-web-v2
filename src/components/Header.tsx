@@ -13,7 +13,7 @@ type HeaderProps = {
   // Page-specific guidance shown as a BeginnerHint in the hero row (only
   // while beginner mode is on).
   beginnerHint?: string;
-  children?: ReactNode; //optional child component also included in the header
+  children?: ReactNode;
 };
 
 export default function Header({

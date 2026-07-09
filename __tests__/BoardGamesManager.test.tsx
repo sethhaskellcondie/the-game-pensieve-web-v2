@@ -428,7 +428,6 @@ describe("BoardGamesManager", () => {
     renderManager(true);
     await screen.findByText("Set-A-Watch");
 
-    // Click the Title trigger to open the inline input, then edit + commit.
     fireEvent.click(screen.getByRole("button", { name: "Set-A-Watch" }));
     const input = screen.getByRole("textbox", {
       name: "Title for Set-A-Watch",

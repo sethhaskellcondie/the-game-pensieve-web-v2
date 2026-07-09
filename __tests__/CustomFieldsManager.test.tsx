@@ -204,7 +204,6 @@ describe("CustomFieldsManager", () => {
     renderManager();
     await screen.findByText("Designers");
 
-    // Click the name to enter edit mode, change it, and commit with Enter.
     fireEvent.click(screen.getByRole("button", { name: "Designers" }));
     const input = screen.getByLabelText("Name for Designers");
     fireEvent.change(input, { target: { value: "Designer" } });
