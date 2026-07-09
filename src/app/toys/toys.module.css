@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--paper);
+  background: var(--surface-paper-grid);
   /* Own stacking context below the header (its .content is z-index 2) so the
      DataTable's sticky cells (z-index up to 50) stay trapped here and can't
      paint over a header beginner-hint tooltip overflowing into this area.

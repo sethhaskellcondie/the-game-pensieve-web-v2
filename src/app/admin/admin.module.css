@@ -9,7 +9,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--paper);
+  background: var(--surface-paper-grid);
   /* Own stacking context below the header so the DataTable's sticky cells stay
      trapped here and can't paint over a header tooltip overflowing into this
      area. Fixed modals/toasts escape to the viewport root, so they're

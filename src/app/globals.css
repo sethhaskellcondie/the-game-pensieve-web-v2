@@ -37,6 +37,20 @@
       24px 24px,
     linear-gradient(180deg, #4f86dd 0%, #2c539f 100%) 0 0 / 100% 100%;
 
+  /* Reusable "paper grid" surface — the app page background: a thin dark-blue
+     grid (24px cells, matching the Header .grid and --surface-blue-grid table
+     headers) over the near-white --paper. Apply with
+     `background: var(--surface-paper-grid)` on a page `.content` wrapper. */
+  --surface-paper-grid: linear-gradient(
+        to right,
+        rgba(var(--ink-navy-rgb), 0.06) 1px,
+        transparent 1px
+      )
+      center / 24px 24px,
+    linear-gradient(to bottom, rgba(var(--ink-navy-rgb), 0.06) 1px, transparent 1px)
+      center / 24px 24px,
+    var(--paper);
+
   /* Custom-field palette — the per-type accent colors. Each type has a light
      `-bg` tint (used for its glyph chip in the registry) and an accent color;
      the option-bearing types add the extra tokens their value pills/editors

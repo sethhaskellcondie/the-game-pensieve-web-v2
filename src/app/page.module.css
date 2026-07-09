@@ -2,7 +2,7 @@
   flex: 1;
   padding: 2rem;
   overflow-y: auto;
-  background: var(--paper);
+  background: var(--surface-paper-grid);
 }
 
 /* Phone layout (Phase 6 of the mobile rollout). Keep in sync with
