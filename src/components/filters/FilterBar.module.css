@@ -2,20 +2,29 @@
    New button. Applied-filter chips come first (filling the space after the
    count); the search box and filter button are pushed to the right. */
 
+/* On desktop the bar is transparent to layout (display: contents): its two
+   children — the chips row and the controls — become direct flex children of
+   the manager's .head. That lets the applied-filter chips take a full-width row
+   whose left edge lines up with the entity count above and the table below,
+   while the controls stay pinned to the top row. On mobile the bar is restored
+   to a real flex container (see the media query below). */
 .bar {
+  display: contents;
   flex: 1;
   min-width: 0;
-  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
 }
 
-/* The chips region: takes the space between the count and the controls, and
-   wraps its chips onto extra lines without displacing the controls. Uses a 0
-   flex-basis so its width is the available space (not its content), keeping the
-   per-row chip count stable as more chips are added. */
+/* The chips region takes its own full-width row below the controls (order 2 +
+   100% basis), wrapping its chips onto extra lines. Keeping it out of the
+   controls' row stops a wide single chip from overflowing under the search box
+   (which, painted later, would otherwise cover it). Mirrors the mobile layout.
+   Hidden when empty so it doesn't add a blank row/gap under the controls. */
 .chips {
-  flex: 1;
+  order: 2;
+  flex: 1 1 100%;
   min-width: 0;
   display: flex;
   flex-wrap: wrap;
@@ -23,9 +32,15 @@
   gap: 10px;
 }
 
-/* Search box + filter button, pinned to the right edge of the bar. */
+.chips:empty {
+  display: none;
+}
+
+/* Search box + filter button, on the top row, pushed to the right edge of the
+   bar (margin-left:auto) now that the chips no longer fill the space. */
 .controls {
   flex: 0 0 auto;
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -69,8 +84,10 @@
 }
 
 /* Hidden on desktop; the mobile controls row (Sort / Filter / Show field names)
-   reveals it below the breakpoint. */
-.mobileOnly {
+   reveals it below the breakpoint. Compounded with .addBtn so it outranks the
+   later `.addBtn { display: inline-flex }` rule, which otherwise wins on equal
+   specificity by source order and leaks the button onto desktop. */
+.addBtn.mobileOnly {
   display: none;
 }
 
@@ -83,6 +100,7 @@
    sync with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
 @media (max-width: 767px) {
   .bar {
+    display: flex;
     flex: 1 1 100%;
     order: 2;
     flex-wrap: wrap;
@@ -118,7 +136,7 @@
     display: none;
   }
 
-  .mobileOnly {
+  .addBtn.mobileOnly {
     display: inline-flex;
   }
 }

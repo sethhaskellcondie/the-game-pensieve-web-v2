@@ -350,7 +350,7 @@ export default function SavedFiltersDashboard({
     <div className={styles.dashboard}>
       <div className={styles.header}>
         <div className={styles.greeting}>
-          <h2 className={styles.title}>Welcome back!</h2>
+          <h2 className={styles.title}>Welcome!</h2>
           <p className={styles.summary}>
             {summary(categoryCount, filterCount)}
           </p>

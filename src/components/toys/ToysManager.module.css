@@ -9,9 +9,15 @@
   background: var(--paper);
 }
 
+/* Top-aligned (not centered) because the FilterBar can now be two rows tall on
+   desktop — its applied-filter chips wrap onto their own row below the search /
+   sort / filter controls. Top-aligning keeps the count, controls, and New
+   button together on the first visual row while the chips hang below, instead
+   of the count + New drifting to the vertical center of the taller bar. */
 .head {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 14px;
   margin-bottom: 18px;
 }
@@ -34,8 +40,12 @@
 .titleWrap {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 7px;
   flex: 0 0 auto;
+  /* Matches the 40px control/New-button row so the count stays vertically
+     centered against them under the header's top alignment. */
+  min-height: 40px;
 }
 
 /* The entity count and its (mass-edit) beginner hint, sitting inline. */

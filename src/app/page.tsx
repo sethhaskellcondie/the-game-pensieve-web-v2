@@ -79,18 +79,18 @@ export default async function Home() {
         icon={<Image src="/blue_pensieve.svg" alt="" width={78} height={78} />}
         title="THE GAME"
         titleAccent="PENSIEVE"
-        tagline="Explore ALL your games — not just how they appear on the shelf."
+        tagline="Explore ALL your games — not just how they appear on your shelf."
       >
         <Stats
           stats={[
             {
               value: String(videoGameBoxes.length),
-              label: "Video Games on Shelf",
+              label: "Video Game Boxes",
             },
             { value: String(videoGames.length), label: "All Video Games" },
             {
               value: String(boardGameBoxes.length),
-              label: "Board Games on Shelf",
+              label: "Board Game Boxes",
             },
             { value: String(boardGames.length), label: "All Board Games" },
             { value: String(toys.length), label: "Toys" },

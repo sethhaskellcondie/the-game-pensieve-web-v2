@@ -24,3 +24,11 @@
   text-transform: uppercase;
   color: rgba(var(--white-rgb), 0.7);
 }
+
+/* Hidden on phones — the header stats are dropped from the mobile view to keep
+   it compact. Keep in sync with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
+@media (max-width: 767px) {
+  .stats {
+    display: none;
+  }
+}
