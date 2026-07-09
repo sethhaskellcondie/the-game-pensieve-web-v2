@@ -298,7 +298,8 @@ export default function BoardGameBoxDetail({
     <>
       <Header
         icon={<BoardGameBoxIcon />}
-        title="BOARD GAME BOX"
+        title="BOARD GAME"
+        titleAccent="BOX"
         tagline={`${box.title} · ${game?.title ?? ""}`}
       />
 

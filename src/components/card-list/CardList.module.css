@@ -138,16 +138,15 @@
   background: var(--field-green);
 }
 
-/* ---- pill row (single line, clipped — decided) ---- */
+/* ---- pill row (wraps onto multiple rows when out of space) ---- */
 .pills {
   margin: 0;
   padding: 0;
   list-style: none;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  overflow: hidden;
-  white-space: nowrap;
 }
 
 .pill {
@@ -160,6 +159,7 @@
   border: 1px solid transparent;
   font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .pill svg {

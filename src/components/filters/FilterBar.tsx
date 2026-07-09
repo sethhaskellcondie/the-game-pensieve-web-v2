@@ -169,7 +169,7 @@ export default function FilterBar({
             aria-pressed={showFieldNames}
             onClick={() => onShowFieldNamesChange(!showFieldNames)}
           >
-            Show field names
+            {showFieldNames ? "Hide field names" : "Show field names"}
           </button>
         )}
 

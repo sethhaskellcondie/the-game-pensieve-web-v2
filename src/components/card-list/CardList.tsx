@@ -16,8 +16,8 @@ export type CardData = {
   glyph?: CardGlyph | null;
   // One row per progress field: stage label + n/m + a real bar.
   bars?: CardBar[];
-  // The single pill row (standard booleans first, then custom fields). It
-  // clips at the card edge — the detail page always has the full record.
+  // The pill row (standard booleans first, then custom fields). It wraps
+  // onto multiple rows when the pills run out of space on one line.
   pills?: CardPill[];
 };
 

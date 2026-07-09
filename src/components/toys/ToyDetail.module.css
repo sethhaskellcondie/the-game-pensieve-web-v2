@@ -241,20 +241,28 @@
   }
 }
 
-/* Phone layout (Phase 5 of the mobile rollout): the 280px label column can't
-   share a row with its value — each field stacks label-above-value, and the
-   page padding tightens. Shared by every detail page and the create-modal
-   field rows. Keep in sync with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
+/* Phone layout (Phase 5 of the mobile rollout): the page padding tightens and
+   the label column narrows, but the row keeps its two-column shape — label on
+   the left, value on the right — so the phone view mirrors the wider desktop
+   layout instead of stacking value under label. Long custom-field names wrap
+   inside the narrower label column rather than overflowing. Shared by every
+   detail page and the create-modal field rows. Keep in sync with
+   MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
 @media (max-width: 767px) {
   .main {
     padding: 16px 12px 44px;
   }
 
   .row {
-    grid-template-columns: 1fr;
-    gap: 8px;
+    grid-template-columns: minmax(0, 40%) 1fr;
+    gap: 14px;
     padding: 13px 16px;
     min-height: 0;
+  }
+
+  .lbl,
+  .lblkind {
+    white-space: normal;
   }
 
   .caphdr {

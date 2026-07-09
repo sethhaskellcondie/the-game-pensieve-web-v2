@@ -178,7 +178,8 @@ export default function VideoGameDetail({
     <>
       <Header
         icon={<VideoGamesIcon />}
-        title="VIDEO GAME"
+        title="VIDEO "
+        titleAccent="GAME"
         tagline={`${game.title} · ${game.system?.name ?? ""}`}
       />
 

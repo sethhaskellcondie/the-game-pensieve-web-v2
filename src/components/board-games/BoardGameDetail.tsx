@@ -214,7 +214,8 @@ export default function BoardGameDetail({
     <>
       <Header
         icon={<BoardGamesIcon />}
-        title="BOARD GAME"
+        title="BOARD"
+        titleAccent="GAME"
         tagline={game.title}
       />
 

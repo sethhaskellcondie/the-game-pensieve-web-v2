@@ -329,7 +329,8 @@ export default function VideoGameBoxDetail({
     <>
       <Header
         icon={<VideoGameBoxIcon />}
-        title="VIDEO GAME BOX"
+        title="VIDEO GAME "
+        titleAccent="BOX"
         tagline={`${box.title} · ${box.system?.name ?? ""}`}
       />
 
