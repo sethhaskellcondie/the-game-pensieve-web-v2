@@ -61,7 +61,10 @@
 
 .menu {
   position: fixed;
-  z-index: 70;
+  /* Above the mobile full-screen filter/sort panels (z 95, which themselves
+     sit above the MobileNav bar at 90/91) so pickers opened from a panel
+     aren't swallowed by it; still under toasts (1000). */
+  z-index: 96;
   max-height: 280px;
   overflow: auto;
   background: #fff;

@@ -59,6 +59,66 @@
   }
 }
 
+/* Full-screen panel variant (mobile, Phase 4): covers the whole viewport —
+   including the MobileNav bar (z 90/91) — with a Done header instead of
+   outside-click dismissal. Listbox menus sit above at z 96. */
+.panel {
+  inset: 0;
+  z-index: 95;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: auto;
+  animation: none;
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panelTitle {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink-navy);
+  letter-spacing: -0.01em;
+}
+
+.panelDone {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 9px;
+  background: var(--primary-600);
+  color: var(--white-pure);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Sort levels stack: the field picker takes its own full row so the
+   direction toggle + reorder/remove controls wrap beneath it. */
+.panel .row {
+  flex-wrap: wrap;
+}
+
+.panel .fieldListbox {
+  flex: 1 1 100%;
+}
+
+/* The Add sort / Clear footer rides at the bottom of the screen. */
+.panel .foot {
+  margin-top: auto;
+}
+
 .empty {
   margin: 0;
   font-size: 13px;

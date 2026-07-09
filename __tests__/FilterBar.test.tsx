@@ -4,6 +4,22 @@ import FilterBar from "@/components/filters/FilterBar";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
 import type { ActiveFilter, FilterFieldDef } from "@/components/filters/types";
+import { MOBILE_MEDIA_QUERY } from "@/lib/useMediaQuery";
+
+// Make useIsMobile() report a phone viewport for the duration of a test;
+// returns the restore function (the jest.setup default is desktop/no-match).
+function installMobileViewport() {
+  const original = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    media: query,
+    matches: query === MOBILE_MEDIA_QUERY,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as unknown as typeof window.matchMedia;
+  return () => {
+    window.matchMedia = original;
+  };
+}
 
 const fields: FilterFieldDef[] = [
   {
@@ -61,6 +77,50 @@ function setup(filters: ActiveFilter[] = []) {
 }
 
 describe("FilterBar", () => {
+
+  describe("on a phone viewport", () => {
+    let restoreViewport: () => void;
+    beforeEach(() => {
+      restoreViewport = installMobileViewport();
+    });
+    afterEach(() => {
+      restoreViewport();
+    });
+
+    it("opens the editor as a titled full-screen panel and applies a filter", () => {
+      const { onChange } = setup();
+      fireEvent.click(screen.getByRole("button", { name: "Add filter" }));
+
+      const dialog = screen.getByRole("dialog", { name: "Add filter" });
+      // Panel chrome: the visible title (the desktop popover has none).
+      expect(within(dialog).getByText("Add filter")).toBeInTheDocument();
+
+      // Same editor flow as desktop: default field (Name), type a value, Add.
+      fireEvent.change(within(dialog).getByRole("textbox"), {
+        target: { value: "R2" },
+      });
+      fireEvent.click(within(dialog).getByRole("button", { name: "Add" }));
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange.mock.calls[0][0][0]).toMatchObject({
+        field: "name",
+        operator: "equals",
+        operand: "R2",
+      });
+    });
+
+    it("cancels the panel from its footer", () => {
+      setup();
+      fireEvent.click(screen.getByRole("button", { name: "Add filter" }));
+      const dialog = screen.getByRole("dialog", { name: "Add filter" });
+
+      fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+      expect(
+        screen.queryByRole("dialog", { name: "Add filter" }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it("renders a chip per active filter with edit + remove controls", () => {
     setup([
       {

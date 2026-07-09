@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useIsMobile } from "@/lib/useMediaQuery";
 import { operatorLabel } from "./operators";
 import Listbox from "./Listbox";
 import FieldGlyph from "./FieldGlyph";
@@ -58,6 +60,10 @@ export default function FilterEditor({
   );
 
   const panelRef = useRef<HTMLDivElement>(null);
+  // Below the breakpoint the popover becomes a full-screen panel (Phase 4 of
+  // the mobile rollout): no anchor alignment, a visible title, and stacked
+  // controls. The footer's Cancel/Apply already covers dismissal.
+  const isMobile = useIsMobile();
 
   const field = useMemo(
     () => fields.find((f) => f.field === fieldToken) ?? null,
@@ -123,13 +129,30 @@ export default function FilterEditor({
     label: operatorLabel(op),
   }));
 
-  return (
+  // The mobile panel portals to <body> so it escapes the entity pages'
+  // z-index: 0 stacking context (which would otherwise trap it under the app
+  // Header). The outside-mousedown closer keys on panelRef — the panel div
+  // itself — so it still resolves correctly through the portal.
+  const editor = (
     <div
       ref={panelRef}
-      className={`${styles.popover}${align === "right" ? ` ${styles.alignRight}` : ""}`}
+      className={`${styles.popover}${
+        isMobile
+          ? ` ${styles.panel}`
+          : align === "right"
+            ? ` ${styles.alignRight}`
+            : ""
+      }`}
       role="dialog"
       aria-label={initial ? "Edit filter" : "Add filter"}
     >
+      {isMobile && (
+        <div className={styles.panelHead}>
+          <span className={styles.panelTitle}>
+            {initial ? "Edit filter" : "Add filter"}
+          </span>
+        </div>
+      )}
       <div className={styles.controls}>
         <Listbox
           value={fieldToken}
@@ -172,4 +195,6 @@ export default function FilterEditor({
       </div>
     </div>
   );
+
+  return isMobile ? createPortal(editor, document.body) : editor;
 }

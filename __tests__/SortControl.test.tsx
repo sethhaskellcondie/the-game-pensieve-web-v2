@@ -2,6 +2,22 @@ import "@testing-library/jest-dom";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import SortControl from "@/components/filters/SortControl";
 import type { ActiveSort, FilterFieldDef } from "@/components/filters/types";
+import { MOBILE_MEDIA_QUERY } from "@/lib/useMediaQuery";
+
+// Make useIsMobile() report a phone viewport for the duration of a test;
+// returns the restore function (the jest.setup default is desktop/no-match).
+function installMobileViewport() {
+  const original = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    media: query,
+    matches: query === MOBILE_MEDIA_QUERY,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as unknown as typeof window.matchMedia;
+  return () => {
+    window.matchMedia = original;
+  };
+}
 
 const fields: FilterFieldDef[] = [
   {
@@ -45,6 +61,48 @@ function openPopover() {
 }
 
 describe("SortControl", () => {
+
+  describe("on a phone viewport", () => {
+    let restoreViewport: () => void;
+    beforeEach(() => {
+      restoreViewport = installMobileViewport();
+    });
+    afterEach(() => {
+      restoreViewport();
+    });
+
+    it("opens as a full-screen panel with a Done header that closes it", () => {
+      setup(twoLevels);
+      const dialog = openPopover();
+
+      // Same dialog, panel chrome: a visible title and a Done button (there
+      // is no outside to click on a full-screen panel).
+      expect(within(dialog).getByText("Sort")).toBeInTheDocument();
+      fireEvent.click(within(dialog).getByRole("button", { name: "Done" }));
+      expect(
+        screen.queryByRole("dialog", { name: "Sort options" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("keeps the same sort controls in the panel", () => {
+      const { onChange } = setup(twoLevels);
+      const dialog = openPopover();
+
+      // The levels, direction toggles, and reorder/remove controls are the
+      // desktop popover's — only the container changed.
+      expect(
+        within(dialog).getByRole("button", { name: "Sort field 1" }),
+      ).toBeInTheDocument();
+      fireEvent.click(
+        within(dialog).getByRole("radio", { name: "Asc", checked: false }),
+      );
+      expect(onChange).toHaveBeenCalledWith([
+        { id: "a", field: "Release Year", label: "Release Year", direction: "asc" },
+        { id: "b", field: "name", label: "Name", direction: "asc" },
+      ]);
+    });
+  });
+
   it("disables the button when there are no fields", () => {
     setup([], []);
     expect(screen.getByRole("button", { name: "Sort" })).toBeDisabled();

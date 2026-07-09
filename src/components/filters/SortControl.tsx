@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CaretIcon, PlusIcon, XIcon } from "@/components/custom-fields/icons";
 import { SortIcon } from "@/components/toys/icons";
+import { useIsMobile } from "@/lib/useMediaQuery";
 import FieldGlyph from "./FieldGlyph";
 import Listbox from "./Listbox";
 import { newFilterId } from "./ids";
@@ -42,6 +44,10 @@ export default function SortControl({
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const wrapRef = useRef<HTMLSpanElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  // Below the breakpoint the popover becomes a full-screen panel (Phase 4 of
+  // the mobile rollout): no trigger anchoring, and a Done header instead of
+  // outside-click dismissal (there is no outside to click).
+  const isMobile = useIsMobile();
 
   const place = () => {
     const r = buttonRef.current?.getBoundingClientRect();
@@ -57,7 +63,7 @@ export default function SortControl({
       setOpen(false);
       return;
     }
-    place();
+    if (!isMobile) place();
     setOpen(true);
   };
 
@@ -68,18 +74,26 @@ export default function SortControl({
   // than closed — a scroll event can land just after opening (e.g. the
   // browser scrolling the button into view), which would otherwise dismiss
   // the popover the instant it appears.
+  // The mobile panel skips the outside/anchoring listeners entirely: it is
+  // portaled out of the wrap (so "outside" would match its own content),
+  // covers the viewport, and closes via Done or Escape.
   useEffect(() => {
     if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    if (isMobile) {
+      return () => {
+        document.removeEventListener("keydown", onKeyDown);
+      };
+    }
     const onDocMouseDown = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
     document.addEventListener("mousedown", onDocMouseDown);
-    document.addEventListener("keydown", onKeyDown);
     window.addEventListener("scroll", place, true);
     window.addEventListener("resize", place);
     return () => {
@@ -88,7 +102,7 @@ export default function SortControl({
       window.removeEventListener("scroll", place, true);
       window.removeEventListener("resize", place);
     };
-  }, [open]);
+  }, [open, isMobile]);
 
   const used = new Set(sorts.map((s) => s.field));
 
@@ -145,6 +159,13 @@ export default function SortControl({
 
   const canAdd = fields.some((f) => !used.has(f.field));
 
+  // The mobile panel portals to <body> so it escapes the entity pages'
+  // z-index: 0 stacking context (which would otherwise trap it under the app
+  // Header); the desktop popover stays inline so wrapRef's outside-click
+  // detection keeps working.
+  const panelPortal = (node: React.ReactNode) =>
+    isMobile && node ? createPortal(node, document.body) : node;
+
   return (
     <span className={styles.anchor} ref={wrapRef}>
       <button
@@ -161,13 +182,28 @@ export default function SortControl({
           <span className={styles.count}>{sorts.length}</span>
         )}
       </button>
-      {open && pos && (
+      {panelPortal(
+        open && (isMobile || pos) && (
         <div
-          className={styles.popover}
+          className={`${styles.popover}${isMobile ? ` ${styles.panel}` : ""}`}
           role="dialog"
           aria-label={`${ariaLabel} options`}
-          style={{ top: pos.top, right: pos.right }}
+          style={
+            isMobile ? undefined : { top: pos!.top, right: pos!.right }
+          }
         >
+          {isMobile && (
+            <div className={styles.panelHead}>
+              <span className={styles.panelTitle}>{ariaLabel}</span>
+              <button
+                type="button"
+                className={styles.panelDone}
+                onClick={() => setOpen(false)}
+              >
+                Done
+              </button>
+            </div>
+          )}
           {sorts.length === 0 ? (
             <p className={styles.empty}>
               Add sort criteria to override default sort.
@@ -261,6 +297,7 @@ export default function SortControl({
             )}
           </div>
         </div>
+        ),
       )}
     </span>
   );

@@ -47,18 +47,51 @@
   gap: 8px;
 }
 
-/* On a phone the one-line editor is wider than the screen: cap the popover at
-   the viewport and let the controls wrap into a stack. (Phase 4 replaces this
-   with a mobile sheet.) Keep in sync with MOBILE_BREAKPOINT in
-   src/lib/useMediaQuery.ts. */
-@media (max-width: 767px) {
-  .popover {
-    max-width: calc(100vw - 24px);
-  }
+/* Full-screen panel variant (mobile, Phase 4): covers the whole viewport —
+   including the MobileNav bar (z 90/91) — with a visible title and stacked,
+   full-width controls; the existing Cancel/Apply footer rides at the bottom.
+   Listbox menus sit above at z 96. */
+.panel {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  max-width: none;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: auto;
+  animation: none;
+}
 
-  .controls {
-    flex-wrap: wrap;
-  }
+.panelHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.panelTitle {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink-navy);
+  letter-spacing: -0.01em;
+}
+
+.panel .controls {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.panel .controls .valueInput,
+.panel .controls .valueListbox {
+  width: 100%;
+}
+
+.panel .foot {
+  margin-top: auto;
 }
 
 .fieldListbox {
