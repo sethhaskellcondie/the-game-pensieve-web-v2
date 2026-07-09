@@ -241,6 +241,27 @@
   }
 }
 
+/* Phone layout (Phase 5 of the mobile rollout): the 280px label column can't
+   share a row with its value — each field stacks label-above-value, and the
+   page padding tightens. Shared by every detail page and the create-modal
+   field rows. Keep in sync with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
+@media (max-width: 767px) {
+  .main {
+    padding: 16px 12px 44px;
+  }
+
+  .row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 13px 16px;
+    min-height: 0;
+  }
+
+  .caphdr {
+    padding: 12px 16px;
+  }
+}
+
 .ph {
   color: #b4bcc8;
   font-style: italic;

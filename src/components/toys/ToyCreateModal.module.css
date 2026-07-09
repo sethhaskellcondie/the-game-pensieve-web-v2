@@ -133,3 +133,20 @@
   background: #c6d4ea;
   cursor: not-allowed;
 }
+
+/* Full-screen sheet below the breakpoint (Phase 5 of the mobile rollout):
+   the centered card grows to cover the viewport. Keep in sync with
+   MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
+@media (max-width: 767px) {
+  .backdrop {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .modal {
+    width: 100%;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+  }
+}
