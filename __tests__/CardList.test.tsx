@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import CardList, { type CardData } from "@/components/card-list/CardList";
 
 // The DataTable's mobile twin: cards render the configured slots, the whole
@@ -38,6 +38,7 @@ function renderList(props: Partial<Parameters<typeof CardList<Row>>[0]> = {}) {
       loadingMessage="Loading…"
       getHref={(r) => `/video-games/${r.id}`}
       card={(r) => cards[r.id]}
+      showNames={false}
       {...props}
     />,
   );
@@ -77,39 +78,28 @@ describe("CardList", () => {
     expect(within(card).queryByText(/\d\/\d/)).not.toBeInTheDocument();
   });
 
-  it("renders no buttons inside cards — they are read/navigate-only", () => {
-    renderList();
-    // The always-visible field-names toggle is the list's only button; the
+  it("renders no buttons — it is a read/navigate-only list", () => {
+    // The field-names toggle now lives in the FilterBar; the card list and the
     // cards themselves carry no actions.
-    expect(screen.getAllByRole("button")).toHaveLength(1);
+    renderList();
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
     for (const card of screen.getAllByRole("listitem")) {
       expect(within(card).queryAllByRole("button")).toHaveLength(0);
     }
   });
 
-  it("toggles the custom field names on pills and bars", () => {
-    renderList();
-    const toggle = screen.getByRole("button", { name: "Show field names" });
-    expect(toggle).toHaveAttribute("aria-pressed", "false");
+  it("shows bare values when showNames is off", () => {
+    renderList({ showNames: false });
     expect(screen.getByText("Action")).toBeInTheDocument();
+    expect(screen.getByText("1993")).toBeInTheDocument();
     expect(screen.getByText("Played")).toBeInTheDocument();
+  });
 
-    fireEvent.click(toggle);
-    expect(toggle).toHaveAttribute("aria-pressed", "true");
+  it("prefixes pills and bars with their field name when showNames is on", () => {
+    renderList({ showNames: true });
     expect(screen.getByText("Genre: Action")).toBeInTheDocument();
     expect(screen.getByText("Year: 1993")).toBeInTheDocument();
     expect(screen.getByText("Playthrough: Played")).toBeInTheDocument();
-
-    fireEvent.click(toggle);
-    expect(toggle).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByText("Action")).toBeInTheDocument();
-  });
-
-  it("keeps the toggle visible even with no rows", () => {
-    renderList({ rows: [] });
-    expect(
-      screen.getByRole("button", { name: "Show field names" }),
-    ).toBeInTheDocument();
   });
 
   it("shows the loading message when loading with no rows", () => {

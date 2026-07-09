@@ -15,27 +15,6 @@
   padding: 2px 2px 24px;
 }
 
-/* Always-visible toggle: prefix pills/bars with their custom field's name.
-   Deliberately plain — it gets a proper look in a later phase. */
-.namesToggle {
-  display: inline-flex;
-  align-items: center;
-  margin-bottom: 10px;
-  padding: 6px 12px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: var(--white);
-  color: var(--ink-navy);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.namesToggle[aria-pressed="true"] {
-  border-color: var(--primary-600);
-  color: var(--primary-600);
-}
-
 .list {
   margin: 0;
   padding: 0;

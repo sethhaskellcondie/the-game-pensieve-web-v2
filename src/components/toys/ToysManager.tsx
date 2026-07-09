@@ -211,6 +211,9 @@ export default function ToysManager({
   // The quick-search text (folded into a name-contains filter) and the explicit
   // filter chips. Both feed the server-side search.
   const [query, setQuery] = useState("");
+  // Mobile-only: prefix card pills/bars with their field name. Owned here so the
+  // FilterBar toggle button and the CardList that reads it stay in sync.
+  const [showFieldNames, setShowFieldNames] = useState(false);
   const [filters, setFilters, initialResolvedFilters] = usePersistentFilters(
     "toy",
     initialFilters,
@@ -644,6 +647,8 @@ export default function ToysManager({
           searchAriaLabel="Search toys"
           sorts={canSort ? sorts : undefined}
           onSortsChange={canSort ? setSorts : undefined}
+          showFieldNames={showFieldNames}
+          onShowFieldNamesChange={setShowFieldNames}
         />
         {canWrite && (
           <div className={styles.actions}>
@@ -665,6 +670,7 @@ export default function ToysManager({
           }
           getHref={(toy) => `/toys/${toy.id}`}
           card={toyCard}
+          showNames={showFieldNames}
         />
       ) : (
         <DataTable

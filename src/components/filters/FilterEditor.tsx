@@ -156,6 +156,25 @@ export default function FilterEditor({
           <span className={styles.panelTitle}>
             {initial ? "Edit filter" : "Add filter"}
           </span>
+          {/* On mobile the Cancel / Add controls ride in the header (like the
+              Sort shelf) rather than in a bottom footer. */}
+          <div className={styles.panelHeadActions}>
+            <button
+              type="button"
+              className={styles.cancel}
+              onClick={() => requestClose(onCancel)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={styles.apply}
+              disabled={!canApply}
+              onClick={apply}
+            >
+              {initial ? "Update" : "Add"}
+            </button>
+          </div>
         </div>
       )}
       <div className={styles.controls}>
@@ -185,23 +204,27 @@ export default function FilterEditor({
           />
         )}
       </div>
-      <div className={styles.foot}>
-        <button
-          type="button"
-          className={styles.cancel}
-          onClick={() => requestClose(onCancel)}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          className={styles.apply}
-          disabled={!canApply}
-          onClick={apply}
-        >
-          {initial ? "Update" : "Add"}
-        </button>
-      </div>
+      {/* Desktop keeps the Cancel / Add footer; on mobile these live in the
+          panel header (above) instead. */}
+      {!isMobile && (
+        <div className={styles.foot}>
+          <button
+            type="button"
+            className={styles.cancel}
+            onClick={() => requestClose(onCancel)}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className={styles.apply}
+            disabled={!canApply}
+            onClick={apply}
+          >
+            {initial ? "Update" : "Add"}
+          </button>
+        </div>
+      )}
     </div>
   );
 

@@ -68,12 +68,19 @@
   box-shadow: 0 0 0 3px rgba(var(--ink-navy-rgb), 0.1);
 }
 
+/* Hidden on desktop; the mobile controls row (Sort / Filter / Show field names)
+   reveals it below the breakpoint. */
+.mobileOnly {
+  display: none;
+}
+
 /* On a phone the bar can't share the header row: it shrinks (min-width: 0)
    while its fixed-size buttons overflow it and paint over the New button. Give
    it the full width of its own row (order 2 keeps the entity count + New
-   button together on the first row) and let the search go fluid. Interim
-   until the Phase 4 mobile filter sheet. Keep in sync with MOBILE_BREAKPOINT
-   in src/lib/useMediaQuery.ts. */
+   button together on the first row). The generic Title/Name quick-search is
+   dropped here (filters live behind the Filter button); the row instead carries
+   Sort, Filter, and the Show-field-names toggle, wrapping if narrow. Keep in
+   sync with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
 @media (max-width: 767px) {
   .bar {
     flex: 1 1 100%;
@@ -81,20 +88,46 @@
     flex-wrap: wrap;
   }
 
+  /* The Sort / Filter / Show-field-names buttons take the first full-width row,
+     right-aligned so Filter lines up with the New button above, and wrapping
+     among themselves if the phone is narrow. */
   .controls {
-    flex: 1 1 auto;
+    order: 1;
+    flex: 1 1 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  /* Applied-filter chips drop to their own line(s) below the buttons and wrap
+     as needed, instead of sharing (and overlapping) the buttons' row. */
+  .chips {
+    order: 2;
+    flex: 1 1 100%;
     min-width: 0;
   }
 
+  /* With no filters the chips row would still add a gap under the buttons. */
+  .chips:empty {
+    display: none;
+  }
+
+  /* No quick-search on phones — it only ever produced a name-contains filter,
+     which the Filter button covers. */
   .search {
-    flex: 1;
-    min-width: 0;
+    display: none;
   }
 
-  .searchInput {
-    width: 100%;
-    min-width: 0;
+  .mobileOnly {
+    display: inline-flex;
   }
+}
+
+/* Pressed look for the Show-field-names toggle, matching the old CardList
+   button's active state. */
+.addBtn[aria-pressed="true"] {
+  border-color: var(--primary-600);
+  color: var(--primary-600);
 }
 
 /* Positioning context so the editor popover anchors under its chip / add btn. */

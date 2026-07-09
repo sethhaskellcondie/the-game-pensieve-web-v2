@@ -197,13 +197,35 @@ export default function SortControl({
           {isMobile && (
             <div className={styles.panelHead}>
               <span className={styles.panelTitle}>{ariaLabel}</span>
-              <button
-                type="button"
-                className={styles.panelDone}
-                onClick={() => requestClose(() => setOpen(false))}
-              >
-                Done
-              </button>
+              {/* On mobile the Add sort / Clear sorting controls ride in the
+                  header next to Done (left→right: Clear sorting, Add sort,
+                  Done) rather than in a bottom footer. */}
+              <div className={styles.panelHeadActions}>
+                {sorts.length > 0 && (
+                  <button
+                    type="button"
+                    className={styles.clear}
+                    onClick={() => onChange([])}
+                  >
+                    Clear sorting
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className={styles.addSort}
+                  disabled={!canAdd}
+                  onClick={addLevel}
+                >
+                  <PlusIcon /> Add sort
+                </button>
+                <button
+                  type="button"
+                  className={styles.panelDone}
+                  onClick={() => requestClose(() => setOpen(false))}
+                >
+                  Done
+                </button>
+              </div>
             </div>
           )}
           {sorts.length === 0 ? (
@@ -279,25 +301,29 @@ export default function SortControl({
               ))}
             </ul>
           )}
-          <div className={styles.foot}>
-            <button
-              type="button"
-              className={styles.addSort}
-              disabled={!canAdd}
-              onClick={addLevel}
-            >
-              <PlusIcon /> Add sort
-            </button>
-            {sorts.length > 0 && (
+          {/* Desktop keeps the Add sort / Clear sorting footer; on mobile these
+              live in the panel header (above) instead. */}
+          {!isMobile && (
+            <div className={styles.foot}>
               <button
                 type="button"
-                className={styles.clear}
-                onClick={() => onChange([])}
+                className={styles.addSort}
+                disabled={!canAdd}
+                onClick={addLevel}
               >
-                Clear sorting
+                <PlusIcon /> Add sort
               </button>
-            )}
-          </div>
+              {sorts.length > 0 && (
+                <button
+                  type="button"
+                  className={styles.clear}
+                  onClick={() => onChange([])}
+                >
+                  Clear sorting
+                </button>
+              )}
+            </div>
+          )}
         </div>
         ),
       )}

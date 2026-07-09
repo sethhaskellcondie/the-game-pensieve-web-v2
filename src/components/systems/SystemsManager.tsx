@@ -210,6 +210,9 @@ export default function SystemsManager({
   // The quick-search text (folded into a name-contains filter), the explicit
   // filter chips, and the ordered sort levels. All feed the server-side search.
   const [query, setQuery] = useState("");
+  // Mobile-only: prefix card pills/bars with their field name. Owned here so the
+  // FilterBar toggle button and the CardList that reads it stay in sync.
+  const [showFieldNames, setShowFieldNames] = useState(false);
   const [filters, setFilters, initialResolvedFilters] = usePersistentFilters(
     "system",
     initialFilters,
@@ -677,6 +680,8 @@ export default function SystemsManager({
           searchAriaLabel="Search systems"
           sorts={canSort ? sorts : undefined}
           onSortsChange={canSort ? setSorts : undefined}
+          showFieldNames={showFieldNames}
+          onShowFieldNamesChange={setShowFieldNames}
         />
         {canWrite && (
           <div className={styles.actions}>
@@ -698,6 +703,7 @@ export default function SystemsManager({
           }
           getHref={(system) => `/systems/${system.id}`}
           card={systemCard}
+          showNames={showFieldNames}
         />
       ) : (
         <DataTable

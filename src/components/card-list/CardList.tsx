@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { CheckIcon, XIcon } from "@/components/custom-fields/icons";
 import type { CardBar, CardGlyph, CardPill, PillTone } from "./cardFields";
@@ -34,6 +33,11 @@ export type CardListProps<Row> = {
   // setting says.
   getHref: (row: Row) => string;
   card: (row: Row) => CardData;
+  // Whether value pills and bar rows prefix their custom field's name
+  // ("Genre: Action" instead of "Action"). Owned by the manager and toggled
+  // from the FilterBar's "Show field names" button. Boolean badges always
+  // carry their name regardless.
+  showNames: boolean;
 };
 
 const TONE_CLASS: Record<PillTone, string> = {
@@ -55,23 +59,10 @@ export default function CardList<Row>({
   loadingMessage,
   getHref,
   card,
+  showNames,
 }: CardListProps<Row>) {
-  // Whether value pills and bar rows prefix their custom field's name
-  // ("Genre: Action" instead of "Action"). Off by default — the always-visible
-  // toggle below flips it. Boolean badges always carry their name.
-  const [showNames, setShowNames] = useState(false);
-
   return (
     <div className={styles.wrap}>
-      {/* Deliberately plain for now — restyled in a later phase. */}
-      <button
-        type="button"
-        className={styles.namesToggle}
-        aria-pressed={showNames}
-        onClick={() => setShowNames((v) => !v)}
-      >
-        Show field names
-      </button>
       {rows.length === 0 ? (
         <p className={styles.empty}>{loading ? loadingMessage : emptyMessage}</p>
       ) : (

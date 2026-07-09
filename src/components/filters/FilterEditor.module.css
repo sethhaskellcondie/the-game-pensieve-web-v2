@@ -71,6 +71,17 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Cancel / Add, grouped at the right of the panel header (left→right in that
+   order, matching the Sort shelf). Stays right-aligned even if it wraps below
+   the title on a narrow phone. */
+.panelHeadActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .panelTitle {
@@ -88,10 +99,6 @@
 .panel .controls .valueInput,
 .panel .controls .valueListbox {
   width: 100%;
-}
-
-.panel .foot {
-  margin-top: auto;
 }
 
 .fieldListbox {

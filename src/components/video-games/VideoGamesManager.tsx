@@ -170,6 +170,9 @@ export default function VideoGamesManager({
   // The quick-search text (folded into a title-contains filter) and the explicit
   // filter chips. Both feed the server-side search.
   const [query, setQuery] = useState("");
+  // Mobile-only: prefix card pills/bars with their field name. Owned here so the
+  // FilterBar toggle button and the CardList that reads it stay in sync.
+  const [showFieldNames, setShowFieldNames] = useState(false);
   const [filters, setFilters, initialResolvedFilters] = usePersistentFilters(
     "video-game",
     initialFilters,
@@ -611,6 +614,8 @@ export default function VideoGamesManager({
           searchHint={BEGINNER_HINTS.videoGameSearch}
           sorts={canSort ? sorts : undefined}
           onSortsChange={canSort ? setSorts : undefined}
+          showFieldNames={showFieldNames}
+          onShowFieldNamesChange={setShowFieldNames}
         />
         {/* No New button: video games are created through video game boxes.
             A beginner hint sits where that button would be to explain why. */}
@@ -635,6 +640,7 @@ export default function VideoGamesManager({
           }
           getHref={(game) => `/video-games/${game.id}`}
           card={gameCard}
+          showNames={showFieldNames}
         />
       ) : (
         <DataTable

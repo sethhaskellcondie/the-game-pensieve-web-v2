@@ -41,6 +41,8 @@ export default function FilterBar({
   searchHint,
   sorts,
   onSortsChange,
+  showFieldNames,
+  onShowFieldNamesChange,
 }: {
   entityKey: EntityKey;
   fields: FilterFieldDef[];
@@ -57,6 +59,11 @@ export default function FilterBar({
   // entity pages adopt sorting one at a time (currently only Systems).
   sorts?: ActiveSort[];
   onSortsChange?: (next: ActiveSort[]) => void;
+  // Mobile-only "Show field names" toggle, rendered in this row beside Sort and
+  // Filter. Optional: only pages with a mobile CardList (which reads the flag)
+  // pass it, so pages without cards stay clean.
+  showFieldNames?: boolean;
+  onShowFieldNamesChange?: (next: boolean) => void;
 }) {
   const [edit, setEdit] = useState<EditState>({ mode: "closed" });
 
@@ -150,6 +157,20 @@ export default function FilterBar({
 
         {searchHint != null && (
           <BeginnerHint placement="bottom-end" text={searchHint} />
+        )}
+
+        {/* Mobile-only display toggle (hidden on desktop via CSS, where the
+            table already shows field names as column headers). Leads the Sort
+            and Filter buttons in the same row. */}
+        {showFieldNames != null && onShowFieldNamesChange != null && (
+          <button
+            type="button"
+            className={`${styles.addBtn} ${styles.mobileOnly}`}
+            aria-pressed={showFieldNames}
+            onClick={() => onShowFieldNamesChange(!showFieldNames)}
+          >
+            Show field names
+          </button>
         )}
 
         {sorts != null && onSortsChange != null && (

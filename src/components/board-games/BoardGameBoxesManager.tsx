@@ -187,6 +187,9 @@ export default function BoardGameBoxesManager({
   // The quick-search text (folded into a title-contains filter) and the explicit
   // filter chips. Both feed the server-side search.
   const [query, setQuery] = useState("");
+  // Mobile-only: prefix card pills/bars with their field name. Owned here so the
+  // FilterBar toggle button and the CardList that reads it stay in sync.
+  const [showFieldNames, setShowFieldNames] = useState(false);
   const [filters, setFilters, initialResolvedFilters] = usePersistentFilters(
     "board-game-box",
     initialFilters,
@@ -727,6 +730,8 @@ export default function BoardGameBoxesManager({
           searchHint={BEGINNER_HINTS.boardGameSearch}
           sorts={canSort ? sorts : undefined}
           onSortsChange={canSort ? setSorts : undefined}
+          showFieldNames={showFieldNames}
+          onShowFieldNamesChange={setShowFieldNames}
         />
         {/* Creating a box is a write, so the New button shows only for an
             active (Paid) account; guests/lapsed see the shelf read-only. */}
@@ -752,6 +757,7 @@ export default function BoardGameBoxesManager({
           }
           getHref={(box) => `/board-game-boxes/${box.id}`}
           card={boxCard}
+          showNames={showFieldNames}
         />
       ) : (
         <DataTable

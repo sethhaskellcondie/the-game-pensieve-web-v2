@@ -84,6 +84,17 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Clear sorting / Add sort / Done, grouped at the right of the panel header
+   (left→right in that order). Stays right-aligned even if it wraps below the
+   title on a narrow phone. */
+.panelHeadActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .panelTitle {
@@ -112,11 +123,6 @@
 
 .panel .fieldListbox {
   flex: 1 1 100%;
-}
-
-/* The Add sort / Clear footer rides at the bottom of the screen. */
-.panel .foot {
-  margin-top: auto;
 }
 
 .empty {
