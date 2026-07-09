@@ -8,16 +8,40 @@ import {
 } from "@testing-library/react";
 import UiSettings from "@/components/UiSettings";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
+import { ToastProvider } from "@/components/ToastProvider";
+import { SessionProvider } from "@/components/auth/SessionProvider";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
+import type { SessionView } from "@/lib/sessionConfig";
+
+// SessionProvider reaches for the router; stub it.
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
+}));
+
+// Developer Mode is admin-only (see UiSettings), so the toggle tests render
+// under an admin session; a dedicated test below covers the non-admin case.
+const ADMIN_SESSION: SessionView = {
+  role: "admin",
+  email: "admin@example.com",
+  isImpersonating: false,
+  impersonatedEmail: null,
+  accessUntil: null,
+  activeShowcase: null,
+};
 
 // UiSettings now reads/writes through the UiSettingsProvider context, so it is
 // rendered inside a provider seeded with the all-false defaults. The optimistic
-// write fires a fetch to /api/ui-settings, which we stub out.
-function renderWithProvider() {
+// write fires a fetch to /api/ui-settings, which we stub out. The session view
+// (admin by default) drives the admin-only Developer Mode toggle.
+function renderWithProvider(session: SessionView = ADMIN_SESSION) {
   return render(
-    <UiSettingsProvider initial={DEFAULT_UI_SETTINGS}>
-      <UiSettings />
-    </UiSettingsProvider>,
+    <ToastProvider>
+      <SessionProvider initial={session}>
+        <UiSettingsProvider initial={DEFAULT_UI_SETTINGS}>
+          <UiSettings />
+        </UiSettingsProvider>
+      </SessionProvider>
+    </ToastProvider>,
   );
 }
 
@@ -47,6 +71,17 @@ describe("UiSettings", () => {
         "false",
       );
     }
+  });
+
+  it("hides the Developer Mode toggle from non-admins", () => {
+    renderWithProvider({ ...ADMIN_SESSION, role: "paid" });
+    expect(
+      screen.queryByRole("switch", { name: "Developer Mode" }),
+    ).not.toBeInTheDocument();
+    // The other toggles are unaffected.
+    expect(
+      screen.getByRole("switch", { name: "Mass Input Mode" }),
+    ).toBeInTheDocument();
   });
 
   it("flips only the clicked toggle once the write is confirmed", async () => {

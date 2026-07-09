@@ -130,3 +130,28 @@ select,
 textarea {
   font: inherit;
 }
+
+/* Mobile "shelf" dialog motion. Every dialog (create/edit modals, filter and
+   sort panels) slides in from the right when opened and back off to the right
+   when dismissed. Defined globally (not in a CSS module) so components can
+   reference the animation by name from inline styles, which also lets the slide
+   win over each dialog's own desktop pop animation on mobile. Paired with
+   useShelfTop (offset below the header) and useShelfClose (holds the element
+   mounted through the slide-out). */
+@keyframes shelf-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes shelf-slide-out {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateX(100%);
+  }
+}

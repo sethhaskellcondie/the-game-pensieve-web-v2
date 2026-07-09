@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { XIcon } from "@/components/custom-fields/icons";
 import type { AdminUser } from "@/lib/api";
+import { useMobileShelf } from "@/lib/useMobileShelf";
 import styles from "./ShowcaseModal.module.css";
 
 // The backend's slug rule (SetShowcaseRequest): lowercase alphanumerics with
@@ -38,13 +39,18 @@ export default function ShowcaseModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // On mobile the dialog behaves as a shelf: slides in from the right, sits
+  // below the header, slides back off to the right on close. requestClose plays that
+  // exit before onClose unmounts; on desktop it closes immediately.
+  const { requestClose, overlayStyle, slideStyle } = useMobileShelf();
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") requestClose(onClose);
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, [onClose, requestClose]);
 
   const trimmedSlug = slug.trim();
   const slugInvalid =
@@ -77,7 +83,7 @@ export default function ShowcaseModal({
       }
       const body = (await res.json()) as { data?: AdminUser };
       if (body.data) onSaved(body.data);
-      onClose();
+      requestClose(onClose);
     } catch {
       setError("Couldn't update the showcase.");
     } finally {
@@ -94,9 +100,14 @@ export default function ShowcaseModal({
   };
 
   return createPortal(
-    <div className={styles.backdrop} onMouseDown={onClose}>
+    <div
+      className={styles.backdrop}
+      style={overlayStyle}
+      onMouseDown={() => requestClose(onClose)}
+    >
       <div
         className={styles.modal}
+        style={slideStyle}
         role="dialog"
         aria-modal="true"
         aria-labelledby="showcase-modal-title"
@@ -110,7 +121,7 @@ export default function ShowcaseModal({
             type="button"
             className={styles.close}
             aria-label="Close"
-            onClick={onClose}
+            onClick={() => requestClose(onClose)}
           >
             <XIcon />
           </button>
@@ -193,7 +204,7 @@ export default function ShowcaseModal({
           <button
             type="button"
             className={styles.cancel}
-            onClick={onClose}
+            onClick={() => requestClose(onClose)}
             disabled={saving}
           >
             Cancel

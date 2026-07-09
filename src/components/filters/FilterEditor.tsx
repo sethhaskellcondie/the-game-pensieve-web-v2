@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useIsMobile } from "@/lib/useMediaQuery";
+import { useMobileShelf } from "@/lib/useMobileShelf";
 import { operatorLabel } from "./operators";
 import Listbox from "./Listbox";
 import FieldGlyph from "./FieldGlyph";
@@ -60,10 +60,11 @@ export default function FilterEditor({
   );
 
   const panelRef = useRef<HTMLDivElement>(null);
-  // Below the breakpoint the popover becomes a full-screen panel: no anchor
-  // alignment, a visible title, and stacked
-  // controls. The footer's Cancel/Apply already covers dismissal.
-  const isMobile = useIsMobile();
+  // Below the breakpoint the popover becomes a shelf: no anchor alignment, a
+  // visible title, stacked controls, offset below the page header and sliding
+  // in from the right / back out to the right (via useMobileShelf). The footer's
+  // Cancel/Apply covers dismissal.
+  const { isMobile, requestClose, overlayStyle, slideStyle } = useMobileShelf();
 
   const field = useMemo(
     () => fields.find((f) => f.field === fieldToken) ?? null,
@@ -85,11 +86,11 @@ export default function FilterEditor({
   useEffect(() => {
     const onDocMouseDown = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        onCancel();
+        requestClose(onCancel);
       }
     };
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCancel();
+      if (e.key === "Escape") requestClose(onCancel);
     };
     document.addEventListener("mousedown", onDocMouseDown);
     document.addEventListener("keydown", onKeyDown);
@@ -97,13 +98,13 @@ export default function FilterEditor({
       document.removeEventListener("mousedown", onDocMouseDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [onCancel]);
+  }, [onCancel, requestClose]);
 
   const canApply = field != null && operand.trim() !== "";
 
   const apply = () => {
     if (!field || !canApply) return;
-    onApply({
+    const filter: ActiveFilter = {
       id: initial?.id ?? newFilterId(),
       field: field.field,
       label: field.label,
@@ -116,7 +117,10 @@ export default function FilterEditor({
       operandLabel:
         field.valueOptions?.find((o) => o.value === operand.trim())?.label ??
         field.options?.find((o) => String(o.id) === operand.trim())?.name,
-    });
+    };
+    // Let the shelf slide out before the parent unmounts us on apply (mobile);
+    // on desktop this fires onApply immediately.
+    requestClose(() => onApply(filter));
   };
 
   const fieldOptions = fields.map((f) => ({
@@ -145,6 +149,7 @@ export default function FilterEditor({
       }`}
       role="dialog"
       aria-label={initial ? "Edit filter" : "Add filter"}
+      style={isMobile ? { ...overlayStyle, ...slideStyle } : undefined}
     >
       {isMobile && (
         <div className={styles.panelHead}>
@@ -181,7 +186,11 @@ export default function FilterEditor({
         )}
       </div>
       <div className={styles.foot}>
-        <button type="button" className={styles.cancel} onClick={onCancel}>
+        <button
+          type="button"
+          className={styles.cancel}
+          onClick={() => requestClose(onCancel)}
+        >
           Cancel
         </button>
         <button

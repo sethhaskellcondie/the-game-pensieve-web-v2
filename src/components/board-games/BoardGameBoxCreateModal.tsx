@@ -21,6 +21,7 @@ import {
 import { PlusIcon, XIcon } from "@/components/custom-fields/icons";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import BeginnerHint from "@/components/BeginnerHint";
+import { useMobileShelf } from "@/lib/useMobileShelf";
 import { BEGINNER_HINTS } from "@/components/beginnerHints";
 import FieldEditor from "@/components/toys/toyFieldEditors";
 import BoardGameCreateModal from "./BoardGameCreateModal";
@@ -108,6 +109,11 @@ export default function BoardGameBoxCreateModal({
   const { settings } = useUiSettings();
   const massInputMode = settings.massInputMode;
 
+  // On mobile the dialog behaves as a shelf: slides in from the right, sits
+  // below the header, slides back off to the right on close. requestClose plays that
+  // exit before onClose unmounts; on desktop it closes immediately.
+  const { requestClose, overlayStyle, slideStyle } = useMobileShelf();
+
   // Option fields start on their configured default; everything else empty.
   // Shared by the initial state and the post-save reset.
   function makeInitialValues(): Record<number, string> {
@@ -159,11 +165,11 @@ export default function BoardGameBoxCreateModal({
     // closes only the child (its own listener handles it).
     if (addingGame) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") requestClose(onClose);
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose, addingGame]);
+  }, [onClose, addingGame, requestClose]);
 
   // After a mass-input save, focus the (now blank) Title field — focusing its
   // editor opens it ready to type. Skipped on first mount, which focuses the X.
@@ -188,7 +194,7 @@ export default function BoardGameBoxCreateModal({
 
   // Move focus into the dialog on open, landing on the Title field so a keyboard
   // user can start typing immediately (focusing its editor opens it). Falls back
-  // to the first focusable, and returns focus to whatever opened the dialog (the
+  // to the first focusable and returns focus to whatever opened the dialog (the
   // New button) when it closes.
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
@@ -395,7 +401,7 @@ export default function BoardGameBoxCreateModal({
       setBaseQuery("");
       setEntryNonce((n) => n + 1);
     } else {
-      onClose();
+      requestClose(onClose);
     }
   };
 
@@ -408,12 +414,14 @@ export default function BoardGameBoxCreateModal({
     <>
       <div
         className={styles.backdrop}
+        style={overlayStyle}
         // Mass-input mode disables accidental backdrop-to-close; exit via X/Cancel.
-        onMouseDown={massInputMode ? undefined : onClose}
+        onMouseDown={massInputMode ? undefined : () => requestClose(onClose)}
       >
         <div
           ref={modalRef}
           className={styles.modal}
+          style={slideStyle}
           role="dialog"
           aria-modal="true"
           aria-labelledby="board-game-box-create-title"
@@ -428,7 +436,7 @@ export default function BoardGameBoxCreateModal({
               type="button"
               className={styles.close}
               aria-label="Close"
-              onClick={onClose}
+              onClick={() => requestClose(onClose)}
             >
               <XIcon />
             </button>
@@ -687,7 +695,7 @@ export default function BoardGameBoxCreateModal({
           </div>
 
           <div className={styles.foot}>
-            <button type="button" className={styles.cancel} onClick={onClose}>
+            <button type="button" className={styles.cancel} onClick={() => requestClose(onClose)}>
               Cancel
             </button>
             <button

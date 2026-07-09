@@ -7,6 +7,7 @@ import { XIcon } from "@/components/custom-fields/icons";
 import { searchVideoGamesClient } from "./searchClient";
 import styles from "@/components/toys/ToyCreateModal.module.css";
 import gameStyles from "./VideoGameBoxCreateModal.module.css";
+import { useMobileShelf } from "@/lib/useMobileShelf";
 
 // Attach-an-existing-video-game dialog for the box detail page. The standard
 // create-modal chrome (ToyCreateModal.module.css) wrapped around the same
@@ -50,14 +51,19 @@ export default function VideoGameAddExistingModal({
   const [gamesError, setGamesError] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
+  // On mobile the dialog behaves as a shelf: slides in from the right, sits
+  // below the header, slides back off to the right on close. requestClose plays that
+  // exit before onClose unmounts; on desktop it closes immediately.
+  const { requestClose, overlayStyle, slideStyle } = useMobileShelf();
+
   // Escape closes the dialog (no mass-input loop to keep it open here).
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") requestClose(onClose);
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, [onClose, requestClose]);
 
   // Move focus into the dialog on open, and return it to the opener on close.
   useEffect(() => {
@@ -121,10 +127,15 @@ export default function VideoGameAddExistingModal({
   // Portal to <body> so the fixed backdrop escapes the page's stacking context,
   // matching the other video-game dialogs.
   return createPortal(
-    <div className={styles.backdrop} onMouseDown={onClose}>
+    <div
+      className={styles.backdrop}
+      style={overlayStyle}
+      onMouseDown={() => requestClose(onClose)}
+    >
       <div
         ref={modalRef}
         className={styles.modal}
+        style={slideStyle}
         role="dialog"
         aria-modal="true"
         aria-labelledby="video-game-add-existing-title"
@@ -139,7 +150,7 @@ export default function VideoGameAddExistingModal({
             type="button"
             className={styles.close}
             aria-label="Close"
-            onClick={onClose}
+            onClick={() => requestClose(onClose)}
           >
             <XIcon />
           </button>
@@ -206,7 +217,11 @@ export default function VideoGameAddExistingModal({
         </div>
 
         <div className={styles.foot}>
-          <button type="button" className={styles.cancel} onClick={onClose}>
+          <button
+            type="button"
+            className={styles.cancel}
+            onClick={() => requestClose(onClose)}
+          >
             Done
           </button>
         </div>

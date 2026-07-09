@@ -134,9 +134,12 @@
   cursor: not-allowed;
 }
 
-/* Full-screen sheet below the breakpoint (Phase 5 of the mobile rollout):
-   the centered card grows to cover the viewport. Keep in sync with
-   MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
+/* Shelf sheet below the breakpoint: the dialog slides in from the right and
+   covers the page from just below the header down (the backdrop's `top` is set
+   inline by useMobileShelf), leaving the header and page title bar visible. The
+   card stretches to fill that region. The slide itself is applied inline (see
+   useMobileShelf) so it overrides the desktop pop animation above. Keep in sync
+   with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
 @media (max-width: 767px) {
   .backdrop {
     padding: 0;
@@ -145,7 +148,7 @@
 
   .modal {
     width: 100%;
-    height: 100dvh;
+    height: 100%;
     max-height: none;
     border-radius: 0;
   }

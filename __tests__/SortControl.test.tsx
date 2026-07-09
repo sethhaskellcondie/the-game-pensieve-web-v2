@@ -1,5 +1,11 @@
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import SortControl from "@/components/filters/SortControl";
 import type { ActiveSort, FilterFieldDef } from "@/components/filters/types";
 import { MOBILE_MEDIA_QUERY } from "@/lib/useMediaQuery";
@@ -71,7 +77,7 @@ describe("SortControl", () => {
       restoreViewport();
     });
 
-    it("opens as a full-screen panel with a Done header that closes it", () => {
+    it("opens as a full-screen panel with a Done header that closes it", async () => {
       setup(twoLevels);
       const dialog = openPopover();
 
@@ -79,9 +85,12 @@ describe("SortControl", () => {
       // is no outside to click on a full-screen panel).
       expect(within(dialog).getByText("Sort")).toBeInTheDocument();
       fireEvent.click(within(dialog).getByRole("button", { name: "Done" }));
-      expect(
-        screen.queryByRole("dialog", { name: "Sort options" }),
-      ).not.toBeInTheDocument();
+      // On mobile the panel slides out before it unmounts, so wait for removal.
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("dialog", { name: "Sort options" }),
+        ).not.toBeInTheDocument(),
+      );
     });
 
     it("keeps the same sort controls in the panel", () => {

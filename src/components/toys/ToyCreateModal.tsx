@@ -18,6 +18,7 @@ import {
 } from "@/components/custom-fields/registry";
 import { XIcon } from "@/components/custom-fields/icons";
 import { useUiSettings } from "@/components/UiSettingsProvider";
+import { useMobileShelf } from "@/lib/useMobileShelf";
 import BeginnerHint from "@/components/BeginnerHint";
 import { BEGINNER_HINTS } from "@/components/beginnerHints";
 import FieldEditor from "./toyFieldEditors";
@@ -74,6 +75,11 @@ export default function ToyCreateModal({
   const { settings } = useUiSettings();
   const massInputMode = settings.massInputMode;
 
+  // On mobile the dialog behaves as a shelf: slides in from the right, sits
+  // below the header, slides back off to the right on close. requestClose plays that
+  // exit before onClose unmounts; on desktop it closes immediately.
+  const { requestClose, overlayStyle, slideStyle } = useMobileShelf();
+
   // Option fields start on their configured default; everything else empty.
   // Shared by the initial state and the post-save reset.
   function makeInitialValues(): Record<number, string> {
@@ -93,11 +99,11 @@ export default function ToyCreateModal({
   useEffect(() => {
     // Escape always closes the dialog, even in mass-input mode.
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") requestClose(onClose);
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, [onClose, requestClose]);
 
   // After a mass-input save, focus the (now blank) Name field — focusing its
   // editor opens it ready to type. Skipped on first mount, where the on-open
@@ -198,7 +204,7 @@ export default function ToyCreateModal({
       setValues(makeInitialValues());
       setEntryNonce((n) => n + 1);
     } else {
-      onClose();
+      requestClose(onClose);
     }
   };
 
@@ -210,12 +216,14 @@ export default function ToyCreateModal({
   return createPortal(
     <div
       className={styles.backdrop}
+      style={overlayStyle}
       // Mass-input mode disables accidental backdrop-to-close; exit via X/Cancel.
-      onMouseDown={massInputMode ? undefined : onClose}
+      onMouseDown={massInputMode ? undefined : () => requestClose(onClose)}
     >
       <div
         ref={modalRef}
         className={styles.modal}
+        style={slideStyle}
         role="dialog"
         aria-modal="true"
         aria-labelledby="toy-create-title"
@@ -230,7 +238,7 @@ export default function ToyCreateModal({
             type="button"
             className={styles.close}
             aria-label="Close"
-            onClick={onClose}
+            onClick={() => requestClose(onClose)}
           >
             <XIcon />
           </button>
@@ -280,7 +288,11 @@ export default function ToyCreateModal({
         </div>
 
         <div className={styles.foot}>
-          <button type="button" className={styles.cancel} onClick={onClose}>
+          <button
+            type="button"
+            className={styles.cancel}
+            onClick={() => requestClose(onClose)}
+          >
             Cancel
           </button>
           <button

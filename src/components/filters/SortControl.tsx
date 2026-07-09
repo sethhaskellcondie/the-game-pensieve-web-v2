@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CaretIcon, PlusIcon, XIcon } from "@/components/custom-fields/icons";
 import { SortIcon } from "@/components/toys/icons";
-import { useIsMobile } from "@/lib/useMediaQuery";
+import { useMobileShelf } from "@/lib/useMobileShelf";
 import FieldGlyph from "./FieldGlyph";
 import Listbox from "./Listbox";
 import { newFilterId } from "./ids";
@@ -44,10 +44,10 @@ export default function SortControl({
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const wrapRef = useRef<HTMLSpanElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  // Below the breakpoint the popover becomes a full-screen panel: no trigger
-  // anchoring, and a Done header instead of
-  // outside-click dismissal (there is no outside to click).
-  const isMobile = useIsMobile();
+  // Below the breakpoint the popover becomes a shelf: no trigger anchoring, a
+  // Done header instead of outside-click dismissal, offset below the page header
+  // and sliding in from the right / back out to the right (via useMobileShelf).
+  const { isMobile, requestClose, overlayStyle, slideStyle } = useMobileShelf();
 
   const place = () => {
     const r = buttonRef.current?.getBoundingClientRect();
@@ -80,7 +80,7 @@ export default function SortControl({
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") requestClose(() => setOpen(false));
     };
     document.addEventListener("keydown", onKeyDown);
     if (isMobile) {
@@ -102,7 +102,7 @@ export default function SortControl({
       window.removeEventListener("scroll", place, true);
       window.removeEventListener("resize", place);
     };
-  }, [open, isMobile]);
+  }, [open, isMobile, requestClose]);
 
   const used = new Set(sorts.map((s) => s.field));
 
@@ -189,7 +189,9 @@ export default function SortControl({
           role="dialog"
           aria-label={`${ariaLabel} options`}
           style={
-            isMobile ? undefined : { top: pos!.top, right: pos!.right }
+            isMobile
+              ? { ...overlayStyle, ...slideStyle }
+              : { top: pos!.top, right: pos!.right }
           }
         >
           {isMobile && (
@@ -198,7 +200,7 @@ export default function SortControl({
               <button
                 type="button"
                 className={styles.panelDone}
-                onClick={() => setOpen(false)}
+                onClick={() => requestClose(() => setOpen(false))}
               >
                 Done
               </button>

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { TrashIcon, XIcon } from "@/components/custom-fields/icons";
 import type { FilterCategory } from "./types";
+import { useMobileShelf } from "@/lib/useMobileShelf";
 import styles from "./CategoryEditDialog.module.css";
 
 // Focusable elements inside the dialog, in tab order — recomputed each Tab so
@@ -37,6 +38,11 @@ export default function CategoryEditDialog({
   const modalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // On mobile the dialog behaves as a shelf: slides in from the right, sits
+  // below the header, slides back off to the right on close. requestClose plays that
+  // exit before onClose unmounts; on desktop it closes immediately.
+  const { requestClose, overlayStyle, slideStyle } = useMobileShelf();
+
   // Focus the name field on open (text selected so it's ready to overwrite), and
   // return focus to whatever opened the dialog (the edit pencil) on close.
   useEffect(() => {
@@ -51,11 +57,11 @@ export default function CategoryEditDialog({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (confirming) setConfirming(false);
-      else onClose();
+      else requestClose(onClose);
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose, confirming]);
+  }, [onClose, confirming, requestClose]);
 
   // Any click outside the confirm menu (and its trigger, which stops
   // propagation) dismisses it — same behavior as the detail page's delete.
@@ -90,14 +96,19 @@ export default function CategoryEditDialog({
   const save = () => {
     if (!canSave) return;
     onRename(trimmed);
-    onClose();
+    requestClose(onClose);
   };
 
   return createPortal(
-    <div className={styles.backdrop} onMouseDown={onClose}>
+    <div
+      className={styles.backdrop}
+      style={overlayStyle}
+      onMouseDown={() => requestClose(onClose)}
+    >
       <div
         ref={modalRef}
         className={styles.modal}
+        style={slideStyle}
         role="dialog"
         aria-modal="true"
         aria-labelledby="category-edit-title"
@@ -112,7 +123,7 @@ export default function CategoryEditDialog({
             type="button"
             className={styles.close}
             aria-label="Close"
-            onClick={onClose}
+            onClick={() => requestClose(onClose)}
           >
             <XIcon />
           </button>
@@ -164,7 +175,7 @@ export default function CategoryEditDialog({
                   className={styles.confirmDelete}
                   onClick={() => {
                     onDelete();
-                    onClose();
+                    requestClose(onClose);
                   }}
                 >
                   Delete
@@ -174,7 +185,11 @@ export default function CategoryEditDialog({
           </div>
 
           <div className={styles.actions}>
-            <button type="button" className={styles.cancel} onClick={onClose}>
+            <button
+              type="button"
+              className={styles.cancel}
+              onClick={() => requestClose(onClose)}
+            >
               Cancel
             </button>
             <button

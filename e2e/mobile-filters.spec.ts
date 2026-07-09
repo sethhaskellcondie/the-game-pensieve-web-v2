@@ -2,11 +2,11 @@ import { test, expect, type Page, type Route } from "@playwright/test";
 import { AUTH_STATE } from "./authState";
 import { DEFAULT_STANDARD_FIELDS } from "../src/lib/uiSettings.types";
 
-// At a phone viewport the anchored
-// Sort and Filter popovers become full-screen panels (decided over a bottom
-// sheet) — a visible title, stacked controls, and a Done/Cancel affordance
-// instead of outside-click dismissal. Same fields, operators, and chips as
-// desktop; only the container changes.
+// At a phone viewport the anchored Sort and Filter popovers become shelves that
+// slide in from the right and sit below the page header (the header and app nav
+// bar stay visible), with a visible title, stacked controls, and a Done/Cancel
+// affordance instead of outside-click dismissal. Same fields, operators, and
+// chips as desktop; only the container changes.
 test.use({ storageState: AUTH_STATE });
 
 const json = (route: Route, body: unknown) =>
@@ -92,7 +92,7 @@ test.describe("mobile filter panel @mobile", () => {
     });
   });
 
-  test("adds a filter through the full-screen panel and the chip applies", async ({
+  test("adds a filter through the shelf panel and the chip applies", async ({
     page,
   }) => {
     await page.goto("/toys");
@@ -102,10 +102,18 @@ test.describe("mobile filter panel @mobile", () => {
     await page.getByRole("button", { name: "Add filter" }).tap();
     const dialog = page.getByRole("dialog", { name: "Add filter" });
     await expect(dialog).toBeVisible();
-    // Full-screen: the panel spans the whole viewport.
+    // Shelf: slides in from the right (starts off-screen), then rests full-width
+    // and offset below the page header (which stays visible), extending to the
+    // bottom of the viewport.
+    const headerBox = (await page.locator("header").boundingBox())!;
+    const viewport = page.viewportSize()!;
+    await expect
+      .poll(async () => Math.round((await dialog.boundingBox())!.x))
+      .toBe(0);
     const box = (await dialog.boundingBox())!;
-    expect(box.width).toBe(page.viewportSize()!.width);
-    expect(box.height).toBe(page.viewportSize()!.height);
+    expect(box.width).toBe(viewport.width);
+    expect(Math.round(box.y)).toBe(Math.round(headerBox.y + headerBox.height));
+    expect(Math.round(box.y + box.height)).toBe(viewport.height);
     await expect(dialog.getByText("Add filter")).toBeVisible();
 
     // Same editor as desktop: Name is the default field; pick contains + value.
@@ -154,7 +162,7 @@ test.describe("mobile sort panel @mobile", () => {
     });
   });
 
-  test("builds a sort in the full-screen panel and Done closes it", async ({
+  test("builds a sort in the shelf panel and Done closes it", async ({
     page,
   }) => {
     await page.goto("/systems");
@@ -165,9 +173,17 @@ test.describe("mobile sort panel @mobile", () => {
     await page.getByRole("button", { name: "Sort" }).tap();
     const dialog = page.getByRole("dialog", { name: "Sort options" });
     await expect(dialog).toBeVisible();
+    // Shelf: slides in from the right, then rests full-width and offset below
+    // the page header, extending to the bottom.
+    const headerBox = (await page.locator("header").boundingBox())!;
+    const viewport = page.viewportSize()!;
+    await expect
+      .poll(async () => Math.round((await dialog.boundingBox())!.x))
+      .toBe(0);
     const box = (await dialog.boundingBox())!;
-    expect(box.width).toBe(page.viewportSize()!.width);
-    expect(box.height).toBe(page.viewportSize()!.height);
+    expect(box.width).toBe(viewport.width);
+    expect(Math.round(box.y)).toBe(Math.round(headerBox.y + headerBox.height));
+    expect(Math.round(box.y + box.height)).toBe(viewport.height);
 
     // Build "Sort by Name, Desc" — SNES sorts above NES.
     await dialog.getByRole("button", { name: "Add sort" }).tap();

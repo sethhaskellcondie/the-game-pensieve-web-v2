@@ -102,20 +102,24 @@ test.describe("mobile create sheet @mobile", () => {
     );
   });
 
-  test("the create modal opens as a full-screen sheet", async ({ page }) => {
+  test("the create modal opens as a shelf below the header", async ({ page }) => {
     await page.goto("/toys");
     await page.getByRole("button", { name: "New" }).tap();
 
     const dialog = page.getByRole("dialog", { name: "Create Toy" });
     await expect(dialog).toBeVisible();
-    // Sheet, not a floating card: it spans the whole viewport. Poll — the
-    // modal's pop animation scales it up over its first frames.
+    // Shelf, not a floating card and not full-screen: it slides in from the
+    // right and covers the page below the header (which stays visible), spanning
+    // the full width to the bottom. Poll — it slides in over its first frames.
+    const headerBox = (await page.locator("header").boundingBox())!;
+    const viewport = page.viewportSize()!;
     await expect
-      .poll(async () => (await dialog.boundingBox())!.width)
-      .toBe(page.viewportSize()!.width);
-    await expect
-      .poll(async () => (await dialog.boundingBox())!.height)
-      .toBe(page.viewportSize()!.height);
+      .poll(async () => Math.round((await dialog.boundingBox())!.x))
+      .toBe(0);
+    const box = (await dialog.boundingBox())!;
+    expect(box.width).toBe(viewport.width);
+    expect(Math.round(box.y)).toBe(Math.round(headerBox.y + headerBox.height));
+    expect(Math.round(box.y + box.height)).toBe(viewport.height);
 
     await dialog.getByRole("button", { name: "Cancel" }).tap();
     await expect(dialog).toBeHidden();

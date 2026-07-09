@@ -17,6 +17,7 @@ import {
 } from "./registry";
 import { GripIcon, PlusIcon, XIcon } from "./icons";
 import EntitySelect from "./EntitySelect";
+import { useMobileShelf } from "@/lib/useMobileShelf";
 import styles from "./FieldModal.module.css";
 
 // What the modal hands back on save: a create input, or an edit input plus the
@@ -45,6 +46,10 @@ export default function FieldModal({
   onClose,
 }: FieldModalProps) {
   const isEdit = mode === "edit";
+  // On mobile the dialog behaves as a shelf: slides in from the right, sits
+  // below the header, slides back off to the right on close. requestClose plays that
+  // exit before onClose unmounts; on desktop it closes immediately.
+  const { requestClose, overlayStyle, slideStyle } = useMobileShelf();
   const [name, setName] = useState(field?.name ?? "");
   const [type, setType] = useState<CustomFieldType>(field?.type ?? "text");
   const [entityKey, setEntityKey] = useState<EntityKey>(
@@ -82,11 +87,11 @@ export default function FieldModal({
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") requestClose(onClose);
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, [onClose, requestClose]);
 
   // In edit mode the type is locked, so options visibility follows the existing
   // field's type; in create mode it follows the picked type.
@@ -181,9 +186,14 @@ export default function FieldModal({
   // the hero logo/title would paint over the modal. document is always defined
   // here — the modal only mounts on a client-side open.
   return createPortal(
-    <div className={styles.backdrop} onMouseDown={onClose}>
+    <div
+      className={styles.backdrop}
+      style={overlayStyle}
+      onMouseDown={() => requestClose(onClose)}
+    >
       <div
         className={styles.modal}
+        style={slideStyle}
         role="dialog"
         aria-modal="true"
         aria-labelledby="cf-modal-title"
@@ -197,7 +207,7 @@ export default function FieldModal({
             type="button"
             className={styles.close}
             aria-label="Close"
-            onClick={onClose}
+            onClick={() => requestClose(onClose)}
           >
             <XIcon />
           </button>
@@ -370,7 +380,11 @@ export default function FieldModal({
         )}
 
         <div className={styles.foot}>
-          <button type="button" className={styles.cancel} onClick={onClose}>
+          <button
+            type="button"
+            className={styles.cancel}
+            onClick={() => requestClose(onClose)}
+          >
             Cancel
           </button>
           <button

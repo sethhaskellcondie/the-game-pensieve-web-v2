@@ -1,5 +1,11 @@
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import FilterBar from "@/components/filters/FilterBar";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
@@ -87,7 +93,7 @@ describe("FilterBar", () => {
       restoreViewport();
     });
 
-    it("opens the editor as a titled full-screen panel and applies a filter", () => {
+    it("opens the editor as a titled full-screen panel and applies a filter", async () => {
       const { onChange } = setup();
       fireEvent.click(screen.getByRole("button", { name: "Add filter" }));
 
@@ -101,7 +107,9 @@ describe("FilterBar", () => {
       });
       fireEvent.click(within(dialog).getByRole("button", { name: "Add" }));
 
-      expect(onChange).toHaveBeenCalledTimes(1);
+      // On mobile the panel slides out before applying, so the change lands
+      // after the exit animation.
+      await waitFor(() => expect(onChange).toHaveBeenCalledTimes(1));
       expect(onChange.mock.calls[0][0][0]).toMatchObject({
         field: "name",
         operator: "equals",
@@ -109,15 +117,18 @@ describe("FilterBar", () => {
       });
     });
 
-    it("cancels the panel from its footer", () => {
+    it("cancels the panel from its footer", async () => {
       setup();
       fireEvent.click(screen.getByRole("button", { name: "Add filter" }));
       const dialog = screen.getByRole("dialog", { name: "Add filter" });
 
       fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
-      expect(
-        screen.queryByRole("dialog", { name: "Add filter" }),
-      ).not.toBeInTheDocument();
+      // The panel slides out before it unmounts, so wait for removal.
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("dialog", { name: "Add filter" }),
+        ).not.toBeInTheDocument(),
+      );
     });
   });
 

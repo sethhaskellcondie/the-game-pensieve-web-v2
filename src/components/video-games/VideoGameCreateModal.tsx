@@ -19,6 +19,7 @@ import {
 } from "@/components/custom-fields/registry";
 import { XIcon } from "@/components/custom-fields/icons";
 import { useUiSettings } from "@/components/UiSettingsProvider";
+import { useMobileShelf } from "@/lib/useMobileShelf";
 import BeginnerHint from "@/components/BeginnerHint";
 import { BEGINNER_HINTS } from "@/components/beginnerHints";
 import FieldEditor from "@/components/toys/toyFieldEditors";
@@ -86,6 +87,11 @@ export default function VideoGameCreateModal({
   const { settings } = useUiSettings();
   const massInputMode = settings.massInputMode;
 
+  // On mobile the dialog behaves as a shelf: slides in from the right, sits
+  // below the header, slides back off to the right on close. requestClose plays that
+  // exit before onClose unmounts; on desktop it closes immediately.
+  const { requestClose, overlayStyle, slideStyle } = useMobileShelf();
+
   const defaultSystemName =
     systems.find((s) => s.id === defaultSystemId)?.name ?? "";
 
@@ -108,11 +114,11 @@ export default function VideoGameCreateModal({
   useEffect(() => {
     // Escape always closes the dialog, even in mass-input mode.
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") requestClose(onClose);
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, [onClose, requestClose]);
 
   // After a mass-input save, focus the (now blank) Title field — focusing its
   // editor opens it ready to type. Skipped on first mount, which focuses the X.
@@ -222,7 +228,7 @@ export default function VideoGameCreateModal({
       setValues(makeInitialValues());
       setEntryNonce((n) => n + 1);
     } else {
-      onClose();
+      requestClose(onClose);
     }
   };
 
@@ -234,12 +240,14 @@ export default function VideoGameCreateModal({
   return createPortal(
     <div
       className={styles.backdrop}
+      style={overlayStyle}
       // Mass-input mode disables accidental backdrop-to-close; exit via X/Cancel.
-      onMouseDown={massInputMode ? undefined : onClose}
+      onMouseDown={massInputMode ? undefined : () => requestClose(onClose)}
     >
       <div
         ref={modalRef}
         className={styles.modal}
+        style={slideStyle}
         role="dialog"
         aria-modal="true"
         aria-labelledby="video-game-create-title"
@@ -254,7 +262,7 @@ export default function VideoGameCreateModal({
             type="button"
             className={styles.close}
             aria-label="Close"
-            onClick={onClose}
+            onClick={() => requestClose(onClose)}
           >
             <XIcon />
           </button>
@@ -304,7 +312,11 @@ export default function VideoGameCreateModal({
         </div>
 
         <div className={styles.foot}>
-          <button type="button" className={styles.cancel} onClick={onClose}>
+          <button
+            type="button"
+            className={styles.cancel}
+            onClick={() => requestClose(onClose)}
+          >
             Cancel
           </button>
           <button

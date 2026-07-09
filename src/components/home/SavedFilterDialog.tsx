@@ -12,6 +12,7 @@ import { newFilterId } from "@/components/filters/ids";
 import type { ActiveFilter, FilterFieldDef } from "@/components/filters/types";
 import { fetchEntityFilterFields } from "./entityFields";
 import type { SavedFilter, SavedFilterCondition } from "./types";
+import { useMobileShelf } from "@/lib/useMobileShelf";
 import styles from "./SavedFilterDialog.module.css";
 
 // Focusable elements inside the dialog, in tab order — recomputed each Tab so
@@ -76,6 +77,11 @@ export default function SavedFilterDialog({
   const [edit, setEdit] = useState<EditState>({ mode: "closed" });
   const [confirming, setConfirming] = useState(false);
 
+  // On mobile the dialog behaves as a shelf: slides in from the right, sits
+  // below the header, slides back off to the right on close. requestClose plays that
+  // exit before onClose unmounts; on desktop it closes immediately.
+  const { requestClose, overlayStyle, slideStyle } = useMobileShelf();
+
   const modalRef = useRef<HTMLDivElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -122,11 +128,11 @@ export default function SavedFilterDialog({
         return;
       }
       if (edit.mode !== "closed") return;
-      onClose();
+      requestClose(onClose);
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose, confirming, edit.mode]);
+  }, [onClose, confirming, edit.mode, requestClose]);
 
   // Any click outside the confirm menu (and its trigger) dismisses it.
   useEffect(() => {
@@ -199,14 +205,19 @@ export default function SavedFilterDialog({
       },
       categoryId,
     );
-    onClose();
+    requestClose(onClose);
   };
 
   return createPortal(
-    <div className={styles.backdrop} onMouseDown={onClose}>
+    <div
+      className={styles.backdrop}
+      style={overlayStyle}
+      onMouseDown={() => requestClose(onClose)}
+    >
       <div
         ref={modalRef}
         className={styles.modal}
+        style={slideStyle}
         role="dialog"
         aria-modal="true"
         aria-labelledby="saved-filter-title"
@@ -221,7 +232,7 @@ export default function SavedFilterDialog({
             type="button"
             className={styles.close}
             aria-label="Close"
-            onClick={onClose}
+            onClick={() => requestClose(onClose)}
           >
             <XIcon />
           </button>
@@ -347,7 +358,7 @@ export default function SavedFilterDialog({
                     className={styles.confirmDelete}
                     onClick={() => {
                       onDelete();
-                      onClose();
+                      requestClose(onClose);
                     }}
                   >
                     Delete
@@ -359,7 +370,11 @@ export default function SavedFilterDialog({
             <span />
           )}
           <div className={styles.actions}>
-            <button type="button" className={styles.cancel} onClick={onClose}>
+            <button
+              type="button"
+              className={styles.cancel}
+              onClick={() => requestClose(onClose)}
+            >
               Cancel
             </button>
             <button

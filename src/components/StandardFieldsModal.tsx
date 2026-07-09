@@ -6,6 +6,7 @@ import BooleanBadge from "./BooleanBadge";
 import { ENTITY_META, ENTITY_ORDER } from "./custom-fields/registry";
 import { XIcon } from "./custom-fields/icons";
 import { useUiSettings } from "./UiSettingsProvider";
+import { useMobileShelf } from "@/lib/useMobileShelf";
 import type { StandardFieldVisibility } from "@/lib/uiSettings.types";
 import styles from "./StandardFieldsModal.module.css";
 
@@ -50,6 +51,10 @@ export default function StandardFieldsModal({
   onClose,
 }: StandardFieldsModalProps) {
   const { settings, setSetting, saving } = useUiSettings();
+  // On mobile the dialog behaves as a shelf: slides in from the right, sits
+  // below the header, slides back off to the right on close. requestClose plays that
+  // exit before onClose unmounts; on desktop it closes immediately.
+  const { requestClose, overlayStyle, slideStyle } = useMobileShelf();
   // Edits are staged locally and only persisted when the user saves, so
   // Cancel/Escape discards them without touching the stored settings.
   const [draft, setDraft] = useState<StandardFieldVisibility>(
@@ -59,11 +64,11 @@ export default function StandardFieldsModal({
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") requestClose(onClose);
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, [onClose, requestClose]);
 
   const setField = (
     entity: keyof StandardFieldVisibility,
@@ -78,7 +83,7 @@ export default function StandardFieldsModal({
     if (saving) return;
     setFailed(false);
     const ok = await setSetting("standardFields", draft);
-    if (ok) onClose();
+    if (ok) requestClose(onClose);
     else setFailed(true);
   };
 
@@ -88,9 +93,14 @@ export default function StandardFieldsModal({
   // the hero logo/title would paint over the modal. document is always defined
   // here — the modal only mounts on a client-side open.
   return createPortal(
-    <div className={styles.backdrop} onMouseDown={onClose}>
+    <div
+      className={styles.backdrop}
+      style={overlayStyle}
+      onMouseDown={() => requestClose(onClose)}
+    >
       <div
         className={styles.modal}
+        style={slideStyle}
         role="dialog"
         aria-modal="true"
         aria-labelledby="standard-fields-title"
@@ -104,7 +114,7 @@ export default function StandardFieldsModal({
             type="button"
             className={styles.close}
             aria-label="Close"
-            onClick={onClose}
+            onClick={() => requestClose(onClose)}
           >
             <XIcon />
           </button>
@@ -148,7 +158,11 @@ export default function StandardFieldsModal({
         )}
 
         <div className={styles.foot}>
-          <button type="button" className={styles.cancel} onClick={onClose}>
+          <button
+            type="button"
+            className={styles.cancel}
+            onClick={() => requestClose(onClose)}
+          >
             Cancel
           </button>
           <button
