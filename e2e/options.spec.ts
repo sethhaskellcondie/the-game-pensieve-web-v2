@@ -49,27 +49,6 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-// The API Tools section is only rendered in developer mode. Stub the settings
-// write proxy and flip the toggle on (if it isn't already) so the section is
-// reliably present regardless of the backend's stored value.
-async function enableDeveloperMode(page: Page) {
-  await page.route("**/api/ui-settings", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ ok: true }),
-    }),
-  );
-
-  await page.goto("/options");
-
-  const developerMode = page.getByRole("switch", { name: "Developer Mode" });
-  if ((await developerMode.getAttribute("aria-checked")) !== "true") {
-    await developerMode.click();
-    await expect(developerMode).toHaveAttribute("aria-checked", "true");
-  }
-}
-
 test("options page is reachable from the sidebar", async ({ page }) => {
   await page.goto("/");
 
@@ -92,10 +71,12 @@ test("UI Settings toggles flip and persist when clicked", async ({ page }) => {
 
   await page.goto("/options");
 
-  const developerMode = page.getByRole("switch", { name: "Developer Mode" });
+  // Beginner Mode is a plain boolean switch visible to every account (Developer
+  // Mode is admin-only), so it's the stand-in for exercising the toggle machinery.
+  const beginnerMode = page.getByRole("switch", { name: "Beginner Mode" });
   // The initial state is loaded from the backend server-side, so assert the
   // toggle flips relative to whatever it currently is rather than a fixed value.
-  const before = await developerMode.getAttribute("aria-checked");
+  const before = await beginnerMode.getAttribute("aria-checked");
   const expected = before === "true" ? "false" : "true";
 
   // Flipping the toggle should optimistically update the UI and POST the new
@@ -103,8 +84,8 @@ test("UI Settings toggles flip and persist when clicked", async ({ page }) => {
   const persisted = page.waitForRequest(
     (req) => req.url().includes("/api/ui-settings") && req.method() === "POST",
   );
-  await developerMode.click();
-  await expect(developerMode).toHaveAttribute("aria-checked", expected);
+  await beginnerMode.click();
+  await expect(beginnerMode).toHaveAttribute("aria-checked", expected);
   await persisted;
 });
 
@@ -203,15 +184,17 @@ test("toggle does not change when the persist request fails", async ({
 
   await page.goto("/options");
 
-  const developerMode = page.getByRole("switch", { name: "Developer Mode" });
-  const before = await developerMode.getAttribute("aria-checked");
+  // Beginner Mode stands in for the toggle machinery; it's visible to every
+  // account, whereas Developer Mode is gated to admins.
+  const beginnerMode = page.getByRole("switch", { name: "Beginner Mode" });
+  const before = await beginnerMode.getAttribute("aria-checked");
 
   // Wait for the rejected write to come back before asserting nothing changed.
   const response = page.waitForResponse("**/api/ui-settings");
-  await developerMode.click();
+  await beginnerMode.click();
   await response;
 
-  await expect(developerMode).toHaveAttribute("aria-checked", before ?? "false");
+  await expect(beginnerMode).toHaveAttribute("aria-checked", before ?? "false");
 });
 
 test("Hide Animations toggle parks the header on a static frame", async ({
@@ -243,63 +226,51 @@ test("Hide Animations toggle parks the header on a static frame", async ({
   await expect(header).toHaveAttribute("data-static", "true");
 });
 
-test("heartbeat reports ONLINE when the service responds", async ({ page }) => {
-  await page.route("**/api/heartbeat**", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ status: "online" }),
-    }),
-  );
+// Developer Mode (and the API Tools it unlocks) became an admin-only affordance,
+// and the suite's shared account is a trial user. So rather than exercising the
+// heartbeat readout — unreachable without an admin session — these specs assert
+// the gating itself: the admin-only controls stay hidden for a non-admin, while
+// the ordinary settings remain fully available.
 
-  await enableDeveloperMode(page);
-  await page.getByRole("button", { name: "Check Heartbeat" }).click();
-
-  await expect(page.getByText(/ONLINE/)).toBeVisible();
-});
-
-test("heartbeat reports OFFLINE when the service is unhealthy", async ({
+test("Developer Mode toggle is hidden for non-admin accounts", async ({
   page,
 }) => {
-  await page.route("**/api/heartbeat**", (route) =>
-    route.fulfill({
-      status: 503,
-      contentType: "application/json",
-      body: JSON.stringify({ status: "offline" }),
-    }),
-  );
-
-  await enableDeveloperMode(page);
-  await page.getByRole("button", { name: "Check Heartbeat" }).click();
-
-  await expect(page.getByText("OFFLINE")).toBeVisible();
-});
-
-test("API Tools section is hidden unless developer mode is enabled", async ({
-  page,
-}) => {
-  await page.route("**/api/ui-settings", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ ok: true }),
-    }),
-  );
-
   await page.goto("/options");
 
-  const developerMode = page.getByRole("switch", { name: "Developer Mode" });
-  const heartbeatButton = page.getByRole("button", { name: "Check Heartbeat" });
+  // The trial account isn't an admin, so the Developer Mode switch is filtered
+  // out of UI Settings entirely.
+  await expect(
+    page.getByRole("switch", { name: "Developer Mode" }),
+  ).toHaveCount(0);
+});
 
-  // Make sure developer mode starts off, then assert the section is absent.
-  if ((await developerMode.getAttribute("aria-checked")) === "true") {
-    await developerMode.click();
-    await expect(developerMode).toHaveAttribute("aria-checked", "false");
-  }
-  await expect(heartbeatButton).toBeHidden();
+test("the API Tools section is hidden for non-admin accounts", async ({
+  page,
+}) => {
+  await page.goto("/options");
 
-  // Turning it on reveals the section.
-  await developerMode.click();
-  await expect(developerMode).toHaveAttribute("aria-checked", "true");
-  await expect(heartbeatButton).toBeVisible();
+  // API Tools (the heartbeat check) rides on Developer Mode, so a non-admin
+  // never sees the section, its button, or any status readout.
+  await expect(
+    page.getByRole("heading", { name: "API Tools" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Check Heartbeat" }),
+  ).toBeHidden();
+  await expect(page.getByText(/ONLINE|OFFLINE/)).toHaveCount(0);
+});
+
+test("the standard UI Settings toggles stay available to non-admin accounts", async ({
+  page,
+}) => {
+  await page.goto("/options");
+
+  // The gating is surgical: only the admin-only affordance is removed, while the
+  // everyday toggles remain visible to a trial user.
+  await expect(
+    page.getByRole("switch", { name: "Beginner Mode" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("switch", { name: "Mass Input Mode" }),
+  ).toBeVisible();
 });

@@ -252,8 +252,10 @@ test.describe("video game cards @mobile", () => {
     });
     await expect(chrono.getByRole("img", { name: "Favorite: No" })).toBeVisible();
 
-    // The always-visible toggle prefixes pills/bars with their field names.
-    const namesToggle = page.getByRole("button", { name: "Show field names" });
+    // The always-visible toggle prefixes pills/bars with their field names. Its
+    // label flips between "Show field names" and "Hide field names" as it's
+    // pressed, so match on the stable part of the name rather than a fixed label.
+    const namesToggle = page.getByRole("button", { name: /field names/i });
     await expect(namesToggle).toBeVisible();
     await namesToggle.tap();
     await expect(namesToggle).toHaveAttribute("aria-pressed", "true");

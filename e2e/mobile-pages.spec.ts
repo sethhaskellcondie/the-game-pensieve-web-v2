@@ -45,7 +45,7 @@ test.describe("remaining pages @mobile", () => {
   }) => {
     await page.goto("/");
 
-    await expect(page.getByText("Welcome back!")).toBeVisible();
+    await expect(page.getByText("Welcome!")).toBeVisible();
     await expect(
       page.getByRole("button", { name: "New Category" }),
     ).toBeVisible();
