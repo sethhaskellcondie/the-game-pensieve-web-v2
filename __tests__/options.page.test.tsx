@@ -129,4 +129,26 @@ describe("OptionsPage", () => {
     await expect(OptionsPage()).rejects.toThrow("NEXT_REDIRECT");
     expect(mockRedirect).toHaveBeenCalledWith("/login");
   });
+
+  it("renders for the anonymous caller of an unsecured instance", async () => {
+    // No accounts exist in unsecured mode — the anonymous caller owns the
+    // collection, so the whole page is available without a login.
+    mockLoadSessionView.mockResolvedValue({
+      role: "guest",
+      email: null,
+      isImpersonating: false,
+      impersonatedEmail: null,
+      accessUntil: null,
+      activeShowcase: null,
+      authMode: "unsecured",
+    });
+    render(await OptionsPage());
+    expect(mockRedirect).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "OPTIONS",
+    );
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Backup & Import" }),
+    ).toBeInTheDocument();
+  });
 });

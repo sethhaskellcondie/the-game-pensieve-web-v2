@@ -50,8 +50,10 @@ The helpers unwrap it (returning `data`) and throw on a non-OK status or a non-e
   instead of throwing. Use it for "does this exist yet?" checks (see UI settings below).
 - `apiPost<T>(path, body)` / `apiPatch<T>(path, body)` — writes. They JSON-encode the
   body, send `Content-Type: application/json`, and unwrap the same envelope.
-- `checkHeartbeat()` — special-cased because `/heartbeat` returns `text/plain`
-  ("thump thump"), not the envelope, so it bypasses the unwrap logic.
+- `checkHeartbeat()` — special-cased because `/heartbeat` is a health probe, not a
+  data read: it never throws on backend errors, reporting `{ ok, secureMode }` instead.
+  `secureMode` mirrors the flag in the heartbeat payload (`true` under the `secured`
+  profile, `false` for the permit-all build, `null` when unreachable or unreported).
 
 All of these resolve the real backend URL through `getBaseUrl()` (reads `API_BASE_URL`,
 falls back to `http://localhost:8080/v1` in development) and use `cache: "no-store"`.
@@ -169,3 +171,87 @@ on `AdminUser`) with a Grant/Edit modal posting to
 400s (slug taken / bad format) surface verbatim. A grant whose owner isn't
 PAID/ADMIN is flagged "not visible" — reserved but absent from the public
 directory until the owner renews.
+
+# Unsecured mode (personal, local instances)
+
+The backend ships in one of two build profiles, fixed for the lifetime of a
+deployment — it never switches while running:
+
+- **`secured`**: accounts, roles, and JWT auth. Everything above applies.
+- **default / unsecured (permit-all)**: a personal collection on the user's own
+  machine, holding their own data for their own use. Users, permissions, and
+  profiles do not apply; the backend accepts every request (its capability
+  checks short-circuit to true) and resolves each one to the single seeded
+  default-showcase owner.
+
+## Detection
+
+`src/lib/authMode.ts` resolves the mode from `GET /heartbeat`'s `secureMode`
+flag (via `checkHeartbeat()`), caches a definitive answer for the life of the
+server process, and fails closed to `"secured"` — without caching — when the
+backend is unreachable or predates the flag. The resolved mode rides on
+`SessionView.authMode` (absent = `"secured"`), so the layout seeds it into the
+client `SessionProvider` and both server and client code branch on the same
+value.
+
+## What changes in unsecured mode
+
+- **Capabilities**: `capabilitiesFor(role, activeShowcase, authMode)` grants
+  the full collection row (`canWrite/canFilter/canImport/canBackup` all true)
+  to the anonymous caller, mirroring the backend's disabled enforcement.
+  `isAdmin` stays false — there are no users or roles to administer. The
+  showcase collapse (read-only while `X-Showcase` is active) still wins; that
+  scoping is GUEST-scoped in BOTH backend modes.
+- **Auth-only pages** — `/login`, `/account`, `/admin`, `/pricing` — redirect
+  to the home page. Logging in against an unsecured backend would actively
+  break the session (the token is ignored, so `/v1/auth/me` resolves GUEST and
+  the stored role becomes "unknown"), which is why the login page must be
+  unreachable; `/api/auth/login` and `/api/auth/register` also refuse with a
+  409 as a guard against direct POSTs.
+- **Chrome**: the sidebar shows Options to the anonymous caller (they own the
+  collection), `AccountMenu` renders nothing (no plan, no log in/out), and
+  `ShowcaseBanner` shows no "log in to manage your collection" notice.
+- **Options offers everything**: the admin-only gate on the Developer Mode
+  toggle (and with it API Tools) opens, since roles don't exist here.
+- **Stale cookies are ignored**: `toSessionView` discards session contents
+  entirely in unsecured mode, so a leftover `gp_session` cookie from a secured
+  deployment can't surface as a half-logged-in state.
+- **E2E**: `e2e/unsecured.spec.ts` covers this mode and skips itself against a
+  secured backend. `auth.setup.ts` probes `/api/heartbeat` and, when the
+  backend is unsecured, saves an empty storage state instead of registering —
+  the secured-mode specs (plan badges, login, showcases) are not expected to
+  pass against an unsecured backend.
+
+## Preexisting secured-mode data in the same database (rare edge case)
+
+Row-Level Security runs **identically in both profiles** — the backend's
+`TenantConfig` registers `TenantTransactionFilter` unconditionally, with no
+profile gate — so the only thing the `secured` profile changes is *which owner
+id gets resolved*, never whether isolation is enforced. Unsecured requests are
+anonymous, so every one of them resolves to the single **default-showcase
+owner** (the `is_public_showcase` row): its inserts are stamped with that id,
+and RLS scopes its reads to that id.
+
+This matters in one edge case: running the app in `secured` mode, writing
+data, then pointing an **unsecured** instance at the same database. It is
+unlikely (a database should not switch security modes under real data), but if
+it happens the behavior is **as intended — the unsecured instance sees only
+the data written in unsecured mode**, i.e. only rows owned by the
+default-showcase owner. Data written by separately registered `secured`-mode
+accounts carries their own distinct `owner_id`, so RLS makes it **invisible
+and unwritable** to the unsecured requests (and, fail-closed, they can never
+widen that scope). No frontend changes are needed to protect the secured data;
+the database boundary already does it.
+
+The one caveat: the isolation key is precisely *"rows owned by the
+`is_public_showcase` user,"* which equals *"data written in unsecured mode"*
+only while no `secured`-mode account writes as that same row. The backend's
+admin bootstrap deliberately **claims the default-showcase row** as the
+operator's account — so anything that admin writes in `secured` mode shares
+the default-showcase `owner_id` and *would* appear in unsecured mode (and
+vice-versa). That is by design (the showcase owner *is* the public
+collection), not a leak of other users' data. If strict separation is ever
+needed even in this scenario, bootstrap the `secured`-mode admin as a
+**separate registered account** and leave the `is_public_showcase` row
+unclaimed, so no `secured`-mode write is ever stamped with the unsecured
+owner id.

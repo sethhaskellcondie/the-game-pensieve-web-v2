@@ -53,6 +53,31 @@ describe("capabilitiesFor with an active showcase", () => {
   });
 });
 
+describe("capabilitiesFor on an unsecured backend", () => {
+  it("grants the full collection row to the anonymous caller", () => {
+    // The backend's AccessService short-circuits every check to true in this
+    // mode; isAdmin stays false because users/roles don't exist to administer.
+    expect(capabilitiesFor("guest", null, "unsecured")).toEqual({
+      canWrite: true,
+      canFilter: true,
+      canImport: true,
+      canBackup: true,
+      isAdmin: false,
+    });
+  });
+
+  it("still collapses to read-only while a showcase is active", () => {
+    // X-Showcase scoping is GUEST/read-only in BOTH backend modes.
+    expect(capabilitiesFor("guest", ACTIVE, "unsecured")).toEqual({
+      canWrite: false,
+      canFilter: true,
+      canImport: false,
+      canBackup: false,
+      isAdmin: false,
+    });
+  });
+});
+
 function Probe() {
   const s = useSession();
   return (

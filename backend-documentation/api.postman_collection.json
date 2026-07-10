@@ -160,7 +160,7 @@
 					}
 				],
 				"url": "http://localhost:8080/v1/auth/me",
-				"description": "Returns the authenticated caller's id, email, and effective role. Uses the collection-level bearer token in {{token}}. Under the secured profile an anonymous call returns 401; in the default build it resolves to the public showcase owner (GUEST)."
+				"description": "Returns the authenticated caller's id, email, and effective role. Uses the collection-level bearer token in {{token}}. Under the secured profile an anonymous call returns 401; in the default build it resolves to the public showcase owner (GUEST). When an ADMIN sends the X-Act-As-Owner header, the primary fields report the admin and an `impersonating` object names the user being acted as (see the 'admin - impersonate' requests)."
 			},
 			"response": []
 		},
@@ -679,7 +679,14 @@
 			"name": "read custom fields by entity key",
 			"request": {
 				"method": "GET",
-				"header": [],
+				"header": [
+					{
+						"key": "X-Showcase",
+						"value": "seths-collection",
+						"disabled": true
+					}
+				],
+				"description": "Returns the custom-field definitions the front end builds its columns from. Part of the anonymous, showcase-scoped read surface: no token required. Enable the X-Showcase header to read a public showcase owner's definitions (GUEST; unknown or not-visible slug -> 404); with no header an anonymous request reads the default showcase. Writes (POST/PUT/DELETE) still require a token, and a showcase view rejects them with 403.",
 				"url": "http://localhost:8080/v1/custom_fields/entity/toy"
 			},
 			"response": []
@@ -767,7 +774,7 @@
 			"response": []
 		},
 		{
-			"name": "import from body (TRIAL account → 403)",
+			"name": "import from body (TRIAL account \u2192 403)",
 			"request": {
 				"method": "POST",
 				"header": [],
@@ -967,6 +974,70 @@
 			"response": []
 		},
 		{
+			"name": "read showcase ui-settings (X-Showcase)",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Showcase",
+						"value": "seths-collection",
+						"disabled": true
+					}
+				],
+				"description": "Part of the anonymous, showcase-scoped read surface: no token required. Enable the X-Showcase header to read a public showcase as a GUEST. On a showcase view ui-settings returns the fixed guest payload (beginner mode on, all other modes off, both default views \"list\", every standard field shown) regardless of the owner's own stored settings, and is served even if the owner has no ui-settings row. Unknown or not-visible slug -> 404. Writes require a token and a showcase view rejects them with 403.",
+				"url": "http://localhost:8080/v1/metadata/ui-settings"
+			},
+			"response": []
+		},
+		{
+			"name": "read showcase default_sort_options (X-Showcase)",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Showcase",
+						"value": "seths-collection",
+						"disabled": true
+					}
+				],
+				"description": "Part of the anonymous, showcase-scoped read surface: no token required. Enable the X-Showcase header to read a public showcase as a GUEST. Unlike ui-settings, default_sort_options passes through to the owner's own row (via RLS), so a guest mirrors and stays in sync with the owner's configured default sort. A key the owner has not set -> 404; unknown or not-visible slug -> 404.",
+				"url": "http://localhost:8080/v1/metadata/default_sort_options"
+			},
+			"response": []
+		},
+		{
+			"name": "read showcase saved-filters (X-Showcase)",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Showcase",
+						"value": "seths-collection",
+						"disabled": true
+					}
+				],
+				"description": "Part of the anonymous, showcase-scoped read surface: no token required. Enable the X-Showcase header to read a public showcase as a GUEST. Passes through to the owner's own row (via RLS), so a guest mirrors and stays in sync with the saved filters the owner configured for the showcase. A key the owner has not set -> 404; unknown or not-visible slug -> 404.",
+				"url": "http://localhost:8080/v1/metadata/saved-filters"
+			},
+			"response": []
+		},
+		{
+			"name": "read showcase saved-filter-categories (X-Showcase)",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Showcase",
+						"value": "seths-collection",
+						"disabled": true
+					}
+				],
+				"description": "Part of the anonymous, showcase-scoped read surface: no token required. Enable the X-Showcase header to read a public showcase as a GUEST. Passes through to the owner's own row (via RLS), so a guest mirrors and stays in sync with the saved-filter categories the owner configured for the showcase. A key the owner has not set -> 404; unknown or not-visible slug -> 404.",
+				"url": "http://localhost:8080/v1/metadata/saved-filter-categories"
+			},
+			"response": []
+		},
+		{
 			"name": "update metadata value",
 			"request": {
 				"method": "PATCH",
@@ -1056,6 +1127,173 @@
 				},
 				"description": "ADMIN only. Clear user 2's role override (roleOverride: null) to revert the account to auto-derivation from its billing fields.",
 				"url": "http://localhost:8080/v1/admin/users/2/role"
+			},
+			"response": []
+		},
+		{
+			"name": "admin - impersonate (me as user)",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "*/*"
+					},
+					{
+						"key": "X-Act-As-Owner",
+						"value": "2"
+					}
+				],
+				"description": "ADMIN only. With the X-Act-As-Owner header set to a target user id, GET /v1/auth/me reports the admin as the primary identity (role ADMIN) plus an `impersonating` object naming user 2. {{token}} must be an ADMIN token; for a non-admin the header is ignored. Stop impersonating by removing the header.",
+				"url": "http://localhost:8080/v1/auth/me"
+			},
+			"response": []
+		},
+		{
+			"name": "admin - impersonate (search a user's systems)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "X-Act-As-Owner",
+						"value": "2"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"filters\": []\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"description": "ADMIN only. Acts as user 2 (full act-as): the search is scoped to user 2's tenant via Row-Level Security and runs with user 2's effective role. Any tenant-scoped route honors the X-Act-As-Owner header the same way.",
+				"url": "http://localhost:8080/v1/systems/function/search"
+			},
+			"response": []
+		},
+		{
+			"name": "showcases - list directory (public)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"description": "Public, no token required. Lists every visible showcase as {slug, name} \u2014 a showcase is visible while its owner derives to PAID or ADMIN, so a lapsed owner's showcase drops out automatically. Pass a listed slug in the X-Showcase header to browse that collection.",
+				"url": "http://localhost:8080/v1/showcases",
+				"auth": {
+					"type": "noauth"
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "showcase - anonymous browse via X-Showcase",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "X-Showcase",
+						"value": "seths-collection"
+					}
+				],
+				"description": "Anonymous, no token. The X-Showcase header switches the request to that showcase owner's collection (GUEST: read + filter only). An unknown slug \u2014 or one whose owner is not currently PAID/ADMIN \u2014 returns 404. Without the header, an anonymous request reads the default showcase. The header also wins for authenticated callers and over X-Act-As-Owner.",
+				"url": "http://localhost:8080/v1/systems/function/search",
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"filters\": []\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"auth": {
+					"type": "noauth"
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "admin - grant user showcase",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"description": "ADMIN only. Publishes user 2's collection as a public showcase: slug is the public address (and the entitlement \u2014 this is the manual grant a future Paddle product would automate), name is the directory display title. Slug format: lowercase alphanumerics with single interior hyphens. The showcase resolves only while user 2 derives to PAID.",
+				"url": "http://localhost:8080/v1/admin/users/2/showcase",
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"slug\": \"retro-vault\",\n    \"name\": \"The Retro Vault\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "admin - grant showcase (duplicate slug -> 400)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"description": "ADMIN only. Slugs are unique across users \u2014 granting a slug another user already holds returns 400: \"Failed Input Validation: The showcase slug 'retro-vault' is already taken.\"",
+				"url": "http://localhost:8080/v1/admin/users/3/showcase",
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"slug\": \"retro-vault\",\n    \"name\": \"Duplicate Address\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "admin - clear user showcase",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"description": "ADMIN only. A null (or blank) slug unpublishes the showcase \u2014 the slug and name are cleared, the address stops resolving (404), and it drops out of GET /v1/showcases.",
+				"url": "http://localhost:8080/v1/admin/users/2/showcase",
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"slug\": null,\n    \"name\": null\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "admin - pin second ADMIN (rejected -> 400)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"description": "ADMIN only. At most one account may be pinned ADMIN (partial unique index uq_users_single_admin). With an admin already in place this returns 400: \"Failed Input Validation: An admin already exists. Clear the current admin's role override first.\" Re-pinning the existing admin itself stays a 200 (idempotent same-row update).",
+				"url": "http://localhost:8080/v1/admin/users/2/role",
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"roleOverride\": \"ADMIN\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				}
 			},
 			"response": []
 		}

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { loginBackend, fetchMe, AuthError } from "@/lib/authBackend";
+import { getAuthMode } from "@/lib/authMode";
 import { getSession } from "@/lib/session";
 
 // POST /api/auth/login — exchanges credentials for backend tokens, stores them
@@ -7,6 +8,19 @@ import { getSession } from "@/lib/session";
 // account's authoritative role, and returns only the browser-safe view
 // { email, role }.
 export async function POST(request: Request) {
+  // On an unsecured backend the login endpoints technically still answer, but
+  // the returned token is ignored and the session would resolve to the broken
+  // "unknown" role — refuse outright (the login page is unreachable in this
+  // mode; this guards direct POSTs).
+  if ((await getAuthMode()) === "unsecured") {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "This instance runs without accounts; there is nothing to log into.",
+      },
+      { status: 409 },
+    );
+  }
   try {
     const { email, password } = (await request.json()) as {
       email?: string;

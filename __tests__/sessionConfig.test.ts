@@ -32,6 +32,7 @@ describe("toSessionView", () => {
       impersonatedEmail: null,
       accessUntil: null,
       activeShowcase: null,
+      authMode: "secured",
     });
   });
 
@@ -50,6 +51,7 @@ describe("toSessionView", () => {
       impersonatedEmail: null,
       accessUntil: 1785484800000,
       activeShowcase: null,
+      authMode: "secured",
     });
   });
 
@@ -61,6 +63,7 @@ describe("toSessionView", () => {
       impersonatedEmail: null,
       accessUntil: null,
       activeShowcase: null,
+      authMode: "secured",
     });
   });
 
@@ -83,6 +86,7 @@ describe("toSessionView", () => {
       impersonatedEmail: "user@example.com",
       accessUntil: 1785484800000,
       activeShowcase: null,
+      authMode: "secured",
     });
   });
 
@@ -95,6 +99,7 @@ describe("toSessionView", () => {
       impersonatedEmail: null,
       accessUntil: null,
       activeShowcase: active,
+      authMode: "secured",
     });
     // Authenticated viewers browse showcases too — the selection is orthogonal
     // to auth state.
@@ -107,6 +112,7 @@ describe("toSessionView", () => {
       impersonatedEmail: null,
       accessUntil: null,
       activeShowcase: active,
+      authMode: "secured",
     });
   });
 
@@ -120,6 +126,42 @@ describe("toSessionView", () => {
       impersonatedEmail: null,
       accessUntil: null,
       activeShowcase: null,
+      authMode: "secured",
+    });
+  });
+
+  it("ignores session contents entirely on an unsecured backend", () => {
+    // A stale cookie from a secured deployment must not surface as a broken
+    // half-logged-in state — unsecured mode has no accounts at all.
+    const stale: SessionData = {
+      accessToken: "a",
+      email: "collector@example.com",
+      role: "paid",
+      accessUntil: 1785484800000,
+      impersonatingUserId: 42,
+      impersonatedEmail: "u@x.z",
+    };
+    expect(toSessionView(stale, null, "unsecured")).toEqual({
+      role: "guest",
+      email: null,
+      isImpersonating: false,
+      impersonatedEmail: null,
+      accessUntil: null,
+      activeShowcase: null,
+      authMode: "unsecured",
+    });
+  });
+
+  it("still carries an active showcase through in unsecured mode", () => {
+    const active = { slug: "showcase-one", name: "Showcase One" };
+    expect(toSessionView({}, active, "unsecured")).toEqual({
+      role: "guest",
+      email: null,
+      isImpersonating: false,
+      impersonatedEmail: null,
+      accessUntil: null,
+      activeShowcase: active,
+      authMode: "unsecured",
     });
   });
 });

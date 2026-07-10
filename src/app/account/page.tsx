@@ -13,9 +13,11 @@ export const metadata: Metadata = {
 // Account information page. Requires a signed-in user — a guest has no account,
 // so send them to log in. The live client session drives the displayed values
 // (see AccountManager); this server gate just keeps anonymous visitors out of
-// the shell.
+// the shell. On an unsecured backend accounts don't exist at all, so the page
+// goes home instead.
 export default async function AccountPage() {
-  const { role } = await loadSessionView();
+  const { role, authMode } = await loadSessionView();
+  if (authMode === "unsecured") redirect("/");
   if (role === "guest") redirect("/login");
 
   return (

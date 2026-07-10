@@ -1143,9 +1143,18 @@ export function getBoardGameBoxById(
   });
 }
 
+// Result of the backend health check. `secureMode` mirrors the flag in the
+// heartbeat payload: true when the backend runs the authenticated (`secured`
+// profile) build, false for the default permit-all build, and null when it
+// can't be determined (backend unreachable, or a body without the flag).
+export type HeartbeatResult = {
+  ok: boolean;
+  secureMode: boolean | null;
+};
+
 export async function checkHeartbeat(
   { debug = false }: { debug?: boolean } = {},
-): Promise<boolean> {
+): Promise<HeartbeatResult> {
   const url = `${getBaseUrl()}/heartbeat`;
   const res = await fetch(url, { cache: "no-store" });
 
@@ -1156,5 +1165,23 @@ export async function checkHeartbeat(
     );
   }
 
-  return res.ok;
+  if (!res.ok) {
+    return { ok: false, secureMode: null };
+  }
+
+  // The envelope's `data` is `{ message, secureMode }`. Parse defensively —
+  // a malformed body still counts as online (the service answered), just with
+  // an unknown security posture.
+  try {
+    const body = (await res.json()) as {
+      data?: { secureMode?: unknown } | null;
+    };
+    const secureMode = body.data?.secureMode;
+    return {
+      ok: true,
+      secureMode: typeof secureMode === "boolean" ? secureMode : null,
+    };
+  } catch {
+    return { ok: true, secureMode: null };
+  }
 }

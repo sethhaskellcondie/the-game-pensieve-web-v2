@@ -39,7 +39,7 @@ info:
 
     ## Data Ownership & Multi-Tenancy
     All collection data (systems, toys, video games and boxes, board games and boxes, custom fields and their options/values, and metadata) is **owned by a single account and isolated per owner**. Ownership is enforced in the database with PostgreSQL Row-Level Security, so a request can only ever read or write the caller's own rows — the isolation holds even against direct SQL.
-    - **Secured build** (`secured` profile): the owner is the authenticated user (from the `Bearer` token). Reads, searches, and writes are automatically scoped to that user; another owner's records are invisible (a read by id returns **404**, and they never appear in list/search results). Ownership is assigned by the server on create — there is no `owner` field in any request or response body. **Showcase** data is world-readable: under the secured profile the read surface — `GET /v1/{entity}/{id}`, `POST /v1/{entity}/function/search`, and `GET /v1/filters/{entity}` — is reachable **without a token** (anonymous requests resolve to the **default showcase** owner); writes always require authentication.
+    - **Secured build** (`secured` profile): the owner is the authenticated user (from the `Bearer` token). Reads, searches, and writes are automatically scoped to that user; another owner's records are invisible (a read by id returns **404**, and they never appear in list/search results). Ownership is assigned by the server on create — there is no `owner` field in any request or response body. **Showcase** data is world-readable: under the secured profile the read surface — `GET /v1/{entity}/{id}`, `POST /v1/{entity}/function/search`, `GET /v1/filters/{entity}`, the custom-field definitions (`GET /v1/custom_fields/entity/{key}` and `GET /v1/custom_fields`), and four metadata keys (`GET /v1/metadata/{ui-settings, default_sort_options, saved-filters, saved-filter-categories}`) — is reachable **without a token** (anonymous requests resolve to the **default showcase** owner); writes always require authentication.
     - **Default (unsecured) build**: anonymous requests resolve to the single seeded, world-readable **default showcase** owner, preserving the original single-collection behavior for the public site. The showcase owner's records are **not** visible to an authenticated user — each user sees only their own.
     - Metadata keys are unique **per owner** (two owners may each use the same key).
 
@@ -119,7 +119,10 @@ paths:
       tags:
         - System
       summary: Health check endpoint
-      description: Simple health check. Returns the string "thump thump" inside the standard response envelope.
+      description: |
+        Simple health check. Returns a `message` of "thump thump" alongside `secureMode`, which reports the
+        security posture the server is enforcing: `true` when the backend runs the authenticated (`secured`
+        profile) build where protected routes require a Bearer token, `false` for the default permit-all build.
       security: []
       responses:
         '200':
@@ -130,15 +133,24 @@ paths:
                 type: object
                 properties:
                   data:
-                    type: string
-                    example: "thump thump"
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "thump thump"
+                      secureMode:
+                        type: boolean
+                        description: True when the backend is running the authenticated (`secured` profile) build.
+                        example: false
                   errors:
                     type: 'null'
                   roundTripMs:
                     type: integer
                     format: int64
               example:
-                data: "thump thump"
+                data:
+                  message: "thump thump"
+                  secureMode: false
                 errors: null
                 roundTripMs: 0
 
@@ -1604,6 +1616,13 @@ paths:
       tags:
         - Custom Fields
       summary: Get all custom fields
+      description: |
+        List every custom-field definition for the resolved owner. Part of the anonymous, showcase-scoped read
+        surface: reachable **without a token** and honors the `X-Showcase` header (GUEST-scoped; unknown or
+        not-visible slug → **404**); anonymous requests with no header resolve to the **default showcase** owner.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ShowcaseView'
       responses:
         '200':
           description: List of all custom fields
@@ -1618,13 +1637,27 @@ paths:
                       $ref: '#/components/schemas/CustomFieldResponse'
                   errors:
                     type: 'null'
+        '404':
+          description: The `X-Showcase` header named a slug that does not exist or is not currently visible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /v1/custom_fields/entity/{key}:
     get:
       tags:
         - Custom Fields
       summary: Get custom fields by entity key
-      description: Retrieve all custom fields associated with a specific entity type
+      description: |
+        Retrieve the custom-field definitions for a specific entity type — the front end builds its
+        custom-field columns from these.
+
+        Part of the anonymous, showcase-scoped read surface: reachable **without a token** and, like the
+        entity read/search/filters routes, it honors the `X-Showcase` header (browse a public showcase,
+        GUEST-scoped; unknown or not-visible slug → **404**). Anonymous requests with no header resolve to the
+        **default showcase** owner. Writes (`POST`/`PUT`/`DELETE`) stay authenticated.
+      security: []
       parameters:
         - name: key
           in: path
@@ -1633,9 +1666,10 @@ paths:
             type: string
             enum: [toy, system, videoGame, videoGameBox, boardGame, boardGameBox]
           description: Entity key to get custom fields for
+        - $ref: '#/components/parameters/ShowcaseView'
       responses:
         '200':
-          description: List of custom fields for the entity
+          description: List of custom-field definitions for the entity
           content:
             application/json:
               schema:
@@ -1648,7 +1682,7 @@ paths:
                   errors:
                     type: 'null'
         '404':
-          description: Invalid entity key
+          description: Invalid entity key, or the `X-Showcase` header named a slug that does not exist or is not currently visible
           content:
             application/json:
               schema:
@@ -2316,6 +2350,10 @@ paths:
         Create a new metadata entry under a unique `key`. The `value` is a string that must itself
         parse as valid JSON (it is stored re-serialized, so whitespace may be normalized). Send
         `id` and the timestamps as null on create — they are server-generated.
+
+        Metadata is **read-only on a showcase view**: a request carrying `X-Showcase` (GUEST-scoped)
+        is rejected with **403** (`secured` profile), even when authenticated — a public showcase can
+        never be mutated. Enforcement is off in the default (unsecured) build.
       requestBody:
         required: true
         content:
@@ -2362,11 +2400,21 @@ paths:
                 data: null
                 errors:
                   - "Value must be valid JSON: Unexpected character ('}' (code 125))"
+        '403':
+          description: '(`secured` profile) the request is a GUEST showcase view (`X-Showcase`); metadata is read-only there'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     get:
       tags:
         - Metadata
       summary: Get all metadata
-      description: Retrieve all metadata entries
+      description: |
+        Retrieve all metadata entries. On a showcase view (`X-Showcase`, GUEST-scoped) the owner's
+        entries are returned but `ui-settings` is replaced with the fixed guest settings (see
+        `GET /v1/metadata/{key}`). This list-all route is **not** part of the anonymous read surface —
+        it requires a token under the `secured` profile.
       responses:
         '200':
           description: List of all metadata
@@ -2387,7 +2435,24 @@ paths:
       tags:
         - Metadata
       summary: Get metadata by key
-      description: Retrieve a specific metadata entry by its unique key
+      description: |
+        Retrieve a specific metadata entry by its unique key.
+
+        **Showcase view (`X-Showcase`, GUEST-scoped).** Four keys form part of the anonymous,
+        showcase-scoped read surface (reachable **without a token**): `ui-settings`,
+        `default_sort_options`, `saved-filters`, and `saved-filter-categories`. On a showcase view:
+        - `ui-settings` returns a **fixed guest payload** — beginner mode on, every other mode off,
+          both collection default views `"list"`, every standard field shown — *independent of* the
+          owner's own stored settings (it is synthesized, so it is returned even if the owner has no
+          `ui-settings` row, and never 404s).
+        - every other key — `default_sort_options`, `saved-filters`, `saved-filter-categories` —
+          passes through to the **owner's own row** via Row-Level Security, so a guest mirrors (and
+          stays in sync with) the sort, filters, and categories the owner configured for the showcase.
+          A key the owner has not set still 404s.
+
+        Off a showcase view (an authenticated owner, or an anonymous no-header request resolving to the
+        default showcase) the stored value is returned unchanged. An unknown or not-visible `X-Showcase`
+        slug → **404** (indistinguishable from an absent slug).
       parameters:
         - name: key
           in: path
@@ -2395,6 +2460,7 @@ paths:
           schema:
             type: string
           description: Unique key for the metadata entry
+        - $ref: '#/components/parameters/ShowcaseView'
       responses:
         '200':
           description: Metadata found
@@ -2403,7 +2469,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/MetadataDataResponse'
         '404':
-          description: Metadata not found
+          description: Metadata not found, or the `X-Showcase` header named a slug that does not exist or is not currently visible
           content:
             application/json:
               schema:
@@ -2460,6 +2526,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: '(`secured` profile) the request is a GUEST showcase view (`X-Showcase`); metadata is read-only there'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Metadata not found
           content:
@@ -2485,6 +2557,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: '(`secured` profile) the request is a GUEST showcase view (`X-Showcase`); metadata is read-only there'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Metadata not found
           content:

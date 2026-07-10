@@ -6,11 +6,13 @@
 
 import { getIronSession, type IronSession } from "iron-session";
 import { cookies } from "next/headers";
+import { getAuthMode } from "./authMode";
 import { resolveActiveShowcase } from "./serverShowcase";
 import {
   sessionOptions,
   toSessionView,
   type ActiveShowcase,
+  type AuthMode,
   type SessionData,
   type SessionView,
 } from "./sessionConfig";
@@ -31,6 +33,16 @@ export async function getSession(): Promise<IronSession<SessionData>> {
 // display name) rides along so the banner and capability collapse are correct
 // on first paint.
 export async function loadSessionView(): Promise<SessionView> {
+  // The backend's security posture rides along on every view: it decides which
+  // capability row the client renders and whether the auth-only pages exist.
+  // getAuthMode never throws (it fails closed to "secured"), but guard anyway
+  // so the view — the thing that keeps the shell rendering — stays fail-soft.
+  let authMode: AuthMode = "secured";
+  try {
+    authMode = await getAuthMode();
+  } catch {
+    authMode = "secured";
+  }
   let activeShowcase: ActiveShowcase | null = null;
   try {
     activeShowcase = await resolveActiveShowcase();
@@ -39,7 +51,7 @@ export async function loadSessionView(): Promise<SessionView> {
   }
   try {
     const session = await getSession();
-    return toSessionView(session, activeShowcase);
+    return toSessionView(session, activeShowcase, authMode);
   } catch {
     return {
       role: "guest",
@@ -48,6 +60,7 @@ export async function loadSessionView(): Promise<SessionView> {
       impersonatedEmail: null,
       accessUntil: null,
       activeShowcase,
+      authMode,
     };
   }
 }

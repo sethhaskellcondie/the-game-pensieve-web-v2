@@ -10,11 +10,14 @@ type Status = "idle" | "online" | "offline";
 
 // Pings the backend health check via our /api/heartbeat Route Handler (which
 // proxies the real backend server-side) and reports ONLINE/OFFLINE plus the
-// measured round-trip time.
+// measured round-trip time and the backend's security posture (SECURED when
+// the `secured` profile enforces auth, UNSECURED for the permit-all build —
+// omitted when the backend didn't report it).
 export default function ApiHeartbeat() {
   const { settings } = useUiSettings();
   const [status, setStatus] = useState<Status>("idle");
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
+  const [secureMode, setSecureMode] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
 
   const runHeartbeat = async () => {
@@ -25,13 +28,22 @@ export default function ApiHeartbeat() {
         settings.developerMode ? "/api/heartbeat?debug=1" : "/api/heartbeat",
       );
       const elapsed = Math.round(performance.now() - startedAt);
-      const body = (await res.json()) as { status?: string };
+      const body = (await res.json()) as {
+        status?: string;
+        secureMode?: boolean | null;
+      };
       const online = res.ok && body.status === "online";
       setStatus(online ? "online" : "offline");
       setLatencyMs(online ? elapsed : null);
+      setSecureMode(
+        online && typeof body.secureMode === "boolean"
+          ? body.secureMode
+          : null,
+      );
     } catch {
       setStatus("offline");
       setLatencyMs(null);
+      setSecureMode(null);
     } finally {
       setLoading(false);
     }
@@ -70,7 +82,13 @@ export default function ApiHeartbeat() {
             >
               <span className={styles.dot} />
               {status === "online"
-                ? `ONLINE · ${latencyMs}ms`
+                ? `ONLINE · ${latencyMs}ms${
+                    secureMode === null
+                      ? ""
+                      : secureMode
+                        ? " · SECURED"
+                        : " · UNSECURED"
+                  }`
                 : "OFFLINE"}
             </span>
           )}

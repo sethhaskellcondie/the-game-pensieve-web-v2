@@ -84,6 +84,20 @@ describe("UiSettings", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows the Developer Mode toggle on an unsecured instance", () => {
+    // No roles exist on an unsecured (personal, local) backend — the options
+    // page offers everything, admin-only gating included.
+    renderWithProvider({
+      ...ADMIN_SESSION,
+      role: "guest",
+      email: null,
+      authMode: "unsecured",
+    });
+    expect(
+      screen.getByRole("switch", { name: "Developer Mode" }),
+    ).toBeInTheDocument();
+  });
+
   it("flips only the clicked toggle once the write is confirmed", async () => {
     renderWithProvider();
     const massInput = screen.getByRole("switch", { name: "Mass Input Mode" });

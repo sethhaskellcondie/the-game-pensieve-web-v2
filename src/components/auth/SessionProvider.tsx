@@ -16,7 +16,12 @@ import {
   type CapabilityDeniedStatus,
 } from "@/lib/bffClient";
 import { clearPersistedCollectionViews } from "@/components/filters/persistedViews";
-import type { ActiveShowcase, Role, SessionView } from "@/lib/sessionConfig";
+import type {
+  ActiveShowcase,
+  AuthMode,
+  Role,
+  SessionView,
+} from "@/lib/sessionConfig";
 import UpgradePrompt from "./UpgradePrompt";
 
 // Capability flags derived from the caller's role. This matrix mirrors the
@@ -33,12 +38,14 @@ export type Capabilities = {
 export function capabilitiesFor(
   role: Role,
   activeShowcase: ActiveShowcase | null = null,
+  authMode: AuthMode = "secured",
 ): Capabilities {
   // While viewing a public showcase every caller is GUEST-scoped on the
-  // backend (X-Showcase wins for authenticated users too), so the collection
-  // capabilities collapse to the guest row: read + filter only. Account-level
-  // state is deliberately untouched — isAdmin still reflects the real
-  // logged-in user, so the account menu and /admin stay reachable.
+  // backend (X-Showcase wins for authenticated users too — in BOTH backend
+  // modes), so the collection capabilities collapse to the guest row: read +
+  // filter only. Account-level state is deliberately untouched — isAdmin still
+  // reflects the real logged-in user, so the account menu and /admin stay
+  // reachable.
   if (activeShowcase) {
     return {
       canWrite: false,
@@ -46,6 +53,19 @@ export function capabilitiesFor(
       canImport: false,
       canBackup: false,
       isAdmin: role === "admin",
+    };
+  }
+  // An unsecured backend is a personal single-user instance: its AccessService
+  // short-circuits every capability check to true, so mirror that with the
+  // full collection row. isAdmin stays false — the admin area manages users
+  // and roles, concepts that don't exist in this mode.
+  if (authMode === "unsecured") {
+    return {
+      canWrite: true,
+      canFilter: true,
+      canImport: true,
+      canBackup: true,
+      isAdmin: false,
     };
   }
   return {
@@ -64,6 +84,10 @@ export function capabilitiesFor(
 }
 
 type SessionContextValue = Capabilities & {
+  // The backend's security posture (fixed per deployment). "unsecured" means a
+  // personal local instance: no accounts, full collection capabilities, and
+  // the auth-only surfaces (login/account/admin/pricing) don't exist.
+  authMode: AuthMode;
   // The resolved role: "guest" (anonymous), "trial", "paid", "lapsed", or "admin".
   // While an admin impersonates a user this is the TARGET's effective role.
   role: Role;
@@ -109,6 +133,7 @@ type SessionContextValue = Capabilities & {
 // exercise the guest/lapsed/trial gating wrap the component in a
 // <SessionProvider> with that view.
 const SessionContext = createContext<SessionContextValue>({
+  authMode: "secured",
   role: "paid",
   email: null,
   isAuthenticated: true,
@@ -142,6 +167,9 @@ export function SessionProvider({
 }) {
   const router = useRouter();
   const { showToast } = useToast();
+  // The backend never switches modes under a running deployment, so the
+  // server-seeded value is constant for the life of the app — no state needed.
+  const authMode: AuthMode = initial.authMode ?? "secured";
   const [role, setRole] = useState<Role>(initial.role);
   const [email, setEmail] = useState<string | null>(initial.email);
   const [isImpersonating, setIsImpersonating] = useState<boolean>(
@@ -255,7 +283,9 @@ export function SessionProvider({
     registerBffHandlers({
       onUnauthorized: () => {
         // The session was missing/expired server-side; drop to guest and send
-        // the user to log in.
+        // the user to log in. An unsecured backend never returns 401 (and has
+        // no login page), so this is a no-op there.
+        if (authMode === "unsecured") return;
         setRole("guest");
         setEmail(null);
         router.push("/login");
@@ -294,10 +324,11 @@ export function SessionProvider({
       },
     });
     return () => registerBffHandlers({});
-  }, [router, role, refresh, markLapsed, showUpgradePrompt, showToast]);
+  }, [authMode, router, role, refresh, markLapsed, showUpgradePrompt, showToast]);
 
   const value = useMemo<SessionContextValue>(
     () => ({
+      authMode,
       role,
       email,
       isAuthenticated: role !== "guest",
@@ -307,12 +338,13 @@ export function SessionProvider({
       activeShowcase,
       selectShowcase,
       stopImpersonating,
-      ...capabilitiesFor(role, activeShowcase),
+      ...capabilitiesFor(role, activeShowcase, authMode),
       markLapsed,
       refresh,
       showUpgradePrompt,
     }),
     [
+      authMode,
       role,
       email,
       isImpersonating,

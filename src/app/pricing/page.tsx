@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import PricingActions from "@/components/auth/PricingActions";
+import { getAuthMode } from "@/lib/authMode";
 import styles from "./pricing.module.css";
 
 export const metadata: Metadata = {
@@ -40,7 +42,11 @@ const PLANS = [
   },
 ];
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  // Plans and upgrades are account concepts; an unsecured (personal, local)
+  // instance has neither, so pricing goes home like the other auth-only pages.
+  if ((await getAuthMode()) === "unsecured") redirect("/");
+
   return (
     <main className={styles.content}>
       <h1>Pricing</h1>

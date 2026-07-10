@@ -43,6 +43,33 @@ function renderWith(
   );
 }
 
+describe("AccountMenu on an unsecured instance", () => {
+  it("renders nothing — plans, accounts, and logins don't exist", () => {
+    const { container } = render(
+      <SessionProvider
+        initial={{
+          role: "guest",
+          email: null,
+          isImpersonating: false,
+          impersonatedEmail: null,
+          accessUntil: null,
+          activeShowcase: null,
+          authMode: "unsecured",
+        }}
+      >
+        <AccountMenu />
+      </SessionProvider>,
+    );
+    expect(container).toBeEmptyDOMElement();
+    expect(
+      screen.queryByRole("link", { name: "Log in" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Log out" }),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("AccountMenu logout", () => {
   it("shows a Log out control to an authenticated user but not a guest", () => {
     renderWith({ role: "paid", email: "collector@example.com" });

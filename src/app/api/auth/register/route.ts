@@ -1,10 +1,22 @@
 import { NextResponse } from "next/server";
 import { registerBackend, AuthError } from "@/lib/authBackend";
+import { getAuthMode } from "@/lib/authMode";
 
 // POST /api/auth/register — proxies the public backend register endpoint. The
 // backend auto-grants a 30-day trial (new accounts start Paid). A duplicate
 // email comes back as a 400 with the backend's message, which we pass through.
 export async function POST(request: Request) {
+  // No accounts exist on an unsecured (personal, local) instance — refuse the
+  // same way login does; the signup UI is unreachable in this mode.
+  if ((await getAuthMode()) === "unsecured") {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "This instance runs without accounts; registration is unavailable.",
+      },
+      { status: 409 },
+    );
+  }
   try {
     const { email, password } = (await request.json()) as {
       email?: string;

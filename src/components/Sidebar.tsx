@@ -27,9 +27,13 @@ export function SidebarContent() {
   // showcase's fields are collection data, shown read-only like Systems and the
   // rest (write controls are gated on canWrite, which is false in showcase mode).
   // Options also requires a logged-in account — it manages the viewer's own
-  // settings and backups, which a guest has none of.
-  const { activeShowcase, isAuthenticated } = useSession();
+  // settings and backups, which a guest has none of. Except on an unsecured
+  // (personal, local) backend: there are no accounts and the anonymous caller
+  // owns the collection, so Options is always available there.
+  const { activeShowcase, isAuthenticated, authMode } = useSession();
   const showcaseMode = activeShowcase != null;
+  const showOptions =
+    !showcaseMode && (isAuthenticated || authMode === "unsecured");
 
   // Marks a nav link active when it matches the current URL, via both a style
   // hook and aria-current so the state is exposed to assistive tech.
@@ -82,12 +86,12 @@ export function SidebarContent() {
           <CustomFieldsIcon />
           Custom Fields
         </Link>
-        {showcaseMode || !isAuthenticated ? null : (
+        {showOptions ? (
           <Link href="/options" {...navProps("/options")}>
             <OptionsIcon />
             Options
           </Link>
-        )}
+        ) : null}
       </nav>
 
       <BeginnerHint

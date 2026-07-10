@@ -21,9 +21,12 @@ export default async function OptionsPage() {
 
   // Options require a logged-in account; guests have no settings or backups to
   // manage. This guards the route directly since the hidden nav link alone
-  // wouldn't stop a guest navigating to /options by URL.
-  const { role } = await loadSessionView();
-  if (role === "guest") redirect("/login");
+  // wouldn't stop a guest navigating to /options by URL. On an unsecured
+  // backend there are no accounts and the anonymous caller IS the collection's
+  // owner, so the page (all of it — settings, sorts, API tools, backups) is
+  // simply available.
+  const { role, authMode } = await loadSessionView();
+  if (authMode !== "unsecured" && role === "guest") redirect("/login");
 
   return (
     <>

@@ -8,9 +8,11 @@ import styles from "./AccountMenu.module.css";
 
 // Sidebar account panel: shows the current plan, the signed-in email, and the
 // relevant auth actions (log in/sign up for guests; log out — plus an upgrade
-// nudge when lapsed or on a trial — for authenticated users).
+// nudge when lapsed or on a trial — for authenticated users). On an unsecured
+// (personal, local) backend none of these concepts exist — no plans, accounts,
+// or logins — so the panel renders nothing at all.
 export default function AccountMenu() {
-  const { role, email, isAuthenticated } = useSession();
+  const { role, email, isAuthenticated, authMode } = useSession();
   // Lapsed accounts upgrade to regain write/filter; trials upgrade to unlock
   // import (and lock in before the window ends).
   const showUpgrade = role === "lapsed" || role === "trial";
@@ -32,6 +34,8 @@ export default function AccountMenu() {
     // fields) cleanly.
     window.location.assign("/");
   }
+
+  if (authMode === "unsecured") return null;
 
   return (
     <div className={styles.panel}>

@@ -2,7 +2,9 @@ import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import { SessionProvider } from "@/components/auth/SessionProvider";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
+import type { SessionView } from "@/lib/sessionConfig";
 import { DEFAULT_UI_SETTINGS } from "@/lib/uiSettings.types";
 
 jest.mock("next/navigation", () => ({
@@ -82,5 +84,40 @@ describe("Sidebar", () => {
     for (const link of screen.getAllByRole("link")) {
       expect(link).not.toHaveAttribute("aria-current");
     }
+  });
+
+  // Options manages the viewer's own settings, so a secured-mode guest has no
+  // use for it — but on an unsecured (personal, local) backend the anonymous
+  // caller owns the collection and the link must stay.
+  function renderAsGuest(authMode?: SessionView["authMode"]) {
+    const view: SessionView = {
+      role: "guest",
+      email: null,
+      isImpersonating: false,
+      impersonatedEmail: null,
+      accessUntil: null,
+      activeShowcase: null,
+      authMode,
+    };
+    render(
+      <SessionProvider initial={view}>
+        <Sidebar />
+      </SessionProvider>,
+    );
+  }
+
+  it("hides the Options link from a secured-mode guest", () => {
+    renderAsGuest("secured");
+    expect(
+      screen.queryByRole("link", { name: "Options" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the Options link to the anonymous caller of an unsecured instance", () => {
+    renderAsGuest("unsecured");
+    expect(screen.getByRole("link", { name: "Options" })).toHaveAttribute(
+      "href",
+      "/options",
+    );
   });
 });

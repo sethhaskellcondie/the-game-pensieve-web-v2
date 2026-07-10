@@ -19,13 +19,19 @@ const HIDDEN_PREFIXES = ["/login", "/signup", "/pricing"];
 // - Anonymous with no selection: the default-showcase notice pointing at log in.
 //   Dismissible, as before.
 export default function ShowcaseBanner() {
-  const { role, activeShowcase, selectShowcase, isAuthenticated } =
+  const { role, activeShowcase, selectShowcase, isAuthenticated, authMode } =
     useSession();
   const pathname = usePathname();
   const [dismissed, setDismissed] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
   if (HIDDEN_PREFIXES.some((p) => pathname.startsWith(p))) return null;
+
+  // On an unsecured (personal, local) backend the anonymous caller IS the
+  // collection's owner — there's no log-in to point at, so treat them like an
+  // authenticated user: no default-showcase notice, and the leave control
+  // (rather than a login link) if a leftover showcase cookie is active.
+  const ownsCollection = isAuthenticated || authMode === "unsecured";
 
   if (activeShowcase) {
     return (
@@ -36,7 +42,7 @@ export default function ShowcaseBanner() {
       >
         <span className={styles.text}>
           Viewing <strong>{activeShowcase.name}</strong> (read-only).{" "}
-          {isAuthenticated ? (
+          {ownsCollection ? (
             <>
               <button
                 type="button"
@@ -64,7 +70,7 @@ export default function ShowcaseBanner() {
     );
   }
 
-  if (role !== "guest" || dismissed) return null;
+  if (role !== "guest" || dismissed || authMode === "unsecured") return null;
 
   return (
     <div className={styles.banner} role="status" aria-label="Showcase notice">

@@ -16,6 +16,13 @@ import type { SessionOptions } from "iron-session";
 // session can never exceed its real role's permissions.
 export type Role = "guest" | "trial" | "paid" | "lapsed" | "admin" | "unknown";
 
+// The backend's security posture, detected from GET /heartbeat's `secureMode`
+// flag (see src/lib/authMode.ts). Fixed for the lifetime of a deployment:
+// "secured" enforces accounts and roles; "unsecured" is a personal, local,
+// single-user instance where users/permissions/profiles do not apply — the
+// caller gets full collection capabilities with no login.
+export type AuthMode = "secured" | "unsecured";
+
 // A role we may actually persist for an authenticated user — everything except
 // the anonymous "guest", which is represented by having no token at all.
 export type StoredRole = Exclude<Role, "guest">;
@@ -77,6 +84,10 @@ export type SessionView = {
   // until" line.
   accessUntil: number | null;
   activeShowcase: ActiveShowcase | null;
+  // The backend's security posture. Optional so the many places (mostly tests)
+  // that build a view literal keep working — absent means "secured", the
+  // posture every existing consumer was written against.
+  authMode?: AuthMode;
 };
 
 // A dev-only fallback keeps the app and E2E runnable out of the box; production
@@ -119,7 +130,24 @@ export function sessionRole(session: SessionData): Role {
 export function toSessionView(
   session: SessionData,
   activeShowcase: ActiveShowcase | null = null,
+  authMode: AuthMode = "secured",
 ): SessionView {
+  // An unsecured backend has no accounts: whatever the cookie holds (e.g. a
+  // stale session from a secured deployment of the same URL) is ignored rather
+  // than surfaced as a broken half-logged-in state. The nominal role stays
+  // "guest" — matching what the backend resolves — while capabilitiesFor()
+  // grants the full-capability row for this mode.
+  if (authMode === "unsecured") {
+    return {
+      role: "guest",
+      email: null,
+      isImpersonating: false,
+      impersonatedEmail: null,
+      accessUntil: null,
+      activeShowcase,
+      authMode,
+    };
+  }
   const authed = !!session.accessToken;
   // Only honor impersonation fields on an authenticated session — a stray id on
   // an anonymous/destroyed session must never read as "impersonating".
@@ -131,5 +159,6 @@ export function toSessionView(
     impersonatedEmail: impersonating ? (session.impersonatedEmail ?? null) : null,
     accessUntil: authed ? (session.accessUntil ?? null) : null,
     activeShowcase,
+    authMode,
   };
 }

@@ -114,7 +114,7 @@ const SETTINGS: SettingMeta[] = [
 
 export default function UiSettings() {
   const { settings, setSetting, saving } = useUiSettings();
-  const { isAdmin } = useSession();
+  const { isAdmin, authMode } = useSession();
   const [fieldsOpen, setFieldsOpen] = useState(false);
   const isMobile = useIsMobile();
 
@@ -124,10 +124,18 @@ export default function UiSettings() {
 
   // Mass Edit Mode drives in-line editing of the display chart, which the phone
   // layout doesn't offer, so its toggle is hidden below the breakpoint. Developer
-  // Mode is an admin-only affordance, so it's hidden from everyone else.
+  // Mode is an admin-only affordance, so it's hidden from everyone else — except
+  // on an unsecured (personal, local) instance, where there are no roles and the
+  // options page offers everything.
   const visibleSettings = SETTINGS.filter((setting) => {
     if (setting.key === "massEditMode" && isMobile) return false;
-    if (setting.key === "developerMode" && !isAdmin) return false;
+    if (
+      setting.key === "developerMode" &&
+      !isAdmin &&
+      authMode !== "unsecured"
+    ) {
+      return false;
+    }
     return true;
   });
 

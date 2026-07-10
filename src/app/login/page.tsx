@@ -1,16 +1,23 @@
 import Image from "next/image";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import Header from "@/components/Header";
 import LoginForm from "@/components/auth/LoginForm";
 import SignupForm from "@/components/auth/SignupForm";
 import ShowcaseSwitcher from "@/components/auth/ShowcaseSwitcher";
+import { getAuthMode } from "@/lib/authMode";
 import styles from "./login.module.css";
 
 export const metadata: Metadata = {
   title: "Log in · The Game Pensieve",
 };
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  // An unsecured backend has no accounts to log into — worse, logging in there
+  // actively degrades the session (the token is ignored and the role resolves
+  // to "unknown"), so this page must be unreachable in that mode.
+  if ((await getAuthMode()) === "unsecured") redirect("/");
+
   return (
     <>
       <Header
