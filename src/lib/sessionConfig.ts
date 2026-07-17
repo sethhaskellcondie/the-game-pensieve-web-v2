@@ -105,6 +105,37 @@ export const SESSION_COOKIE_NAME = "gp_session";
 // POST /api/showcase/select (which validates the slug against the directory).
 export const SHOWCASE_COOKIE_NAME = "gp_showcase";
 
+// The short-lived OIDC transaction cookie. It carries the in-flight login's PKCE
+// verifier, CSRF `state`, id_token `nonce`, and optional post-login `returnTo`
+// between the login redirect and the callback. Deliberately separate from the
+// main session cookie (it is not auth state) and sealed with the same
+// SESSION_SECRET via iron-session's sealData/unsealData. Set by GET
+// /api/auth/login, read + cleared by GET /api/auth/callback.
+export const OAUTH_TX_COOKIE_NAME = "gp_oauth";
+
+// TTL (seconds) for the transaction cookie — long enough to complete a login at
+// Keycloak's hosted page, short enough that a stale/abandoned attempt lapses.
+export const OAUTH_TX_TTL_SECONDS = 600;
+
+export type OAuthTransaction = {
+  verifier: string;
+  state: string;
+  nonce: string;
+  // A validated same-origin relative path to return to after login, or absent.
+  returnTo?: string;
+};
+
+// The Keycloak id_token is kept ONLY for RP-initiated logout (`id_token_hint`).
+// It lives in its own sealed httpOnly cookie rather than the main session cookie
+// because three Keycloak JWTs (access + refresh + id) sealed together overflow
+// the 4096-byte browser cookie limit. The access + refresh tokens (the ones the
+// proxy and api.ts actually use every request) stay in gp_session; the id_token
+// is written once at login and read at logout — it never needs rotating, since
+// Keycloak accepts the original id_token as a logout hint for the SSO session.
+export const ID_TOKEN_COOKIE_NAME = "gp_oidc";
+
+export type IdTokenCookie = { idToken: string };
+
 export const sessionOptions: SessionOptions = {
   password: process.env.SESSION_SECRET || DEV_SESSION_SECRET,
   cookieName: SESSION_COOKIE_NAME,

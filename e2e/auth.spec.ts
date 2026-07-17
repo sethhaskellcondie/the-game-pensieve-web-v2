@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { loginViaKeycloak } from "./keycloakLogin";
 
 // Auth/tier coverage.
 //
@@ -41,24 +42,22 @@ test.describe("Guest tier", () => {
   });
 });
 
-test.describe("Trial tier (new account)", () => {
-  test.skip(!SECURED, "needs the secured backend (SECURED_BACKEND=1)");
+test.describe("Trial tier (Keycloak login)", () => {
+  test.skip(!SECURED, "needs the secured backend (SECURED_BACKEND=1) + Keycloak");
 
-  test("register, persist across reload, expose writes, then log out", async ({
+  // The seeded `seth` user JIT-provisions a 30-day TRIAL on first login.
+  const username = process.env.E2E_KC_USER || "seth";
+  const password = process.env.E2E_KC_PASSWORD || "password";
+  const email = process.env.E2E_KC_EMAIL || "seth.condie@quiltsoftware.com";
+
+  test("sign in, persist across reload, expose writes, then log out", async ({
     page,
   }) => {
-    const email = `e2e+${Date.now()}@example.com`;
-    const password = "Sup3rSecret!";
+    // Sign-in now goes through Keycloak's hosted login (authorization-code +
+    // PKCE); the helper drives the real form and lands back authenticated.
+    await loginViaKeycloak(page, username, password);
 
-    // Sign-up now lives in the "New here?" card on the login page. Scope to that
-    // card so its Email/Password fields aren't confused with the Log in card's.
-    await page.goto("/login");
-    const signup = page.getByRole("region", { name: "New here?" });
-    await signup.getByLabel("Email").fill(email);
-    await signup.getByLabel("Password").fill(password);
-    await signup.getByRole("button", { name: "Create account" }).click();
-
-    // Auto-login lands on home as a TRIAL account (30-day trial).
+    // Lands on home as a TRIAL account (30-day trial).
     await expect(page.getByLabel("Plan: Trial")).toBeVisible();
 
     // Session is BFF-held: persists across a full reload.
@@ -71,8 +70,10 @@ test.describe("Trial tier (new account)", () => {
     await expect(
       page.getByRole("heading", { name: "ACCOUNT" }),
     ).toBeVisible();
-    await expect(page.getByText(email)).toBeVisible();
-    await expect(page.getByLabel("Plan: Trial")).toBeVisible();
+    // The email and plan badge each show in both the sidebar account panel and
+    // the page body, so assert at least one is visible rather than a unique match.
+    await expect(page.getByText(email).first()).toBeVisible();
+    await expect(page.getByLabel("Plan: Trial").first()).toBeVisible();
     // A trial account shows how long the plan stays active. The default trial
     // window is 30 days, so the days-left hint renders alongside the date.
     await expect(page.getByText("Active until")).toBeVisible();

@@ -1,30 +1,18 @@
-// Public auth client for the backend's /v1/auth/* endpoints plus the role probe.
-// The register/login/refresh calls are unauthenticated (flat bodies, no bearer
-// token); fetchRole is the one authed call here. This module deliberately does
-// NOT go through the authed helpers in src/lib/api.ts and does NOT import
-// `next/headers` — that keeps it usable from the proxy (middleware).
+// Reads the caller's identity/role from the backend's one surviving auth
+// endpoint, `GET /v1/auth/me`. Login/refresh now go through Keycloak OIDC (see
+// src/lib/oidc.ts); the backend still resolves identity from the forwarded
+// Bearer access token exactly as before, and /v1/auth/me reports it. This module
+// deliberately does NOT go through the authed helpers in src/lib/api.ts and does
+// NOT import `next/headers` — that keeps it usable from the proxy (middleware).
 // See backend-documentation/openapi.yaml ("Authentication").
 
 import { getBaseUrl } from "./apiBase";
 import type { Role, StoredRole } from "./sessionConfig";
 
-// Mirrors the AuthTokens schema. expiresInMs is the access token lifetime.
-export type AuthTokens = {
-  accessToken: string;
-  refreshToken: string;
-  tokenType: string;
-  expiresInMs: number;
-};
-
-export type RegisteredUser = {
-  id: number;
-  email: string;
-};
-
 type Envelope<T> = { data: T; errors: string[] | null };
 
-// Thrown when an auth call fails, carrying the backend status (401 bad creds /
-// invalid refresh, 400 duplicate email) and the backend's error message.
+// Thrown when an authed backend call fails, carrying the backend status and
+// message. Retained for callers that surface auth failures with a status.
 export class AuthError extends Error {
   constructor(
     public readonly status: number,
@@ -33,59 +21,6 @@ export class AuthError extends Error {
     super(message);
     this.name = "AuthError";
   }
-}
-
-async function readErrors(res: Response): Promise<string | null> {
-  try {
-    const body = (await res.json()) as { errors?: unknown };
-    if (Array.isArray(body.errors) && body.errors.length > 0) {
-      return body.errors.join(", ");
-    }
-  } catch {
-    // ignore parse failures
-  }
-  return null;
-}
-
-async function postAuth<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${getBaseUrl()}${path}`, {
-    method: "POST",
-    cache: "no-store",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const detail = await readErrors(res);
-    throw new AuthError(
-      res.status,
-      detail || `Auth request failed: ${res.status} ${res.statusText} (${path})`,
-    );
-  }
-
-  const payload = (await res.json()) as Envelope<T>;
-  if (payload.errors && payload.errors.length > 0) {
-    throw new AuthError(res.status, payload.errors.join(", "));
-  }
-  return payload.data;
-}
-
-export function registerBackend(
-  email: string,
-  password: string,
-): Promise<RegisteredUser> {
-  return postAuth<RegisteredUser>("/auth/register", { email, password });
-}
-
-export function loginBackend(
-  email: string,
-  password: string,
-): Promise<AuthTokens> {
-  return postAuth<AuthTokens>("/auth/login", { email, password });
-}
-
-export function refreshBackend(refreshToken: string): Promise<AuthTokens> {
-  return postAuth<AuthTokens>("/auth/refresh", { refreshToken });
 }
 
 // Maps the backend's uppercase role enum (GUEST/TRIAL/PAID/LAPSED/ADMIN) onto the

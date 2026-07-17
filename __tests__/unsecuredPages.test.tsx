@@ -96,7 +96,7 @@ describe("LoginPage", () => {
     expect(mockRedirect).toHaveBeenCalledWith("/");
   });
 
-  it("renders the login and signup panels in secured mode", async () => {
+  it("renders the login and guest panels in secured mode", async () => {
     mockGetAuthMode.mockResolvedValue("secured");
     // The showcase switcher loads the directory on mount; a pending promise
     // keeps it in its initial state for this render test.
@@ -107,9 +107,18 @@ describe("LoginPage", () => {
     expect(
       screen.getByRole("region", { name: "Log in" }),
     ).toBeInTheDocument();
+    // Sign-in is a link to the OIDC login route (no in-app password form).
     expect(
-      screen.getByRole("region", { name: "New here?" }),
+      screen.getByRole("link", { name: "Log in" }),
+    ).toHaveAttribute("href", "/api/auth/login");
+    // Guests can still browse a public showcase.
+    expect(
+      screen.getByRole("region", { name: "Browse as a guest" }),
     ).toBeInTheDocument();
+    // In-app sign-up is gone (account creation is admin-driven in Keycloak).
+    expect(
+      screen.queryByRole("region", { name: "New here?" }),
+    ).not.toBeInTheDocument();
     // @ts-expect-error - cleanup of the per-test fetch stub
     delete global.fetch;
   });

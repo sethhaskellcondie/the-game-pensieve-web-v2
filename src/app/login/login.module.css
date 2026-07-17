@@ -1,6 +1,6 @@
-/* Login-screen layout. The Header stays on top; below it, three controls sit on
-   the paper background: a primary login card, and a stacked column with a
-   guest-showcase panel and a sign-up panel. Collapses to a single column on
+/* Login-screen layout. The Header stays on top; below it, two controls sit on
+   the paper background: a primary login card (which sends the user to Keycloak's
+   hosted login) and a guest-showcase panel. Collapses to a single column on
    narrow viewports. */
 
 .content {
@@ -11,15 +11,15 @@
 }
 
 .grid {
-  max-width: 1080px;
+  max-width: 760px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   align-items: start;
   gap: 20px;
 }
 
-/* When the row gets too skinny for three equal cards, stack them into a single
+/* When the row gets too skinny for two equal cards, stack them into a single
    centered column so each keeps a comfortable, readable width. */
 @media (max-width: 820px) {
   .grid {

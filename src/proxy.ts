@@ -7,7 +7,8 @@
 
 import { getIronSession } from "iron-session";
 import { NextResponse, type NextRequest } from "next/server";
-import { refreshBackend, fetchMe, AuthError } from "./lib/authBackend";
+import { fetchMe } from "./lib/authBackend";
+import { refreshTokens, OidcError } from "./lib/oidc";
 import {
   SESSION_COOKIE_NAME,
   sessionOptions,
@@ -36,9 +37,13 @@ export async function proxy(request: NextRequest) {
   }
 
   try {
-    const tokens = await refreshBackend(refreshToken);
+    const tokens = await refreshTokens(refreshToken);
     session.accessToken = tokens.accessToken;
+    // Keycloak rotates the refresh token — persist the fresh one for the next
+    // refresh. (The id_token lives in its own cookie and needs no rotation: the
+    // original remains a valid logout hint for the SSO session.)
     session.refreshToken = tokens.refreshToken;
+    // expires_in is SECONDS on the wire; oidc.ts already converted to ms.
     session.accessTokenExpiresAt = Date.now() + tokens.expiresInMs;
     // The backend re-derives the role per request, so a long-lived session can
     // silently cross TRIAL → LAPSED. Re-read it on each refresh; only overwrite
@@ -81,13 +86,17 @@ export async function proxy(request: NextRequest) {
       return forwarded;
     }
   } catch (error) {
-    // Only an explicit 401 (invalid/expired refresh token) means the session is
-    // truly dead — clear it so the user falls back to guest and is sent to login
-    // on the next protected action. Transient/network failures (and the benign
-    // race where a sibling request already rotated this single-use refresh token)
-    // are left alone: we keep the current session and let the downstream request
-    // proceed, rather than logging the user out on a hiccup.
-    if (error instanceof AuthError && error.status === 401) {
+    // A definitive `invalid_grant` from the token endpoint (HTTP 400/401) means
+    // the refresh token is truly dead — expired, revoked, or already consumed
+    // (Keycloak rotation invalidates the session on reuse) — so clear the session
+    // and let the user fall back to guest / re-login. Transient and network
+    // failures (OidcError status 0, or any non-invalid_grant error) are left
+    // alone: keep the current session rather than logging the user out on a hiccup.
+    if (
+      error instanceof OidcError &&
+      (error.status === 400 || error.status === 401) &&
+      error.oauthError === "invalid_grant"
+    ) {
       session.destroy();
     }
   }

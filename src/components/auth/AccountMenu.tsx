@@ -18,8 +18,13 @@ export default function AccountMenu() {
   const showUpgrade = role === "lapsed" || role === "trial";
 
   async function logout() {
+    let logoutUrl: string | null = null;
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      const res = await fetch("/api/auth/logout", { method: "POST" });
+      const body = (await res.json().catch(() => null)) as {
+        data?: { logoutUrl?: string | null };
+      } | null;
+      logoutUrl = body?.data?.logoutUrl ?? null;
     } catch {
       // ignore — we hard-navigate below regardless
     }
@@ -29,10 +34,11 @@ export default function AccountMenu() {
     // reapplied against a collection that lacks that field.
     clearPersistedCollectionViews();
     // Full navigation (not router.refresh): every server component must
-    // re-render as a guest so the home page reloads the default showcase's
-    // metadata (ui_settings, sort options) and filters (saved filters, custom
-    // fields) cleanly.
-    window.location.assign("/");
+    // re-render as a guest. When the backend gave us an RP-initiated end-session
+    // URL, redirect there — it kills the Keycloak SSO session and then returns to
+    // our origin (post_logout_redirect_uri). Otherwise just reload home as guest,
+    // reloading the default showcase's metadata and filters cleanly.
+    window.location.assign(logoutUrl ?? "/");
   }
 
   if (authMode === "unsecured") return null;

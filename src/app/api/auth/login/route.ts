@@ -1,73 +1,73 @@
 import { NextResponse } from "next/server";
-import { loginBackend, fetchMe, AuthError } from "@/lib/authBackend";
+import { sealData } from "iron-session";
 import { getAuthMode } from "@/lib/authMode";
-import { getSession } from "@/lib/session";
+import { authorizationUrl, pkcePair, randomUrlToken } from "@/lib/oidc";
+import {
+  OAUTH_TX_COOKIE_NAME,
+  OAUTH_TX_TTL_SECONDS,
+  sessionOptions,
+  type OAuthTransaction,
+} from "@/lib/sessionConfig";
 
-// POST /api/auth/login — exchanges credentials for backend tokens, stores them
-// in the httpOnly session cookie (the browser never sees the JWT), reads the
-// account's authoritative role, and returns only the browser-safe view
-// { email, role }.
-export async function POST(request: Request) {
-  // On an unsecured backend the login endpoints technically still answer, but
-  // the returned token is ignored and the session would resolve to the broken
-  // "unknown" role — refuse outright (the login page is unreachable in this
-  // mode; this guards direct POSTs).
+// GET /api/auth/login — starts the Keycloak OIDC authorization-code + PKCE flow.
+// No password is collected in-app anymore; this 302-redirects the browser to
+// Keycloak's hosted login page. The callback (GET /api/auth/callback) finishes
+// the exchange and mints the session cookie.
+export async function GET(request: Request) {
+  // On an unsecured backend there are no accounts to log into — the token would
+  // be ignored and the session would resolve to the broken "unknown" role. Refuse
+  // outright (the login page is unreachable in this mode; this guards direct GETs).
   if ((await getAuthMode()) === "unsecured") {
     return NextResponse.json(
       {
         status: "error",
-        message: "This instance runs without accounts; there is nothing to log into.",
+        message:
+          "This instance runs without accounts; there is nothing to log into.",
       },
       { status: 409 },
     );
   }
-  try {
-    const { email, password } = (await request.json()) as {
-      email?: string;
-      password?: string;
-    };
-    if (!email || !password) {
-      return NextResponse.json(
-        { status: "error", message: "Email and password are required." },
-        { status: 400 },
-      );
-    }
 
-    const tokens = await loginBackend(email, password);
-    // Read the authoritative role (and plan expiry). If the probe can't resolve
-    // it (endpoint down/missing, transient failure), fail loudly: store "unknown"
-    // rather than guessing a capable role. The session then renders restricted
-    // (like lapsed) and shows UNKNOWN; the backend still gates every endpoint by
-    // the real role.
-    const me = await fetchMe(tokens.accessToken);
-    const role = me?.role ?? "unknown";
-    if (role === "unknown") {
-      console.warn(
-        `[auth] Could not resolve role for ${email} from GET /v1/auth/me; ` +
-          `storing role "unknown" (session will render restricted).`,
-      );
-    }
+  const url = new URL(request.url);
+  // Derive the callback from the incoming origin so dev (3000) and compose (4200)
+  // both work without per-env config — each origin's callback is registered on the
+  // Keycloak client's redirectUris.
+  const redirectUri = `${url.origin}/api/auth/callback`;
 
-    const session = await getSession();
-    session.accessToken = tokens.accessToken;
-    session.refreshToken = tokens.refreshToken;
-    session.accessTokenExpiresAt = Date.now() + tokens.expiresInMs;
-    session.email = email;
-    session.role = role;
-    session.accessUntil = me?.accessUntil ?? undefined;
-    await session.save();
+  // Only honor a same-origin relative returnTo (leading "/", not "//" which is a
+  // protocol-relative absolute URL) to avoid an open redirect after login.
+  const returnToParam = url.searchParams.get("returnTo");
+  const returnTo =
+    returnToParam &&
+    returnToParam.startsWith("/") &&
+    !returnToParam.startsWith("//")
+      ? returnToParam
+      : undefined;
 
-    return NextResponse.json({ status: "ok", data: { email, role } });
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return NextResponse.json(
-        { status: "error", message: error.message },
-        { status: error.status },
-      );
-    }
-    return NextResponse.json(
-      { status: "error", message: "Login failed." },
-      { status: 502 },
-    );
-  }
+  const { verifier, challenge } = await pkcePair();
+  const state = randomUrlToken();
+  const nonce = randomUrlToken();
+
+  const tx: OAuthTransaction = { verifier, state, nonce, returnTo };
+  const sealed = await sealData(tx, {
+    password: sessionOptions.password as string,
+    ttl: OAUTH_TX_TTL_SECONDS,
+  });
+
+  const authorizeUrl = authorizationUrl({
+    redirectUri,
+    state,
+    codeChallenge: challenge,
+    nonce,
+  });
+
+  const response = NextResponse.redirect(authorizeUrl, 302);
+  response.cookies.set(OAUTH_TX_COOKIE_NAME, sealed, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: OAUTH_TX_TTL_SECONDS,
+  });
+  return response;
 }
