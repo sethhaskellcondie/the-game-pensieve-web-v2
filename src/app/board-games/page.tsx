@@ -40,16 +40,17 @@ export default async function BoardGamesPage({
             ? "Every box on the shelf with a board game, or part of a board game in it!"
             : "Every board game you have, no matter how many boxes they are in!"
         }
-      >
-        <div className={styles.viewControls}>
-          <BeginnerHint
-            className={styles.viewHint}
-            placement="bottom-end"
-            text="Board Games can be viewed in two different ways the the list view will list all of the games that are in the collection, but some games come in multiple boxes, like expansions, or additional characters. So the shelf view will show all of the boxes that you have on your shelves."
-          />
-          <ViewToggle view={view} basePath="/board-games" pinned={false} />
-        </div>
-      </Header>
+        heroAside={
+          <div className={styles.viewControls}>
+            <BeginnerHint
+              className={styles.viewHint}
+              placement="bottom-end"
+              text="Board Games can be viewed in two different ways the the list view will list all of the games that are in the collection, but some games come in multiple boxes, like expansions, or additional characters. So the shelf view will show all of the boxes that you have on your shelves."
+            />
+            <ViewToggle view={view} basePath="/board-games" pinned={false} />
+          </div>
+        }
+      />
 
       <main className={styles.content}>
         {view === "shelf" ? (

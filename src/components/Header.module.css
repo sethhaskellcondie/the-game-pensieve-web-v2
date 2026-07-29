@@ -168,6 +168,22 @@
   --beginner-hint-color: var(--field-green-bg);
 }
 
+/* The title + tagline block. min-width: 0 lets it shrink below its max-content
+   width so the tagline wraps when a heroAside shares the row — without it the
+   block keeps its full width and the text runs under the aside. */
+.heroText {
+  min-width: 0;
+}
+
+/* Hero-row controls (the collection pages' List/Shelf cluster), pushed to the
+   right edge but kept in flow so they reserve their own space. */
+.heroAside {
+  margin-left: auto;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
 .heroTitle {
   margin: 0;
   font-family: var(--font-press-start), monospace;
@@ -206,8 +222,12 @@
     row-gap: 12px;
   }
 
+  /* A heroAside has no room beside a phone-width hero, so let the row wrap and
+     drop it onto its own line underneath (still right-aligned by its
+     margin-left: auto), matching how the rest of the header content wraps. */
   .heroTop {
-    gap: 14px;
+    gap: 12px 14px;
+    flex-wrap: wrap;
   }
 
   .heroMark {

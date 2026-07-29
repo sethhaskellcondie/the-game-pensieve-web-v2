@@ -13,6 +13,11 @@ type HeaderProps = {
   // Page-specific guidance shown as a BeginnerHint in the hero row (only
   // while beginner mode is on).
   beginnerHint?: string;
+  // Controls that belong on the hero row itself, pinned to its right edge —
+  // e.g. the collection pages' List/Shelf toggle. Rendered as a flex sibling of
+  // the title block (rather than floated over it) so a long title or tagline
+  // wraps beside the controls instead of running underneath them.
+  heroAside?: ReactNode;
   children?: ReactNode;
 };
 
@@ -22,6 +27,7 @@ export default function Header({
   titleAccent,
   tagline,
   beginnerHint,
+  heroAside,
   children,
 }: HeaderProps) {
   // The animated grid/wash/glow background can be parked on a static frame via
@@ -39,7 +45,7 @@ export default function Header({
       <div className={styles.content}>
         <div className={styles.heroTop}>
           <div className={styles.heroMark}>{icon}</div>
-          <div>
+          <div className={styles.heroText}>
             <h1 className={styles.heroTitle}>
               {title}
               {titleAccent ? (<> <span className={styles.heroTitleEm}>{titleAccent}</span></>) : null}
@@ -53,6 +59,7 @@ export default function Header({
               placement="bottom-end"
             />
           ) : null}
+          {heroAside ? <div className={styles.heroAside}>{heroAside}</div> : null}
         </div>
         {children}
       </div>

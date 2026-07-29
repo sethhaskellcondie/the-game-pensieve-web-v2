@@ -16,12 +16,10 @@
   z-index: 0;
 }
 
-/* The view toggle and its beginner hint, pinned to the header's right edge. */
+/* The view toggle and its beginner hint. Passed as Header's heroAside, which
+   pins the cluster to the hero row's right edge in flow — so the hero title
+   and tagline wrap beside it rather than running underneath. */
 .viewControls {
-  position: absolute;
-  top: 50%;
-  right: 0;
-  transform: translateY(-50%);
   display: flex;
   align-items: center;
   gap: 14px;
@@ -30,15 +28,4 @@
 /* The seedling sits on the dark header, so lighten its color to read there. */
 .viewHint {
   --beginner-hint-color: var(--field-green-bg);
-}
-
-/* Mobile (keep in sync with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts):
-   no room right of the hero — the cluster joins Header's wrapping content row
-   (wrapping beneath the title), keeping the desktop right-edge alignment. */
-@media (max-width: 767px) {
-  .viewControls {
-    position: static;
-    transform: none;
-    margin-left: auto;
-  }
 }

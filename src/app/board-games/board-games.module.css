@@ -17,14 +17,10 @@
 }
 
 /* The hero-row controls cluster: a beginner hint sitting just left of the
-   List/Shelf toggle. It owns the right-edge placement the toggle used to pin
-   itself (ViewToggle pinned={false}), anchoring against Header's relative
-   .content wrapper and centering on the hero row. */
+   List/Shelf toggle. Passed as Header's heroAside (ViewToggle pinned={false}),
+   which handles the right-edge placement — in flow, so the hero title and
+   tagline wrap beside the cluster rather than under it. */
 .viewControls {
-  position: absolute;
-  top: 50%;
-  right: 0;
-  transform: translateY(-50%);
   display: flex;
   align-items: center;
   gap: 14px;
@@ -36,13 +32,3 @@
   --beginner-hint-color: var(--field-green-bg);
 }
 
-/* Mobile (keep in sync with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts):
-   no room right of the hero — the cluster joins Header's wrapping content row
-   (wrapping beneath the title), keeping the desktop right-edge alignment. */
-@media (max-width: 767px) {
-  .viewControls {
-    position: static;
-    transform: none;
-    margin-left: auto;
-  }
-}

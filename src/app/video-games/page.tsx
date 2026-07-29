@@ -40,16 +40,17 @@ export default async function VideoGamesPage({
             ? "All of your games as they appear on your shelves!"
             : "Every single game in your collection in one single list!"
         }
-      >
-        <div className={styles.viewControls}>
-          <BeginnerHint
-            className={styles.viewHint}
-            placement="bottom-end"
-            text={'Video Games can be viewed in two different ways the the shelf view shows all of the games as they appear on your shelf, but some games are compliations or collections of games there could be multiple games in a single cart, or disc. In the pensieve games appear in a "box" when listed on a shelf. The shelf view shows all of the video game boxes, and the list view shows all of your video games excluding repeats, and including all of the games that are in compliations or collections.'}
-          />
-          <ViewToggle view={view} pinned={false} />
-        </div>
-      </Header>
+        heroAside={
+          <div className={styles.viewControls}>
+            <BeginnerHint
+              className={styles.viewHint}
+              placement="bottom-end"
+              text={'Video Games can be viewed in two different ways the the shelf view shows all of the games as they appear on your shelf, but some games are compliations or collections of games there could be multiple games in a single cart, or disc. In the pensieve games appear in a "box" when listed on a shelf. The shelf view shows all of the video game boxes, and the list view shows all of your video games excluding repeats, and including all of the games that are in compliations or collections.'}
+            />
+            <ViewToggle view={view} pinned={false} />
+          </div>
+        }
+      />
 
       <main className={styles.content}>
         {view === "shelf" ? (
