@@ -1,5 +1,6 @@
 // Single source of truth for talking to The Game Pensieve backend.
-// Routes and the response envelope are documented in backend-documentation/openapi.yaml.
+// Routes and the response envelope are documented by the backend's OpenAPI spec,
+// which lives in the backend repository; comments below refer to it as "the spec".
 //
 // Server-only: this module reads the session cookie (via next/headers) to attach
 // the caller's bearer token, so it must only be imported from Server Components
@@ -405,7 +406,7 @@ export function setUserShowcase(
 }
 
 // ---------- Custom fields ----------
-// Shapes mirror the CustomField schemas in backend-documentation/openapi.yaml.
+// Shapes mirror the CustomField schemas in the spec.
 
 export type CustomFieldType =
   | "text"
@@ -523,8 +524,7 @@ export function deleteCustomField(id: number): Promise<void> {
 }
 
 // ---------- Filters ----------
-// Shapes mirror the FilterSpecification + FilterRequest schemas in
-// backend-documentation/openapi.yaml.
+// Shapes mirror the FilterSpecification + FilterRequest schemas in the spec.
 
 // The available filters for an entity: `fields` maps each field name to its data
 // type (text/number/boolean/time/system plus the sort/pagination pseudo-fields),
@@ -553,8 +553,7 @@ export function getFilterSpec(entity: EntityKey): Promise<FilterSpecification> {
 }
 
 // ---------- Toys ----------
-// Shapes mirror the Toy + CustomFieldValue schemas in
-// backend-documentation/openapi.yaml.
+// Shapes mirror the Toy + CustomFieldValue schemas in the spec.
 
 // A custom field's value on a specific entity. `value` is always a string
 // representation (e.g. "true"/"false" for booleans, "123" for numbers). The
@@ -698,9 +697,9 @@ export function getToyById(id: number): Promise<Toy | null> {
 }
 
 // ---------- Systems ----------
-// Shapes mirror the System + CustomFieldValue schemas in
-// backend-documentation/openapi.yaml. Systems differ from toys only in their
-// standard fields: generation (integer) and handheld (boolean) replace set.
+// Shapes mirror the System + CustomFieldValue schemas in the spec. Systems
+// differ from toys only in their standard fields: generation (integer) and
+// handheld (boolean) replace set.
 
 export type System = {
   id: number;
@@ -770,7 +769,7 @@ export function getSystemById(id: number): Promise<System | null> {
 }
 
 // ---------- Video Games ----------
-// Shapes mirror the VideoGame schemas in backend-documentation/openapi.yaml,
+// Shapes mirror the VideoGame schemas in the spec,
 // with one divergence: the live API also returns a videoGameBoxes array on
 // each game (the spec omits it), and those nested boxes carry the box's system,
 // its physical/collection flags, custom field values, and timestamps. Note the
@@ -843,7 +842,7 @@ export function getVideoGameById(id: number): Promise<VideoGame | null> {
 }
 
 // ---------- Video Game Boxes ----------
-// Shapes mirror the VideoGameBox schemas in backend-documentation/openapi.yaml.
+// Shapes mirror the VideoGameBox schemas in the spec.
 // A box is the case (physical or digital) that holds one or more video games;
 // games themselves are created and removed through boxes.
 
@@ -960,7 +959,7 @@ export function getVideoGameBoxById(
 }
 
 // ---------- Board Games ----------
-// Shapes mirror the BoardGame schemas in backend-documentation/openapi.yaml,
+// Shapes mirror the BoardGame schemas in the spec,
 // with one divergence: the live API returns richer box entries than the spec's
 // SlimBoardGameBox (expansion flags, custom field values, and timestamps ride
 // along). Board games have no create or delete endpoints — they are created
@@ -1028,7 +1027,7 @@ export function getBoardGameById(id: number): Promise<BoardGame | null> {
 }
 
 // ---------- Board Game Boxes ----------
-// Shapes mirror the BoardGameBox schemas in backend-documentation/openapi.yaml.
+// Shapes mirror the BoardGameBox schemas in the spec.
 // Unlike video game boxes (which hold many games), a board game box links to
 // exactly one board game, and one game can have many boxes (base set, second
 // copies, expansions). Expansion boxes point at their base set via baseSetId.

@@ -26,7 +26,7 @@ import UpgradePrompt from "./UpgradePrompt";
 
 // Capability flags derived from the caller's role. This matrix mirrors the
 // backend's AccessService (the backend is the source of truth — keep them in
-// lockstep). See backend-documentation/openapi.yaml ("Roles & Capabilities").
+// lockstep). See the "Roles & Capabilities" section of the backend's OpenAPI spec.
 export type Capabilities = {
   canWrite: boolean;
   canFilter: boolean;

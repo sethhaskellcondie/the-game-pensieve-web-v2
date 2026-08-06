@@ -14,7 +14,7 @@ import {
   type UiSettings,
 } from "./uiSettings.types";
 
-// The metadata record returned by GET/POST /metadata (see openapi.yaml).
+// The metadata record returned by GET/POST /metadata.
 type MetadataRecord = {
   id: number;
   key: string;

@@ -10,10 +10,6 @@ Playwright handles End-to-End (E2E) tests (config in `playwright.config.ts`, spe
 
 The UI settings (`ui_settings` — e.g. `massInputMode`, `massEditMode`) are loaded server-side in the layout, so `page.route` cannot stub them; a spec that needs a particular mode must set it through the real `/api/ui-settings` endpoint (GET to read, POST to write). Tests are free to update `ui_settings` this way, but it is **shared backend state** — clashing writes between concurrently running tests cause flakiness. So run such tests in a fashion where their settings will not collide: pin every spec that touches a given setting to the same value (the toys specs pin both mass modes off in `beforeEach`), or otherwise serialize/isolate them. Avoid having one test depend on a setting being on while a sibling forces it off. Note that pinning leaves the setting changed in the dev backend after the run.
 
-### Backend
+## localFiles
 
-The `backend-documentation/` directory holds the reference notes for how to connect to the backend API to retrieve data — consult it before writing any data-fetching or API-integration code. It contains `openapi.yaml` (the OpenAPI 3.0 spec: endpoints, request/response shapes, and the standard `{ "data": ..., "errors": ... }` response envelope) and `api.postman_collection.json` (a Postman collection of example requests). These are reference material describing the existing backend — do not edit them to change the API; follow what they document.
-
-### Inspiration
-
-The files in the design-inspiration directory are for reference only DO NOT try to replicate them in the project.
+All files in this directory are temporary files, the should be referenced when appropriate, but do not write comments that reference these files.

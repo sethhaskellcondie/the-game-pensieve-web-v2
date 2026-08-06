@@ -4,7 +4,7 @@
 // Bearer access token exactly as before, and /v1/auth/me reports it. This module
 // deliberately does NOT go through the authed helpers in src/lib/api.ts and does
 // NOT import `next/headers` — that keeps it usable from the proxy (middleware).
-// See backend-documentation/openapi.yaml ("Authentication").
+// See the "Authentication" section of the backend's OpenAPI spec.
 
 import { getBaseUrl } from "./apiBase";
 import type { Role, StoredRole } from "./sessionConfig";

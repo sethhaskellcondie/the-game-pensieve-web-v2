@@ -7,9 +7,9 @@
 //   instance. No accounts, roles, or permissions apply; every request resolves
 //   to the seeded default-showcase owner and the backend allows everything.
 //
-// The mode is telegraphed by GET /heartbeat's `secureMode` flag (see
-// backend-documentation/openapi.yaml). Because it cannot change under a running
-// backend, a definitive answer is cached for the life of this server process.
+// The mode is telegraphed by GET /heartbeat's `secureMode` flag. Because it
+// cannot change under a running backend, a definitive answer is cached for the
+// life of this server process.
 // An UNKNOWN answer (backend unreachable, or an older backend without the
 // flag) fails closed to "secured" — the restrictive posture the app has always
 // assumed — and is deliberately NOT cached, so a backend that comes up after
