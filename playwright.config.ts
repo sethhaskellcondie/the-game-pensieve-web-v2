@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const baseURL = "http://localhost:3000";
+// Env-overridable so the release gate can point the suite at a remapped stack
+// (see the api repo's compose.e2e.yaml); defaults keep local use unchanged.
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 
 export default defineConfig({
   testDir: "./e2e",

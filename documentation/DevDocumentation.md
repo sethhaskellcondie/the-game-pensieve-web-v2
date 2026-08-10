@@ -716,7 +716,7 @@ in-memory store, since that screen is fully client-driven.
 `page.route` cannot stub it. A spec needing a particular mode must set it through
 the real `/api/ui-settings` endpoint — but that is **shared backend state**, and
 clashing writes between concurrent specs cause flakiness. Pin every spec that
-touches a given setting to the same value (the toys specs pin both mass modes off
+touches a given setting to the same value (the toy specs pin both mass modes off
 in `beforeEach`) or otherwise serialize them. Never let one spec depend on a
 setting being on while a sibling forces it off. Note that pinning leaves the
 setting changed in the dev backend after the run.

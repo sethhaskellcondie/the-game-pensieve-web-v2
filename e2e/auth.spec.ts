@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { loginViaKeycloak } from "./keycloakLogin";
+import { skipUnlessSecured } from "./securedOnly";
 
 // Auth/tier coverage.
 //
@@ -13,6 +14,12 @@ import { loginViaKeycloak } from "./keycloakLogin";
 const SECURED = process.env.SECURED_BACKEND === "1";
 
 test.describe("Guest tier", () => {
+  // Guests only exist on a secured backend — in permit-all mode the anonymous
+  // caller owns the collection (unsecured.spec.ts asserts that inverse).
+  test.beforeEach(async ({ request }) => {
+    await skipUnlessSecured(request);
+  });
+
   test("shows the Guest plan and the showcase prompt", async ({ page }) => {
     await page.goto("/toys");
     await expect(page.getByLabel("Plan: Guest")).toBeVisible();
@@ -125,16 +132,20 @@ test.describe("Trial tier (Keycloak login)", () => {
 test.describe("Lapsed tier", () => {
   test.skip(
     !SECURED,
-    "needs the secured backend AND an operator-set past access_until (no admin API)",
+    "needs the secured backend, seeded (scripts/seed-test-data.sh creates the lapsed accounts)",
   );
 
-  // Precondition (manual / fixture): log in as an account whose access_until is
-  // in the past. This spec assumes the test harness has established that session
-  // — e.g. via a storageState produced by a fixture that registers an account
-  // and an operator expires it through SQL on the users table.
+  // The api repo's seeder provisions LAPSED accounts with Keycloak credentials
+  // (lapsed1@email.com / lapsed1 by default), so the spec establishes its own
+  // session through the hosted login, the same way the Trial spec does.
+  const username = process.env.E2E_LAPSED_USER || "lapsed1@email.com";
+  const password = process.env.E2E_LAPSED_PASSWORD || "lapsed1";
+
   test("blocks filtering and writing, surfacing the upgrade prompt", async ({
     page,
   }) => {
+    await loginViaKeycloak(page, username, password);
+
     await page.goto("/toys");
     await expect(page.getByLabel("Plan: Lapsed")).toBeVisible();
 

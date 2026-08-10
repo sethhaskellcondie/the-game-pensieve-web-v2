@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { skipUnlessSecured } from "./securedOnly";
 
 // Every page
 // must load at a phone viewport with its real h1 and without horizontally
@@ -21,7 +22,9 @@ async function expectNoHorizontalOverflow(page: Page) {
   ).toBeLessThanOrEqual(innerWidth);
 }
 
-const PAGES: { path: string; heading: string }[] = [
+// securedOnly pages redirect home on the permit-all backend (no accounts, no
+// pricing), so their layout only exists — and is only asserted — when secured.
+const PAGES: { path: string; heading: string; securedOnly?: true }[] = [
   { path: "/", heading: "PENSIEVE" },
   { path: "/video-games", heading: "VIDEO" },
   { path: "/video-games?view=shelf", heading: "VIDEO" },
@@ -30,15 +33,17 @@ const PAGES: { path: string; heading: string }[] = [
   { path: "/toys", heading: "TOYS" },
   { path: "/systems", heading: "SYSTEMS" },
   { path: "/custom-fields", heading: "CUSTOM" },
-  { path: "/pricing", heading: "Pricing" },
-  { path: "/login", heading: "PENSIEVE" },
+  { path: "/pricing", heading: "Pricing", securedOnly: true },
+  { path: "/login", heading: "PENSIEVE", securedOnly: true },
 ];
 
 test.describe("mobile smoke @mobile", () => {
-  for (const { path, heading } of PAGES) {
+  for (const { path, heading, securedOnly } of PAGES) {
     test(`${path} shows its heading without horizontal overflow`, async ({
       page,
+      request,
     }) => {
+      if (securedOnly) await skipUnlessSecured(request);
       await page.goto(path);
 
       await expect(page.getByRole("heading", { level: 1 })).toContainText(
@@ -49,8 +54,13 @@ test.describe("mobile smoke @mobile", () => {
   }
 
   // Guests have no settings or account details; these routes bounce to login.
+  // (Guests only exist on a secured backend — permit-all has no login page.)
   for (const path of ["/options", "/account"]) {
-    test(`${path} redirects guests to the login page`, async ({ page }) => {
+    test(`${path} redirects guests to the login page`, async ({
+      page,
+      request,
+    }) => {
+      await skipUnlessSecured(request);
       await page.goto(path);
 
       await expect(page).toHaveURL(/\/login$/);

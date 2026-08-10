@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { loginViaKeycloak } from "./keycloakLogin";
 
 // Multiple-public-showcases coverage.
 //
@@ -35,14 +36,9 @@ async function switcherHasOption(page: Page, optionName: string) {
 }
 
 async function login(page: Page, email: string, password: string) {
-  await page.goto("/login");
-  // The login page hosts both a Log in and a New here? (sign up) card, each with
-  // Email/Password fields — scope to the Log in card so the selectors are unique.
-  const form = page.getByRole("region", { name: "Log in" });
-  await form.getByLabel("Email").fill(email);
-  await form.getByLabel("Password").fill(password);
-  await form.getByRole("button", { name: "Log in" }).click();
-  await expect(page).toHaveURL(/\/$/);
+  // Sign-in goes through Keycloak's hosted login (the in-app password form is
+  // gone); the seeded accounts exist in Keycloak with these credentials.
+  await loginViaKeycloak(page, email, password);
 }
 
 test.describe("Authenticated showcase viewing", () => {
@@ -63,10 +59,12 @@ test.describe("Authenticated showcase viewing", () => {
     await expect(page.getByRole("status", { name: "Showcase notice" })).toContainText(
       "Viewing Showcase One (read-only)",
     );
-    // Showcase mode hides the personal Manage pages from the nav.
+    // Showcase mode hides the viewer's own Options page from the nav; Custom
+    // Fields stays — a showcase's fields are collection data, shown read-only
+    // like Systems and the rest (see the Sidebar's showcase-mode comment).
     await expect(
       page.getByRole("link", { name: "Custom Fields" }),
-    ).toHaveCount(0);
+    ).toBeVisible();
     await expect(page.getByRole("link", { name: "Options" })).toHaveCount(0);
 
     // Read-only while viewing, though the account itself stays logged in.

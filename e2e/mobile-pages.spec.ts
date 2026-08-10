@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { AUTH_STATE } from "./authState";
+import { skipUnlessSecured } from "./securedOnly";
 
 // The remaining pages — options,
 // account, and the home dashboard — render usable phone layouts. Options and
@@ -29,7 +30,10 @@ test.describe("remaining pages @mobile", () => {
     ).toBeHidden();
   });
 
-  test("account shows the profile section", async ({ page }) => {
+  test("account shows the profile section", async ({ page, request }) => {
+    // The account page only exists behind a login; on the permit-all backend
+    // /account redirects home (unsecured.spec.ts asserts that redirect).
+    await skipUnlessSecured(request);
     await page.goto("/account");
 
     // Scoped to main — the CSS-hidden desktop rail also carries Email/Plan

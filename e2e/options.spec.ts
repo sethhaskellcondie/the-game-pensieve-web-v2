@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { AUTH_STATE } from "./authState";
+import { skipUnlessSecured } from "./securedOnly";
 
 // /options requires a logged-in account (guests are redirected to /login), so
 // this whole file runs with the shared authenticated session from auth.setup.ts.
@@ -234,7 +235,11 @@ test("Hide Animations toggle parks the header on a static frame", async ({
 
 test("Developer Mode toggle is hidden for non-admin accounts", async ({
   page,
+  request,
 }) => {
+  // Admin gating only exists on a secured backend; in permit-all mode the
+  // anonymous owner sees the toggle (unsecured.spec.ts asserts that inverse).
+  await skipUnlessSecured(request);
   await page.goto("/options");
 
   // The trial account isn't an admin, so the Developer Mode switch is filtered
