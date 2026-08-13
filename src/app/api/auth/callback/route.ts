@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { sealData, unsealData } from "iron-session";
+import { appOrigin } from "@/lib/appOrigin";
 import { fetchMe } from "@/lib/authBackend";
 import {
   decodeJwtClaims,
@@ -42,7 +43,9 @@ function friendlyError(code: string): string {
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const origin = url.origin;
+  // The PUBLIC origin, not the request's own — behind a reverse proxy those differ
+  // and every redirect built below would point at the container's bind address.
+  const origin = appOrigin(request);
   const params = url.searchParams;
 
   const cookieStore = await cookies();

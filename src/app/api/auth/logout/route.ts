@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { unsealData } from "iron-session";
+import { appOrigin } from "@/lib/appOrigin";
 import { getSession } from "@/lib/session";
 import { endSessionUrl } from "@/lib/oidc";
 import {
@@ -42,7 +43,9 @@ export async function POST(request: Request) {
     try {
       logoutUrl = endSessionUrl({
         idToken,
-        postLogoutRedirectUri: new URL(request.url).origin,
+        // Public origin — the realm's post.logout.redirect.uris are registered
+        // against it, not against the container's bind address.
+        postLogoutRedirectUri: appOrigin(request),
       });
     } catch {
       // OIDC env not configured (e.g. an unsecured/personal deploy) — the local

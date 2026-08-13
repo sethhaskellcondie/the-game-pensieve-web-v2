@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { sealData } from "iron-session";
+import { appOrigin } from "@/lib/appOrigin";
 import { getAuthMode } from "@/lib/authMode";
 import { authorizationUrl, pkcePair, randomUrlToken } from "@/lib/oidc";
 import {
@@ -29,10 +30,11 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  // Derive the callback from the incoming origin so dev (3000) and compose (4200)
+  // Derive the callback from the public origin so dev (3000) and compose (4200)
   // both work without per-env config — each origin's callback is registered on the
-  // Keycloak client's redirectUris.
-  const redirectUri = `${url.origin}/api/auth/callback`;
+  // Keycloak client's redirectUris. Behind a reverse proxy the request's own origin
+  // is the container's bind address, so APP_ORIGIN supplies it instead (appOrigin).
+  const redirectUri = `${appOrigin(request)}/api/auth/callback`;
 
   // Only honor a same-origin relative returnTo (leading "/", not "//" which is a
   // protocol-relative absolute URL) to avoid an open redirect after login.
