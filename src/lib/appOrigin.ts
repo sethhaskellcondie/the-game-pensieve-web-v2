@@ -10,7 +10,7 @@
 // `redirect_uri=https://0.0.0.0:3000/api/auth/callback`, which is not one of the
 // realm's registered URIs — Keycloak answers "Invalid parameter: redirect_uri"
 // and login is impossible. Set APP_ORIGIN in any deployment that sits behind a
-// reverse proxy; compose.production.yaml wires it from ${APP_DOMAIN}.
+// reverse proxy; dockerCompose/compose.production.yaml wires it from ${APP_DOMAIN}.
 //
 // Deliberately configuration and NOT the X-Forwarded-Host header. That header is
 // attacker-controllable unless the proxy is known to overwrite it, and the
