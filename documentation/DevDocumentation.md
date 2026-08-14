@@ -245,7 +245,34 @@ proxy — before the request reaches any handler, where the response cookie can
 still be set. It fires when the access token is expired or within
 `REFRESH_SKEW_MS` (60s) of expiring.
 
-Three behaviors to know before you touch this file:
+Four behaviors to know before you touch this file:
+
+0. **Single-flight, with a replay window — `refreshOnce`. Removing this logs users
+   out roughly every fifteen minutes.** The production Keycloak realm sets
+   `revokeRefreshToken: true` with `refreshTokenMaxReuse: 0`, so presenting a
+   refresh token that has already been spent is not a harmless retry: Keycloak
+   reads it as token reuse and **revokes the entire user session**, which then
+   trips behavior 3 below and destroys the local session too. Two ordinary things
+   would cause exactly that:
+   - A page load fires several `/api/*` calls at once. Every one enters this proxy
+     carrying the same cookie, so every one would call the token endpoint with the
+     same refresh token. The first wins; the rest are reuse.
+   - The browser had already dispatched a request before the rotated `Set-Cookie`
+     reached it, so that request arrives with the previous token just after the
+     refresh completed.
+
+   `refreshOnce` keys an in-flight promise on the refresh token being spent, so
+   concurrent callers share one exchange, and keeps the settled result for
+   `REFRESH_GRACE_MS` (60s) so a late arrival replays it instead of spending a
+   dead token. The expiry is stamped **when the refresh returned**, not when a
+   caller reads it — otherwise a replayed caller would push the expiry up to a
+   minute past the token's real lifetime and then send a token the server
+   considers dead. Failures are deliberately **not** cached: a transient network
+   error must not lock the session out of refreshing for a minute.
+
+   This is safe as module state because production runs a **single replica**. A
+   multi-replica deployment would need a shared cache, or a non-zero
+   `refreshTokenMaxReuse` in the realm.
 
 1. **The request-cookie mirror.** `session.save()` writes the new sealed cookie
    to the *response* — so the browser gets it next time. But the handler serving
@@ -699,6 +726,20 @@ self-contained server under `.next/standalone` with only the traced runtime
 dependencies. The `Dockerfile` is a two-stage build (node:22-alpine) that copies
 the standalone output plus `.next/static` and `public`, and runs `node server.js`.
 `API_BASE_URL` must be supplied at container runtime.
+
+Two things the runtime stage does deliberately:
+
+- **`USER node`** — it runs unprivileged. `node` (uid 1000) ships with the official
+  image, so there is no user to create; the `COPY`s use `--chown=node:node` so the
+  files are readable by it.
+- **A `HEALTHCHECK` on `GET /api/auth/session`**, which the production compose file
+  gates Caddy's startup on (`depends_on: condition: service_healthy`). That route is
+  the right probe because it is always 200 — it degrades to a guest view rather than
+  erroring — and it is excluded from the proxy matcher, so probing it triggers no
+  token refresh. Deliberately **not** `/api/heartbeat`: that one proxies the
+  *backend* and answers 503 when the backend is down, which would report this
+  container unhealthy for someone else's outage. It does construct the iron-session
+  options, so a bad `SESSION_SECRET` surfaces here too.
 
 ---
 

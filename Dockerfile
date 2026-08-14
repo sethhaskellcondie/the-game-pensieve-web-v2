@@ -28,12 +28,24 @@ ENV PORT=3000
 # Bind to all interfaces so the server is reachable from outside the container.
 ENV HOSTNAME=0.0.0.0
 
-# Copy the standalone server, static assets, and public files from the build stage.
-COPY --from=build /app/.next/standalone ./
-COPY --from=build /app/.next/static ./.next/static
-COPY --from=build /app/public ./public
+# Copy the standalone server, static assets, and public files from the build stage. `node` owns them so a
+# non-root runtime can read them (and so Next can write .next/cache if it ever needs to).
+COPY --from=build --chown=node:node /app/.next/standalone ./
+COPY --from=build --chown=node:node /app/.next/static ./.next/static
+COPY --from=build --chown=node:node /app/public ./public
 
 EXPOSE 3000
+
+# Run unprivileged. `node` (uid 1000) ships with the official image, so there is no user to create.
+USER node
+
+# Liveness for `docker compose ps` and for Caddy's depends_on. /api/auth/session is the right probe: it is
+# always 200 (it degrades to a guest view rather than erroring), it is excluded from the proxy matcher so
+# it triggers no token refresh, and it touches nothing downstream — unlike /api/heartbeat, which proxies
+# the BACKEND and would report this container unhealthy whenever the backend hiccups. It does exercise the
+# iron-session config, so a bad SESSION_SECRET shows up here too.
+HEALTHCHECK --interval=15s --timeout=5s --start-period=45s --retries=5 \
+    CMD wget -qO- "http://127.0.0.1:${PORT:-3000}/api/auth/session" >/dev/null || exit 1
 
 # API_BASE_URL (server-only, including the /v1 prefix) must be supplied at runtime,
 # e.g. via the compose file. See .env.example for the variables this app expects.

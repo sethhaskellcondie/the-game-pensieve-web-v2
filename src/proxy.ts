@@ -8,7 +8,7 @@
 import { getIronSession } from "iron-session";
 import { NextResponse, type NextRequest } from "next/server";
 import { fetchMe } from "./lib/authBackend";
-import { refreshTokens, OidcError } from "./lib/oidc";
+import { refreshTokens, OidcError, type OidcTokens } from "./lib/oidc";
 import {
   SESSION_COOKIE_NAME,
   sessionOptions,
@@ -18,6 +18,65 @@ import {
 // Refresh when the access token is expired or within this skew of expiring, so a
 // request never goes out with a token about to lapse mid-flight.
 const REFRESH_SKEW_MS = 60_000;
+
+// How long a completed refresh stays replayable for the token it consumed. See
+// `refreshOnce` — this is the window that covers a request the browser sent
+// BEFORE the rotated cookie reached it.
+const REFRESH_GRACE_MS = 60_000;
+
+interface RefreshResult {
+  tokens: OidcTokens;
+  // Captured when the refresh actually returned, not when a replaying caller
+  // reads it — otherwise a caller served from the grace window would push the
+  // expiry up to a minute past the token's real lifetime and send a dead token.
+  accessTokenExpiresAt: number;
+}
+
+// Keyed by the refresh token being SPENT (not by session): single-flight, plus a
+// short replay window after it settles.
+const inflightRefresh = new Map<string, Promise<RefreshResult>>();
+
+/**
+ * Refresh once per refresh token, no matter how many requests ask at the same
+ * moment, and let late arrivals replay the result for `REFRESH_GRACE_MS`.
+ *
+ * Why this exists: the production realm sets `revokeRefreshToken: true` with
+ * `refreshTokenMaxReuse: 0`, so presenting a refresh token that has already been
+ * spent is not a harmless retry — Keycloak treats it as token-reuse and revokes
+ * the whole user session. Two ways that happens without this:
+ *
+ *  1. A page load fires several `/api/*` calls at once. Every one of them enters
+ *     this proxy carrying the same cookie, so every one would call the token
+ *     endpoint with the same refresh token. The first wins; the rest are reuse.
+ *  2. The browser had already dispatched a request before the rotated `Set-Cookie`
+ *     reached it, so that request arrives with the previous token just after the
+ *     refresh completed. The grace window answers it with the tokens that refresh
+ *     produced instead of spending the dead one again.
+ *
+ * A failure is NOT cached — a transient network error must not lock the session
+ * out of refreshing for a minute. Safe as module state because production runs a
+ * single replica; a multi-replica deployment would need a shared cache (or a
+ * non-zero `refreshTokenMaxReuse`).
+ */
+function refreshOnce(refreshToken: string): Promise<RefreshResult> {
+  const shared = inflightRefresh.get(refreshToken);
+  if (shared) return shared;
+
+  const pending = refreshTokens(refreshToken).then((tokens) => ({
+    tokens,
+    accessTokenExpiresAt: Date.now() + tokens.expiresInMs,
+  }));
+  inflightRefresh.set(refreshToken, pending);
+  pending.then(
+    () => {
+      const timer = setTimeout(() => inflightRefresh.delete(refreshToken), REFRESH_GRACE_MS);
+      // Don't hold the process open for a cache eviction.
+      timer.unref?.();
+    },
+    () => inflightRefresh.delete(refreshToken),
+  );
+  return pending;
+}
 
 export async function proxy(request: NextRequest) {
   const response = NextResponse.next();
@@ -37,14 +96,14 @@ export async function proxy(request: NextRequest) {
   }
 
   try {
-    const tokens = await refreshTokens(refreshToken);
+    const { tokens, accessTokenExpiresAt } = await refreshOnce(refreshToken);
     session.accessToken = tokens.accessToken;
     // Keycloak rotates the refresh token — persist the fresh one for the next
     // refresh. (The id_token lives in its own cookie and needs no rotation: the
     // original remains a valid logout hint for the SSO session.)
     session.refreshToken = tokens.refreshToken;
-    // expires_in is SECONDS on the wire; oidc.ts already converted to ms.
-    session.accessTokenExpiresAt = Date.now() + tokens.expiresInMs;
+    // Stamped when the refresh returned (see RefreshResult), not now.
+    session.accessTokenExpiresAt = accessTokenExpiresAt;
     // The backend re-derives the role per request, so a long-lived session can
     // silently cross TRIAL → LAPSED. Re-read it on each refresh; only overwrite
     // when the probe gives a definitive answer (null = transient → keep prior).
