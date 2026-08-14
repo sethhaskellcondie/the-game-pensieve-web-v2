@@ -32,15 +32,33 @@ const OPTION_LABELS = [
 // Restore-from-backup and Seth's seed data only appear in developer mode.
 const DEVELOPER_ONLY_LABELS = ["Import From Backup", "Seed Seth's Data"];
 
-// Render inside the ToastProvider so seed outcomes can surface their toast,
-// and a UiSettingsProvider with developer mode on so every action is present.
+// Render inside the ToastProvider so seed outcomes can surface their toast, and
+// a UiSettingsProvider with developer mode on so every action is present.
+//
+// Wrapped in an ADMIN session because these tests are about what each action
+// does, not who may run it — and admin is the only role holding every
+// capability the panel offers. Seeding in particular is admin-only (it loads
+// the maintainer's bundled fixtures), so the context default of "paid" leaves
+// the seed buttons correctly disabled and nothing to click. The gating rules
+// themselves are covered by the "capability gating" block below.
 function renderBackupImport({ developerMode = true } = {}) {
   return render(
-    <UiSettingsProvider initial={{ ...DEFAULT_UI_SETTINGS, developerMode }}>
-      <ToastProvider>
-        <BackupImport />
-      </ToastProvider>
-    </UiSettingsProvider>,
+    <SessionProvider
+      initial={{
+        role: "admin",
+        email: "a@b.c",
+        isImpersonating: false,
+        impersonatedEmail: null,
+        accessUntil: null,
+        activeShowcase: null,
+      }}
+    >
+      <UiSettingsProvider initial={{ ...DEFAULT_UI_SETTINGS, developerMode }}>
+        <ToastProvider>
+          <BackupImport />
+        </ToastProvider>
+      </UiSettingsProvider>
+    </SessionProvider>,
   );
 }
 
@@ -504,7 +522,7 @@ describe("BackupImport", () => {
       );
     }
 
-    it("enables import and backup for a paid account", () => {
+    it("enables import and backup for a paid account, but not seeding", () => {
       renderForRole("paid");
       expect(
         screen.getByRole("button", { name: "Import From File" }),
@@ -512,10 +530,27 @@ describe("BackupImport", () => {
       expect(
         screen.getByRole("button", { name: "Import From Backup" }),
       ).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Backup Data" })).toBeEnabled();
+      // Seeding loads the maintainer's bundled fixture files rather than the
+      // caller's own data, so the backend gates it on SEED (admin-only) rather
+      // than IMPORT. A paid account importing its own backup is a different
+      // thing from a paid account injecting someone else's collection.
+      expect(
+        screen.getByRole("button", { name: "Seed Sample Data" }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Seed Seth's Data" }),
+      ).toBeDisabled();
+    });
+
+    it("enables seeding for an admin account", () => {
+      renderForRole("admin");
       expect(
         screen.getByRole("button", { name: "Seed Sample Data" }),
       ).toBeEnabled();
-      expect(screen.getByRole("button", { name: "Backup Data" })).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Seed Seth's Data" }),
+      ).toBeEnabled();
     });
 
     it("disables import but allows backup for a trial account", () => {

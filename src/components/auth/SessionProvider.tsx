@@ -32,6 +32,11 @@ export type Capabilities = {
   canFilter: boolean;
   canImport: boolean;
   canBackup: boolean;
+  // Seeding imports a fixture file bundled in the backend's image rather than
+  // the caller's own data, so the backend gates it on SEED (ADMIN only), not
+  // IMPORT. Distinct from canImport: a PAID account may import its own backup
+  // but may not inject the maintainer's fixtures.
+  canSeed: boolean;
   isAdmin: boolean;
 };
 
@@ -52,6 +57,7 @@ export function capabilitiesFor(
       canFilter: true,
       canImport: false,
       canBackup: false,
+      canSeed: false,
       isAdmin: role === "admin",
     };
   }
@@ -65,6 +71,7 @@ export function capabilitiesFor(
       canFilter: true,
       canImport: true,
       canBackup: true,
+      canSeed: true,
       isAdmin: false,
     };
   }
@@ -76,6 +83,9 @@ export function capabilitiesFor(
     canFilter: role !== "lapsed" && role !== "unknown",
     // Import is paid-only — TRIAL is excluded (its import attempt 403s).
     canImport: role === "paid" || role === "admin",
+    // Seeding is admin-only: it loads the maintainer's bundled fixture files,
+    // which is a maintenance tool rather than a customer feature.
+    canSeed: role === "admin",
     // Any authenticated role may back up its own data (UNKNOWN included — it
     // renders like LAPSED, which may back up).
     canBackup: role !== "guest",

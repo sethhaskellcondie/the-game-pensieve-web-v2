@@ -9,11 +9,13 @@ import { useSession } from "./auth/SessionProvider";
 import { backupFilename, downloadTextFile } from "@/lib/download";
 import styles from "./BackupImport.module.css";
 
-// Which backend capability an action needs. Backup maps to BACKUP; everything
-// that loads records (file import, restore-from-backup, and the seed actions,
-// which the backend routes through IMPORT) maps to IMPORT — paid-only, so a
-// TRIAL/LAPSED account is gated out before it can trigger a 403.
-type Capability = "import" | "backup";
+// Which backend capability an action needs. Backup maps to BACKUP; loading the
+// caller's own records (file import, restore-from-backup) maps to IMPORT —
+// paid-only, so a TRIAL/LAPSED account is gated out before it can trigger a
+// 403. The seed actions map to SEED, which only ADMIN holds: they import
+// fixture files bundled in the backend's image rather than the caller's data,
+// so they are a maintenance tool, not a customer feature.
+type Capability = "import" | "backup" | "seed";
 
 type BackupAction = {
   id: string;
@@ -76,7 +78,7 @@ const ACTIONS: BackupAction[] = [
     title: "Seed Sample Data",
     description: "Populate the app with starter data to explore.",
     buttonLabel: "Seed Sample Data",
-    requires: "import",
+    requires: "seed",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         {/* A sprout / seedling. */}
@@ -91,7 +93,7 @@ const ACTIONS: BackupAction[] = [
     title: "Seed Seth's Data",
     description: "Load Seth's collection as a large data set.",
     buttonLabel: "Seed Seth's Data",
-    requires: "import",
+    requires: "seed",
     developerOnly: true,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -159,18 +161,33 @@ export default function BackupImport() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast, showSnackbar } = useToast();
   const { settings } = useUiSettings();
-  const { canImport, canBackup } = useSession();
+  const { canImport, canBackup, canSeed } = useSession();
 
   // Capability gating mirrors the backend: import is paid-only (TRIAL/LAPSED are
-  // excluded), backup needs any authenticated role. A gated action is shown but
-  // disabled with a hint, rather than hidden, so the user understands why.
-  const allows = (requires: Capability): boolean =>
-    requires === "import" ? canImport : canBackup;
+  // excluded), seeding is admin-only, backup needs any authenticated role. A
+  // gated action is shown but disabled with a hint, rather than hidden, so the
+  // user understands why.
+  const allows = (requires: Capability): boolean => {
+    switch (requires) {
+      case "import":
+        return canImport;
+      case "seed":
+        return canSeed;
+      default:
+        return canBackup;
+    }
+  };
 
-  const hintFor = (requires: Capability): string =>
-    requires === "import"
-      ? "Importing is a paid feature — upgrade to import."
-      : "Backing up requires signing in.";
+  const hintFor = (requires: Capability): string => {
+    switch (requires) {
+      case "import":
+        return "Importing is a paid feature — upgrade to import.";
+      case "seed":
+        return "Seeding bundled data is an administrator action.";
+      default:
+        return "Backing up requires signing in.";
+    }
+  };
 
   // Developer-only actions (restore-from-backup, Seth's seed data) stay hidden
   // unless developer mode is enabled.

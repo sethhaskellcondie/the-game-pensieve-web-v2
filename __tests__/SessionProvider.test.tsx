@@ -52,6 +52,7 @@ describe("capabilitiesFor", () => {
       canFilter: true,
       canImport: false,
       canBackup: false,
+      canSeed: false,
       isAdmin: false,
     });
     expect(capabilitiesFor("trial")).toEqual({
@@ -59,6 +60,7 @@ describe("capabilitiesFor", () => {
       canFilter: true,
       canImport: false,
       canBackup: true,
+      canSeed: false,
       isAdmin: false,
     });
     expect(capabilitiesFor("paid")).toEqual({
@@ -66,6 +68,7 @@ describe("capabilitiesFor", () => {
       canFilter: true,
       canImport: true,
       canBackup: true,
+      canSeed: false,
       isAdmin: false,
     });
     expect(capabilitiesFor("lapsed")).toEqual({
@@ -73,6 +76,7 @@ describe("capabilitiesFor", () => {
       canFilter: false,
       canImport: false,
       canBackup: true,
+      canSeed: false,
       isAdmin: false,
     });
     expect(capabilitiesFor("admin")).toEqual({
@@ -80,6 +84,7 @@ describe("capabilitiesFor", () => {
       canFilter: true,
       canImport: true,
       canBackup: true,
+      canSeed: true,
       isAdmin: true,
     });
     // An unresolved role renders like lapsed: read + backup only.
@@ -88,6 +93,7 @@ describe("capabilitiesFor", () => {
       canFilter: false,
       canImport: false,
       canBackup: true,
+      canSeed: false,
       isAdmin: false,
     });
   });

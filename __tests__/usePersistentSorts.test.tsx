@@ -16,8 +16,13 @@ function makeSort(overrides: Partial<ActiveSort> = {}): ActiveSort {
 
 // The stored shape drops the UI-local id; restored levels get fresh ids, so
 // comparisons ignore id and assert on the persisted field/label/direction.
+//
+// Drops the key rather than listing the ones to keep, so a new field on
+// ActiveSort is compared automatically instead of silently going unasserted.
 function stripIds(sorts: ActiveSort[]) {
-  return sorts.map(({ id: _id, ...rest }) => rest);
+  return sorts.map((sort) =>
+    Object.fromEntries(Object.entries(sort).filter(([key]) => key !== "id")),
+  );
 }
 
 function store(sorts: ActiveSort[]) {

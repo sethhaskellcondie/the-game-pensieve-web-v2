@@ -93,8 +93,65 @@ export type SessionView = {
 // A dev-only fallback keeps the app and E2E runnable out of the box; production
 // MUST override SESSION_SECRET (see .env.example). iron-session requires >= 32
 // chars.
+//
+// This literal is committed, so it is public: it is in the repo, in the built
+// image, and readable by anyone. It seals gp_session, which carries live
+// Keycloak access AND refresh tokens — so a production instance that fell back
+// to it would let anyone forge a session cookie for any account, and would look
+// completely healthy while doing it. resolveSessionSecret() below is what makes
+// that impossible; keep the fallback confined to it.
 const DEV_SESSION_SECRET =
   "dev-only-insecure-session-secret-change-me-in-prod";
+
+// iron-session's floor. A shorter password is refused by sealData() at runtime,
+// which would surface as a login failure rather than a configuration error, so
+// the length is checked up front where the message can say what is wrong.
+const MIN_SESSION_SECRET_LENGTH = 32;
+
+// The password that seals gp_session, or a hard failure. Production is
+// fail-closed on purpose: a missing or too-short SESSION_SECRET throws rather
+// than falling back to the committed dev secret, because that fallback is
+// silent — the resulting deployment is indistinguishable from a working one
+// until someone forges a cookie.
+//
+// Deliberately NOT evaluated at module load. `next build` runs with
+// NODE_ENV=production and imports every route module while collecting page
+// data, so a throw at module scope fails the image build on a machine that has
+// no business holding the production secret. This is called lazily instead:
+// from the `password` accessor below (so nothing can ever be sealed with the
+// dev secret in production) and eagerly from instrumentation.ts at server
+// startup (so a misconfigured deployment dies on boot rather than on the first
+// login attempt).
+//
+// Outside production the fallback stands, so `npm run dev` and the Playwright
+// suite need no configuration.
+export function resolveSessionSecret(): string {
+  const configured = process.env.SESSION_SECRET;
+
+  if (process.env.NODE_ENV !== "production") {
+    return configured || DEV_SESSION_SECRET;
+  }
+
+  if (!configured) {
+    throw new Error(
+      "SESSION_SECRET is required in production. It seals the session cookie " +
+        "holding live access and refresh tokens; without it the app would fall " +
+        "back to a secret that is public in the repository, and anyone could " +
+        "forge a session for any account. Generate one with: openssl rand -base64 48",
+    );
+  }
+
+  if (configured.length < MIN_SESSION_SECRET_LENGTH) {
+    throw new Error(
+      `SESSION_SECRET must be at least ${MIN_SESSION_SECRET_LENGTH} characters ` +
+        `in production (got ${configured.length}). iron-session refuses to seal ` +
+        "with a shorter password, so every login would fail at runtime. " +
+        "Generate one with: openssl rand -base64 48",
+    );
+  }
+
+  return configured;
+}
 
 export const SESSION_COOKIE_NAME = "gp_session";
 
@@ -137,7 +194,13 @@ export const ID_TOKEN_COOKIE_NAME = "gp_oidc";
 export type IdTokenCookie = { idToken: string };
 
 export const sessionOptions: SessionOptions = {
-  password: process.env.SESSION_SECRET || DEV_SESSION_SECRET,
+  // An accessor, not a value: see resolveSessionSecret() for why this must not
+  // run at module load. iron-session reads it on every seal/unseal, so there is
+  // no code path that can encrypt a cookie without passing the production
+  // check first.
+  get password(): string {
+    return resolveSessionSecret();
+  },
   cookieName: SESSION_COOKIE_NAME,
   cookieOptions: {
     httpOnly: true,

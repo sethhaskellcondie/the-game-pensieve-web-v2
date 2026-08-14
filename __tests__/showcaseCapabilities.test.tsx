@@ -20,6 +20,7 @@ describe("capabilitiesFor with an active showcase", () => {
         canFilter: true,
         canImport: false,
         canBackup: false,
+        canSeed: false,
         isAdmin: false,
       });
     }
@@ -31,6 +32,7 @@ describe("capabilitiesFor with an active showcase", () => {
       canFilter: true,
       canImport: false,
       canBackup: false,
+      canSeed: false,
       isAdmin: true,
     });
   });
@@ -48,6 +50,9 @@ describe("capabilitiesFor with an active showcase", () => {
       canFilter: true,
       canImport: true,
       canBackup: true,
+      // Seeding loads the maintainer's bundled fixtures, so it is admin-only
+      // even for a paid account that may import its own data.
+      canSeed: false,
       isAdmin: false,
     });
   });
@@ -62,6 +67,7 @@ describe("capabilitiesFor on an unsecured backend", () => {
       canFilter: true,
       canImport: true,
       canBackup: true,
+      canSeed: true,
       isAdmin: false,
     });
   });
@@ -73,6 +79,7 @@ describe("capabilitiesFor on an unsecured backend", () => {
       canFilter: true,
       canImport: false,
       canBackup: false,
+      canSeed: false,
       isAdmin: false,
     });
   });
