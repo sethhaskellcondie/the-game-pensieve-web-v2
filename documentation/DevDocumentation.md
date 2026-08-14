@@ -278,6 +278,21 @@ vocabulary verbatim, and `capabilitiesFor()`
 (`src/components/auth/SessionProvider.tsx`) mirrors its capability matrix. **The
 backend is the source of truth — when it changes, change these in lockstep.**
 
+### `canSeed` is separate from `canImport`
+
+The backend gates the two seed endpoints (`/v1/function/seedSampleData`,
+`/seedMyCollection`) on a **SEED** capability that only ADMIN holds, not on
+IMPORT. The distinction is what the data *is*: IMPORT loads a document the
+caller supplied — their own backup — and is a paid feature; SEED loads a fixture
+file bundled in the backend's image, which is the maintainer's data. So a PAID
+account may restore its own backup but gets a 403 from the seed endpoints, and
+`BackupImport.tsx` maps its two seed actions to `canSeed` accordingly.
+
+Note that the "Import From Backup" action (`/v1/function/importFromFile`) is
+**unsecured-builds-only** on the backend and 404s against a hosted deployment.
+It stays in the UI behind the developer-mode flag as a local convenience; the
+failure against a secured server is expected, not a bug.
+
 Three things here are ours, not the backend's:
 
 ### The `unknown` sentinel
@@ -640,7 +655,7 @@ is its mobile counterpart with the same prop-driven design.
 | Variable | Required | Notes |
 | --- | --- | --- |
 | `API_BASE_URL` | Yes in production | Backend base URL **including `/v1`**. No `NEXT_PUBLIC_` prefix — server-only. Falls back to `http://localhost:8080/v1` in development; **throws at runtime if unset outside development**. |
-| `SESSION_SECRET` | Yes in production | iron-session encryption password, ≥ 32 chars. A dev-only default is committed in `.env.development` so the app and E2E run out of the box. Never ship it. |
+| `SESSION_SECRET` | Yes in production — **enforced** | iron-session encryption password, ≥ 32 chars. A dev-only default is committed in `.env.development` so the app and E2E run out of the box. **In production the server refuses to start** if this is unset or shorter than 32 chars, rather than falling back to that committed default — see below. |
 | `OIDC_ISSUER` | Yes (secured) | Browser-facing issuer. |
 | `OIDC_INTERNAL_ISSUER` | Compose only | Server-facing issuer. Unset in host dev → falls back to `OIDC_ISSUER`. |
 | `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | Yes (secured) | Confidential client `pensieve-web`. |
@@ -648,6 +663,33 @@ is its mobile counterpart with the same prop-driven design.
 
 `.env.development` holds committed non-secret dev defaults; `.env.local`
 (gitignored) is for secrets and overrides; `.env.example` documents the full set.
+
+### `SESSION_SECRET` fails closed in production
+
+`gp_session` carries live Keycloak **access and refresh** tokens, and the dev
+fallback is committed to this repository — so a production instance that fell
+back to it would let anyone forge a session for any account, while looking
+completely healthy. `resolveSessionSecret()` (`src/lib/sessionConfig.ts`)
+therefore throws in production when the variable is unset or under 32 chars.
+
+Three details there are load-bearing and easy to undo by accident:
+
+- **It is not evaluated at module load.** `next build` runs with
+  `NODE_ENV=production` and imports every route module while collecting page
+  data, so a top-level throw fails the *image build* on a machine that has no
+  business holding the production secret. Do not "simplify" it back to a
+  module-scope constant.
+- **`sessionOptions.password` is an accessor, not a value**, so every seal and
+  unseal passes the check — there is no path that can encrypt a cookie with the
+  dev secret in production.
+- **`instrumentation.ts` calls it eagerly at server start and `process.exit(1)`s
+  on failure.** Throwing alone is not enough: Next catches a failing
+  instrumentation hook, logs "Failed to prepare server", and leaves the process
+  running — a container that reports `running` forever while serving nothing.
+
+`compose.production.yaml` (in the API repo) additionally guards the variable with
+`${SESSION_SECRET:?...}`, so a blank value aborts `docker compose up` in a second
+with the variable named, rather than surfacing later in a container log.
 
 Typical local ports: **3000** app, **8080** backend, **8081** Keycloak, **4200**
 app under compose.
