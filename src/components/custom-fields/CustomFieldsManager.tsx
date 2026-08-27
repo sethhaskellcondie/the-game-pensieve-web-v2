@@ -6,7 +6,7 @@ import type {
   EntityKey,
   UpdateCustomFieldInput,
 } from "@/lib/api";
-import Button from "@/components/Button";
+import NewButton from "@/components/NewButton";
 import { useToast } from "@/components/ToastProvider";
 import { useSession } from "@/components/auth/SessionProvider";
 import { bffFetch } from "@/lib/bffClient";
@@ -17,13 +17,7 @@ import OptionList from "./OptionList";
 import FieldModal, { type FieldModalSave } from "./FieldModal";
 import { usePersistentColumnWidths } from "@/components/data-table/usePersistentColumnWidths";
 import { useIsMobile } from "@/lib/useMediaQuery";
-import {
-  CaretIcon,
-  GripIcon,
-  PencilIcon,
-  PlusIcon,
-  TrashIcon,
-} from "./icons";
+import { CaretIcon, GripIcon, PencilIcon, TrashIcon } from "./icons";
 import styles from "./CustomFieldsManager.module.css";
 
 type ColKey = "order" | "name" | "kind" | "options";
@@ -490,12 +484,7 @@ export default function CustomFieldsManager() {
           />
           {/* Creating fields is a write — hidden for guests/lapsed. */}
           {canWrite && (
-            <Button
-              className={styles.newBtn}
-              onClick={() => setModal({ mode: "create" })}
-            >
-              <PlusIcon /> New
-            </Button>
+            <NewButton onClick={() => setModal({ mode: "create" })} />
           )}
         </div>
       </div>

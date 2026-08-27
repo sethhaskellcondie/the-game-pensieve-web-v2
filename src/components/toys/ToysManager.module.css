@@ -134,26 +134,3 @@
   gap: 10px;
 }
 
-/* The New button reuses the shared <Button> for its height, focus-visible,
-   :active, and disabled behavior, and only swaps the palette to the design's
-   green. Scoping under .actions raises specificity above Button's own
-   :hover/:active rules (cross-file class order isn't guaranteed otherwise). */
-.actions .newBtn {
-  background: var(--success);
-  white-space: nowrap;
-}
-
-.actions .newBtn:hover:not(:disabled) {
-  background: #229b3d;
-  box-shadow: 0 6px 16px -6px rgba(42, 167, 69, 0.7);
-}
-
-.actions .newBtn:active:not(:disabled) {
-  background: #1e8a36;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .newBtn {
-    transition: none;
-  }
-}

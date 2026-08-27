@@ -59,30 +59,45 @@
   width: 236px;
 }
 
-/* The New button reuses the shared <Button> for its height, focus-visible,
-   :active, and disabled behavior, and only swaps the palette to the design's
-   green. Scoping under .actions raises specificity above Button's own
-   :hover/:active rules (cross-file class order isn't guaranteed otherwise). */
-.actions .newBtn {
-  background: var(--success);
-  white-space: nowrap;
-}
-
-.actions .newBtn:hover:not(:disabled) {
-  background: #229b3d;
-  box-shadow: 0 6px 16px -6px rgba(42, 167, 69, 0.7);
-}
-
-.actions .newBtn:active:not(:disabled) {
-  background: #1e8a36;
-}
-
-/* On a phone the single header row can't hold the title, scope picker, and
-   New button — let it wrap (.actions already right-aligns via margin auto).
-   Keep in sync with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
+/* On a phone the header stays a single row: the New button drops its label for
+   just the "+" icon, the scope picker gives up its pinned width and shrinks,
+   and the title ellipsizes last. Keep in sync with MOBILE_BREAKPOINT in
+   src/lib/useMediaQuery.ts. */
 @media (max-width: 767px) {
   .head {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    gap: 10px;
+  }
+
+  /* Without min-width: 0 a flex item refuses to shrink below its content. */
+  .titleWrap {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .entName {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* The outsized shrink factors (here and on the picker below) run the same
+     "take the width from the picker" rule at both levels: .head splits any
+     missing width between the title and this group, and .actions splits its
+     share between the picker and the fixed-size New button. */
+  .actions {
+    flex: 0 999 auto;
+    min-width: 0;
+    gap: 8px;
+  }
+
+  /* An outsized shrink factor makes the picker (whose label just repeats the
+     title) give up essentially all of the missing width, so the title only
+     ellipsizes once the picker has bottomed out at its floor — wide enough to
+     keep its icon, an ellipsized label, and its caret. */
+  .entityScope {
+    flex: 0 999 236px;
+    min-width: 104px;
+    width: auto;
   }
 }
 
@@ -687,8 +702,7 @@
   .del,
   .moveBtns,
   .moveBtn,
-  .name,
-  .newBtn {
+  .name {
     transition: none;
   }
 }

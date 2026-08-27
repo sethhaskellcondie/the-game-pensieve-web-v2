@@ -12,7 +12,7 @@ import {
   type Toy,
   type UpdateToyInput,
 } from "@/lib/api";
-import Button from "@/components/Button";
+import NewButton from "@/components/NewButton";
 import DataTable, {
   MIN_COL,
   type ColumnDef,
@@ -26,7 +26,6 @@ import { useSession } from "@/components/auth/SessionProvider";
 import { bffFetch } from "@/lib/bffClient";
 import BeginnerHint from "@/components/BeginnerHint";
 import { BEGINNER_HINTS } from "@/components/beginnerHints";
-import { PlusIcon } from "@/components/custom-fields/icons";
 import FilterBar from "@/components/filters/FilterBar";
 import {
   fetchDefaultSortOptions,
@@ -667,9 +666,7 @@ export default function ToysManager({
         />
         {canWrite && (
           <div className={styles.actions}>
-            <Button className={styles.newBtn} onClick={() => setCreating(true)}>
-              <PlusIcon /> New
-            </Button>
+            <NewButton onClick={() => setCreating(true)} />
           </div>
         )}
       </div>

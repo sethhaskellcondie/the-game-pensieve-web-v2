@@ -1,0 +1,48 @@
+/* Reuses the shared <Button> for its height, focus-visible, :active, and
+   disabled behavior, and only swaps the palette to the design's green. The
+   class is doubled in each selector to raise specificity above Button's own
+   base/:hover/:active rules — across CSS module files the source order isn't
+   guaranteed, so specificity is what settles the cascade. */
+.newBtn.newBtn {
+  flex: 0 0 auto;
+  background: var(--success);
+  white-space: nowrap;
+}
+
+.newBtn.newBtn:hover:not(:disabled) {
+  background: #229b3d;
+  box-shadow: 0 6px 16px -6px rgba(42, 167, 69, 0.7);
+}
+
+.newBtn.newBtn:active:not(:disabled) {
+  background: #1e8a36;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .newBtn.newBtn {
+    transition: none;
+  }
+}
+
+/* On a phone the header has to stay a single row, so the button shrinks to its
+   "+" glyph. Keep in sync with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
+@media (max-width: 767px) {
+  .newBtn.newBtn {
+    padding: 0 12px;
+  }
+
+  /* Clipped rather than display: none, so the icon-only button keeps its "New"
+     accessible name. Taken out of flow so <Button>'s gap doesn't leave a
+     phantom space beside the icon. */
+  .label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    clip-path: inset(50%);
+  }
+}

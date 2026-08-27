@@ -12,7 +12,7 @@ import {
   type FilterSpecification,
   type UpdateBoardGameBoxInput,
 } from "@/lib/api";
-import Button from "@/components/Button";
+import NewButton from "@/components/NewButton";
 import DataTable, {
   MIN_COL,
   type ColumnDef,
@@ -23,7 +23,6 @@ import {
   type CardPill,
 } from "@/components/card-list/cardFields";
 import { useIsMobile } from "@/lib/useMediaQuery";
-import { PlusIcon } from "@/components/custom-fields/icons";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import { useSession } from "@/components/auth/SessionProvider";
@@ -749,9 +748,7 @@ export default function BoardGameBoxesManager({
             active (Paid) account; guests/lapsed see the shelf read-only. */}
         {canWrite && (
           <div className={styles.actions}>
-            <Button className={styles.newBtn} onClick={() => setCreating(true)}>
-              <PlusIcon /> New
-            </Button>
+            <NewButton onClick={() => setCreating(true)} />
           </div>
         )}
       </div>

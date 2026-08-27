@@ -13,7 +13,7 @@ import {
   type UpdateVideoGameBoxInput,
   type VideoGameBox,
 } from "@/lib/api";
-import Button from "@/components/Button";
+import NewButton from "@/components/NewButton";
 import DataTable, {
   MIN_COL,
   type ColumnDef,
@@ -21,7 +21,6 @@ import DataTable, {
 import CardList, { type CardData } from "@/components/card-list/CardList";
 import { buildCardCustomFields } from "@/components/card-list/cardFields";
 import { useIsMobile } from "@/lib/useMediaQuery";
-import { PlusIcon } from "@/components/custom-fields/icons";
 import { useToast } from "@/components/ToastProvider";
 import { useUiSettings } from "@/components/UiSettingsProvider";
 import { useSession } from "@/components/auth/SessionProvider";
@@ -754,9 +753,7 @@ export default function VideoGameBoxesManager({
         {/* Creating a box is a write — only an active (Paid) account sees New. */}
         {canWrite && (
           <div className={styles.actions}>
-            <Button className={styles.newBtn} onClick={() => setCreating(true)}>
-              <PlusIcon /> New
-            </Button>
+            <NewButton onClick={() => setCreating(true)} />
           </div>
         )}
       </div>

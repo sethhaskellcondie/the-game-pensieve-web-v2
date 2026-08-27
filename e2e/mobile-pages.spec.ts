@@ -3,7 +3,8 @@ import { AUTH_STATE } from "./authState";
 import { skipUnlessSecured } from "./securedOnly";
 
 // The remaining pages — options,
-// account, and the home dashboard — render usable phone layouts. Options and
+// account, the home dashboard, and the custom-fields header — render usable
+// phone layouts. Options and
 // account are login-gated, so the file runs with the authenticated session
 // (their guest redirects are covered by mobile-smoke.spec.ts).
 //
@@ -53,5 +54,31 @@ test.describe("remaining pages @mobile", () => {
     await expect(
       page.getByRole("button", { name: "New Category" }),
     ).toBeVisible();
+  });
+
+  // The custom-fields header must stay one row at a phone width: the New
+  // button collapses to its "+" icon rather than the title and the actions
+  // wrapping onto two lines.
+  test("custom fields keeps its title and New button on one header row", async ({
+    page,
+  }) => {
+    await page.goto("/custom-fields");
+
+    // boardGame is the default scope, so the title is always "Board Game".
+    const title = page.getByRole("heading", { name: "Board Game", level: 2 });
+    const newButton = page.getByRole("button", { name: "New" });
+    await expect(title).toBeVisible();
+    // Icon-only, but still named "New" for assistive tech (the label is
+    // clipped, not removed).
+    await expect(newButton).toBeVisible();
+
+    const titleBox = await title.boundingBox();
+    const buttonBox = await newButton.boundingBox();
+    if (!titleBox || !buttonBox) throw new Error("header boxes not measurable");
+    // Same row: their vertical spans overlap.
+    expect(buttonBox.y).toBeLessThan(titleBox.y + titleBox.height);
+    expect(titleBox.y).toBeLessThan(buttonBox.y + buttonBox.height);
+    // Only the "+" glyph plus padding — a labelled button is far wider.
+    expect(buttonBox.width).toBeLessThan(60);
   });
 });
