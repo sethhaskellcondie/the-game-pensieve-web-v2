@@ -22,18 +22,17 @@
   margin-bottom: 18px;
 }
 
-/* On a phone the single header row can't hold the count, filter bar, and New
-   button. Wrap: the count + New button share the first row (the FilterBar
-   moves to its own full-width row via its own mobile rule). Interim until the
-   Phase 4 mobile filter sheet. Keep in sync with MOBILE_BREAKPOINT in
-   src/lib/useMediaQuery.ts. */
+/* On a phone the whole header stays one row: the count on the left, then the
+   collapsed Sort / Filter / field-name buttons and the collapsed New button
+   grouped at the right (the FilterBar's .controls carries the margin-left:auto
+   that pushes the group over — .actions must not add a second auto margin, or
+   the free space would split between them and strand the buttons mid-row).
+   Applied-filter chips still wrap to a line of their own below. Keep in sync
+   with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
 @media (max-width: 767px) {
   .head {
     flex-wrap: wrap;
-  }
-
-  .actions {
-    margin-left: auto;
+    gap: 10px;
   }
 }
 

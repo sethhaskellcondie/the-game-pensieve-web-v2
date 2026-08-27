@@ -503,4 +503,55 @@ describe("FilterBar", () => {
     fireEvent.click(screen.getByRole("button", { name: "Remove Name filter" }));
     expect(onChange).toHaveBeenCalledWith([]);
   });
+  // Below the breakpoint the Sort / Filter / field-name buttons collapse to
+  // their glyphs, but only in CSS: each label is wrapped in a clipped <span>,
+  // never removed, so every button answers to the same accessible name at
+  // every viewport width.
+  it("keeps the toolbar buttons named when their labels collapse", () => {
+    render(
+      <FilterBar
+        entityKey="system"
+        fields={fields}
+        filters={[]}
+        onChange={jest.fn()}
+        searchValue=""
+        onSearchChange={jest.fn()}
+        searchAriaLabel="Search systems"
+        sorts={[]}
+        onSortsChange={jest.fn()}
+        showFieldNames={false}
+        onShowFieldNamesChange={jest.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Show field names" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sort" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add filter" }),
+    ).toBeInTheDocument();
+  });
+
+  it("names the field-name toggle for what the next press does", () => {
+    const onShowFieldNamesChange = jest.fn();
+    render(
+      <FilterBar
+        entityKey="system"
+        fields={fields}
+        filters={[]}
+        onChange={jest.fn()}
+        searchValue=""
+        onSearchChange={jest.fn()}
+        searchAriaLabel="Search systems"
+        showFieldNames
+        onShowFieldNamesChange={onShowFieldNamesChange}
+      />,
+    );
+
+    const toggle = screen.getByRole("button", { name: "Hide field names" });
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(toggle);
+    expect(onShowFieldNamesChange).toHaveBeenCalledWith(false);
+  });
 });

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PlusIcon } from "@/components/custom-fields/icons";
-import { FilterIcon, SearchIcon } from "@/components/toys/icons";
+import { FilterIcon, SearchIcon, TagIcon } from "@/components/toys/icons";
 import BeginnerHint from "@/components/BeginnerHint";
 import { useSession } from "@/components/auth/SessionProvider";
 import FilterChip from "./FilterChip";
@@ -161,7 +160,9 @@ export default function FilterBar({
 
         {/* Mobile-only display toggle (hidden on desktop via CSS, where the
             table already shows field names as column headers). Leads the Sort
-            and Filter buttons in the same row. */}
+            and Filter buttons in the same row. Its label is clipped on a phone
+            (see .btnLabel), leaving the tag glyph — the accessible name is
+            unchanged, so it still answers to "Show/Hide field names". */}
         {showFieldNames != null && onShowFieldNamesChange != null && (
           <button
             type="button"
@@ -169,7 +170,10 @@ export default function FilterBar({
             aria-pressed={showFieldNames}
             onClick={() => onShowFieldNamesChange(!showFieldNames)}
           >
-            {showFieldNames ? "Hide field names" : "Show field names"}
+            <TagIcon />
+            <span className={styles.btnLabel}>
+              {showFieldNames ? "Hide field names" : "Show field names"}
+            </span>
           </button>
         )}
 
@@ -179,6 +183,7 @@ export default function FilterBar({
             sorts={sorts}
             onChange={onSortsChange}
             buttonClassName={styles.addBtn}
+            labelClassName={styles.btnLabel}
           />
         )}
 
@@ -200,15 +205,14 @@ export default function FilterBar({
               )
             }
           >
-            {filters.length === 0 ? (
-              <>
-                <FilterIcon /> Filter
-              </>
-            ) : (
-              <>
-                <PlusIcon /> Add filter
-              </>
-            )}
+            {/* The funnel is the button's glyph in both states. Only the label
+                changes once there are chips to add to — a leading "+" there
+                would be the button's whole appearance on a phone (the label
+                collapses) and would then read as a second New button. */}
+            <FilterIcon />
+            <span className={styles.btnLabel}>
+              {filters.length === 0 ? "Filter" : "Add filter"}
+            </span>
           </button>
           {canFilter && edit.mode === "add" && (
             <FilterEditor

@@ -25,6 +25,7 @@ export default function SortControl({
   sorts,
   onChange,
   buttonClassName,
+  labelClassName,
   ariaLabel = "Sort",
   align = "right",
   onOpenChange,
@@ -35,6 +36,11 @@ export default function SortControl({
   // The toolbar button style, passed by FilterBar so the Sort and Filter
   // buttons stay visually identical.
   buttonClassName?: string;
+  // Class for the "Sort" text beside the glyph. FilterBar passes the class that
+  // clips it on a phone, shrinking the button to its icon; hosts that keep the
+  // word at every width (the Options page, the saved-filter dialog) pass
+  // nothing. The button's accessible name comes from aria-label either way.
+  labelClassName?: string;
   // Accessible name for the button (and the popover, suffixed with
   // "options"). Override it when several SortControls share a page — e.g. the
   // Options page's per-entity default sorts — so each stays distinguishable.
@@ -214,7 +220,8 @@ export default function SortControl({
         aria-expanded={open}
         onClick={toggle}
       >
-        <SortIcon /> Sort
+        <SortIcon />
+        <span className={labelClassName}>Sort</span>
         {sorts.length > 0 && (
           <span className={styles.count}>{sorts.length}</span>
         )}

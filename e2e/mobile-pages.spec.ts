@@ -81,4 +81,36 @@ test.describe("remaining pages @mobile", () => {
     // Only the "+" glyph plus padding — a labelled button is far wider.
     expect(buttonBox.width).toBeLessThan(60);
   });
+  // The systems header must stay one row too: the count, the three collapsed
+  // toolbar buttons, and the New button all share a line, with every label
+  // clipped down to its glyph.
+  test("systems keeps its count and toolbar on one header row", async ({
+    page,
+  }) => {
+    await page.goto("/systems");
+
+    const count = page.getByRole("heading", { level: 2 });
+    await expect(count).toContainText("Systems");
+
+    // Icon-only, but each still carries its label as an accessible name.
+    const buttons = [
+      page.getByRole("button", { name: /field names/i }),
+      page.getByRole("button", { name: "Sort" }),
+      page.getByRole("button", { name: "Add filter" }),
+      page.getByRole("button", { name: "New" }),
+    ];
+
+    const countBox = await count.boundingBox();
+    if (!countBox) throw new Error("header count not measurable");
+    for (const button of buttons) {
+      await expect(button).toBeVisible();
+      const box = await button.boundingBox();
+      if (!box) throw new Error("header button not measurable");
+      // Same row as the count: their vertical spans overlap.
+      expect(box.y).toBeLessThan(countBox.y + countBox.height);
+      expect(countBox.y).toBeLessThan(box.y + box.height);
+      // Only the glyph plus padding — a labelled button is far wider.
+      expect(box.width).toBeLessThan(60);
+    }
+  });
 });
