@@ -13,8 +13,10 @@ export default async function SystemsPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  // Pre-applied filters from a home saved-filter card, if any.
-  const initialFiltersParam = (await searchParams).filters;
+  // Pre-applied filters and sort levels from a home saved-filter card, if any.
+  const resolvedParams = await searchParams;
+  const initialFiltersParam = resolvedParams.filters;
+  const initialSortsParam = resolvedParams.sorts;
 
   return (
     <>
@@ -26,7 +28,10 @@ export default async function SystemsPage({
       />
 
       <main className={styles.content}>
-        <SystemsManager initialFiltersParam={initialFiltersParam} />
+        <SystemsManager
+          initialFiltersParam={initialFiltersParam}
+          initialSortsParam={initialSortsParam}
+        />
       </main>
     </>
   );

@@ -8,8 +8,14 @@ import EntitySelect from "@/components/custom-fields/EntitySelect";
 import FilterChip from "@/components/filters/FilterChip";
 import FilterEditor from "@/components/filters/FilterEditor";
 import Listbox from "@/components/filters/Listbox";
+import SortControl from "@/components/filters/SortControl";
+import { sortableFields } from "@/components/filters/fieldList";
 import { newFilterId } from "@/components/filters/ids";
-import type { ActiveFilter, FilterFieldDef } from "@/components/filters/types";
+import type {
+  ActiveFilter,
+  ActiveSort,
+  FilterFieldDef,
+} from "@/components/filters/types";
 import { fetchEntityFilterFields } from "./entityFields";
 import type { SavedFilter, SavedFilterCondition } from "./types";
 import { useMobileShelf } from "@/lib/useMobileShelf";
@@ -35,6 +41,19 @@ type EditState =
 
 // The entity a brand-new saved filter targets until the user picks another.
 const DEFAULT_ENTITY: EntityKey = "videoGame";
+
+// How the chosen sort levels read under the control: "Name ascending, then
+// Release Date descending" — the same priority order the levels are sent in.
+function sortSummary(sorts: ActiveSort[]): string {
+  return sorts
+    .map(
+      (s, i) =>
+        `${i === 0 ? "" : "then "}${s.label} ${
+          s.direction === "asc" ? "ascending" : "descending"
+        }`,
+    )
+    .join(", ");
+}
 
 // The new/edit saved-filter dialog: name the shortcut, choose the collection it
 // applies to, and build its filter conditions with the same chip + editor the
@@ -72,9 +91,17 @@ export default function SavedFilterDialog({
   const [conditions, setConditions] = useState<ActiveFilter[]>(
     initial?.conditions ?? [],
   );
+  const [sorts, setSorts] = useState<ActiveSort[]>(initial?.sorts ?? []);
   const [fields, setFields] = useState<FilterFieldDef[]>([]);
+  // Whether the selected entity's spec advertises sorting — hides the sort
+  // control for an entity that can't be sorted at all.
+  const [canSort, setCanSort] = useState(false);
   const [loadingFields, setLoadingFields] = useState(true);
   const [edit, setEdit] = useState<EditState>({ mode: "closed" });
+  // Whether the sort popover is open. It closes itself on Escape and on an
+  // outside mousedown, so the dialog only needs to know in order to stay open
+  // while that happens.
+  const [sortOpen, setSortOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
   // On mobile the dialog behaves as a shelf: slides in from the right, sits
@@ -95,12 +122,14 @@ export default function SavedFilterDialog({
     fetchEntityFilterFields(entity, controller.signal)
       .then((loaded) => {
         if (!active) return;
-        setFields(loaded);
+        setFields(loaded.fields);
+        setCanSort(loaded.canSort);
         setLoadingFields(false);
       })
       .catch(() => {
         if (!active || controller.signal.aborted) return;
         setFields([]);
+        setCanSort(false);
         setLoadingFields(false);
       });
     return () => {
@@ -118,8 +147,8 @@ export default function SavedFilterDialog({
     return () => opener?.focus?.();
   }, []);
 
-  // Escape closes the delete-confirm first, then defers to the filter editor (it
-  // closes itself), otherwise closes the dialog.
+  // Escape closes the delete-confirm first, then defers to the filter editor and
+  // the sort popover (each closes itself), otherwise closes the dialog.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
@@ -127,12 +156,12 @@ export default function SavedFilterDialog({
         setConfirming(false);
         return;
       }
-      if (edit.mode !== "closed") return;
+      if (edit.mode !== "closed" || sortOpen) return;
       requestClose(onClose);
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose, confirming, edit.mode, requestClose]);
+  }, [onClose, confirming, edit.mode, sortOpen, requestClose]);
 
   // Any click outside the confirm menu (and its trigger) dismisses it.
   useEffect(() => {
@@ -163,13 +192,15 @@ export default function SavedFilterDialog({
   const sourceOf = (token: string): "standard" | "custom" =>
     fields.find((f) => f.field === token)?.source ?? "custom";
 
-  // Switching entity invalidates conditions built against the old field list, so
-  // clear them (and any open editor) when the user picks a different collection.
+  // Switching entity invalidates the conditions and sort levels built against
+  // the old field list, so clear both (and any open editor) when the user picks
+  // a different collection.
   const changeEntity = (key: EntityKey) => {
     if (key === entity) return;
     setEntity(key);
     setLoadingFields(true);
     setConditions([]);
+    setSorts([]);
     setEdit({ mode: "closed" });
   };
 
@@ -202,6 +233,7 @@ export default function SavedFilterDialog({
         name: trimmed,
         entity,
         conditions: savedConditions,
+        sorts,
       },
       categoryId,
     );
@@ -212,7 +244,14 @@ export default function SavedFilterDialog({
     <div
       className={styles.backdrop}
       style={overlayStyle}
-      onMouseDown={() => requestClose(onClose)}
+      // Only a press on the backdrop itself closes the dialog. A press inside
+      // the modal is deliberately NOT stopped here: the filter editor and the
+      // sort popover dismiss themselves on an outside mousedown seen at the
+      // document, so swallowing it would strand them open with no way back to
+      // the dialog's own controls.
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) requestClose(onClose);
+      }}
     >
       <div
         ref={modalRef}
@@ -221,7 +260,6 @@ export default function SavedFilterDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="saved-filter-title"
-        onMouseDown={(e) => e.stopPropagation()}
         onKeyDown={trapTab}
       >
         <div className={styles.head}>
@@ -328,6 +366,28 @@ export default function SavedFilterDialog({
             </p>
           )}
         </div>
+
+        {canSort && (
+          <div className={styles.field}>
+            <span className={styles.label}>Sorting</span>
+            <div className={styles.sorting}>
+              <SortControl
+                fields={sortableFields(fields)}
+                sorts={sorts}
+                onChange={setSorts}
+                buttonClassName={styles.addBtn}
+                ariaLabel="Sort"
+                align="left"
+                onOpenChange={setSortOpen}
+              />
+            </div>
+            <p className={styles.hint}>
+              {sorts.length === 0
+                ? "Optional — without it the page keeps its own sorting."
+                : sortSummary(sorts)}
+            </p>
+          </div>
+        )}
 
         <div className={styles.foot}>
           {onDelete ? (

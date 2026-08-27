@@ -3,9 +3,17 @@ import {
   fetchFilterSpec,
   searchSystemsClient,
 } from "@/components/video-games/searchClient";
-import { buildFieldList } from "@/components/filters/fieldList";
+import { buildFieldList, supportsSorting } from "@/components/filters/fieldList";
 import type { FilterFieldDef } from "@/components/filters/types";
 import type { EntityKey } from "@/lib/api";
+
+// What the saved-filter dialog needs about an entity: the fields it can build
+// conditions and sort levels from, and whether the entity's spec advertises
+// sorting at all (the sort control is hidden when it doesn't).
+export type EntityFilterFields = {
+  fields: FilterFieldDef[];
+  canSort: boolean;
+};
 
 // Build the filter field list for an entity the same way the collection pages
 // do: merge the backend filter spec (standard filterable fields + operators)
@@ -15,13 +23,13 @@ import type { EntityKey } from "@/lib/api";
 export async function fetchEntityFilterFields(
   entity: EntityKey,
   signal?: AbortSignal,
-): Promise<FilterFieldDef[]> {
+): Promise<EntityFilterFields> {
   const [spec, defs, systems] = await Promise.all([
     fetchFilterSpec(entity, signal),
     fetchEntityFields(entity, signal),
     searchSystemsClient(signal),
   ]);
-  return buildFieldList(spec, defs).map((f) =>
+  const fields = buildFieldList(spec, defs).map((f) =>
     f.kind === "system"
       ? {
           ...f,
@@ -33,4 +41,5 @@ export async function fetchEntityFilterFields(
         }
       : f,
   );
+  return { fields, canSort: supportsSorting(spec) };
 }

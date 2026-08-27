@@ -1,5 +1,5 @@
 import type { EntityKey } from "@/lib/api";
-import type { ActiveFilter } from "@/components/filters/types";
+import type { ActiveFilter, ActiveSort } from "@/components/filters/types";
 
 // One condition on a saved filter, rendered as a read-only pill on the card.
 // It's an applied filter (the same shape the filter bar produces) plus the
@@ -11,15 +11,20 @@ export type SavedFilterCondition = ActiveFilter & {
 };
 
 // A single saved filter — one card. It targets an entity page and pre-applies
-// `conditions` there when opened, exactly as if they'd been entered by hand. The
-// match count shown on the card is derived live from these conditions (see
-// useMatchCount), not stored.
+// `conditions` and `sorts` there when opened, exactly as if they'd been entered
+// by hand. The match count shown on the card is derived live from the conditions
+// (see useMatchCount), not stored — sorting doesn't change how many records
+// match, so it's deliberately left out of that request.
 export type SavedFilter = {
   id: string;
   name: string;
   // Which collection page this opens (and whose icon/noun the card shows).
   entity: EntityKey;
   conditions: SavedFilterCondition[];
+  // The sort levels applied on arrival, in priority order (primary first).
+  // Empty means the card doesn't touch sorting: the page keeps whatever it
+  // remembers, falling back to the entity's default sort.
+  sorts: ActiveSort[];
 };
 
 // A named group of saved filters — one labeled row on the dashboard.

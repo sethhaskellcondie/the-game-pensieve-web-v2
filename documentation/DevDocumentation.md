@@ -591,12 +591,16 @@ Three sources, in increasing specificity:
    page has nothing else. Levels are stored as `{ field, direction }` with no
    label; labels are re-resolved against the live field list on apply, so a level
    whose custom field was renamed away is simply dropped.
-2. **The `filters` URL param** — a JSON array (`encodeFilterParam` /
-   `decodeFilterParam` in `urlFilters.ts`) written by the dashboard's saved-filter
-   cards, so clicking a card opens the page already filtered. Decoding is
-   defensive (a malformed param yields no filters) and ids are deterministic and
-   index-based so server and client render identically. Once on the page these
-   behave like any hand-entered filter.
+2. **The `filters` and `sorts` URL params** — JSON arrays (`encodeFilterParam` /
+   `decodeFilterParam` and `encodeSortParam` / `decodeSortParam` in
+   `urlFilters.ts`) written by the dashboard's saved-filter cards, so clicking a
+   card opens the page already filtered *and* sorted. Decoding is defensive (a
+   malformed param yields nothing) and ids are deterministic and index-based so
+   server and client render identically — the Sort button renders a level count,
+   so a seeded sort is server-rendered too. Once on the page these behave like
+   any hand-entered filter or sort level. Each param is honored only when
+   non-empty: a card that saved no sorting leaves the page's own sort alone
+   rather than clearing it.
 3. **localStorage** — whatever the user last had applied (§12).
 
 ### The home dashboard
@@ -610,6 +614,17 @@ Saved conditions store the persistable subset of an `ActiveFilter` plus its fiel
 source (for the glyph). The heavy `options` array is deliberately **not** stored —
 it is re-resolved from the live field list on edit, and the chip display only
 needs the snapshotted `operandLabel`.
+
+A saved filter also carries `sorts`: the persistable subset of its `ActiveSort`
+levels (`{ id, field, label, direction }`), in priority order. `normalizeFilters`
+is the single funnel for both reading and writing the store, so its
+`normalizeSorts` pass is what drops malformed levels, collapses a repeated field
+to its highest-priority level (the rule `SortControl` enforces in the UI), and
+turns a filter saved before sorting existed — one with no `sorts` key — into an
+empty list. That default is why no migration was needed. Conditions still define
+a saved filter: the dialog requires at least one before it will save, and the
+match count on a card is computed from the conditions alone, since sorting can't
+change how many records match.
 
 ---
 

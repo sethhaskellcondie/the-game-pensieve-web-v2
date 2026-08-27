@@ -5,13 +5,19 @@
 // the record's `value` field holds a JSON-encoded STRING: an array of filter
 // objects. Each filter belongs to exactly one category (by `categoryId`) and
 // carries its `order` within that category — so reordering within a category and
-// moving between categories are both just edits to these two fields.
+// moving between categories are both just edits to these two fields. A filter
+// holds both the conditions it applies and the sort levels it applies them
+// under.
 //
 // This module is free of server-only code (no API_BASE_URL, no fetch) so it is
 // safe to import from Client Components.
 
 import type { EntityKey } from "@/lib/api";
-import type { FilterFieldKind, FilterOperator } from "@/components/filters/types";
+import type {
+  FilterFieldKind,
+  FilterOperator,
+  SortDirection,
+} from "@/components/filters/types";
 
 export const SAVED_FILTERS_KEY = "saved-filters";
 
@@ -39,8 +45,23 @@ export type StoredFilterCondition = {
   operandLabel?: string;
 };
 
+// One stored sort level — the persistable subset of an ActiveSort. Array
+// position is the sort priority (first = primary, then tiebreakers), matching
+// the order the backend applies sort filters in. The label is snapshotted the
+// same way a condition's is, so the card reads without re-resolving the field
+// list.
+export type StoredSortLevel = {
+  id: string;
+  field: string;
+  label: string;
+  direction: SortDirection;
+};
+
 // One stored saved filter: its identity, target collection, owning category,
-// position within that category, and its conditions.
+// position within that category, its conditions, and the sort levels applied
+// alongside them. `sorts` is absent on filters saved before sorting was part of
+// a saved filter — those normalize to an empty list, so they keep working
+// unchanged (no migration).
 export type StoredFilter = {
   id: string;
   name: string;
@@ -48,6 +69,7 @@ export type StoredFilter = {
   categoryId: string;
   order: number;
   conditions: StoredFilterCondition[];
+  sorts: StoredSortLevel[];
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -84,6 +106,29 @@ function normalizeConditions(value: unknown): StoredFilterCondition[] {
     };
     if (typeof operandLabel === "string") cond.operandLabel = operandLabel;
     out.push(cond);
+  }
+  return out;
+}
+
+// Keeps only structurally valid sort levels, and at most one level per field
+// (the first, highest-priority one) — the same rule SortControl enforces in the
+// UI and resolveDefaultSorts enforces for the stored per-entity defaults.
+function normalizeSorts(value: unknown): StoredSortLevel[] {
+  const raw = Array.isArray(value) ? value : [];
+  const out: StoredSortLevel[] = [];
+  const used = new Set<string>();
+  for (const item of raw) {
+    if (!isRecord(item)) continue;
+    const { id, field, label, direction } = item;
+    if (typeof field !== "string" || used.has(field)) continue;
+    if (direction !== "asc" && direction !== "desc") continue;
+    used.add(field);
+    out.push({
+      id: typeof id === "string" ? id : `sort-${out.length}`,
+      field,
+      label: typeof label === "string" ? label : field,
+      direction,
+    });
   }
   return out;
 }
@@ -126,6 +171,7 @@ export function normalizeFilters(value: unknown): StoredFilter[] {
       categoryId,
       order,
       conditions: normalizeConditions(item.conditions),
+      sorts: normalizeSorts(item.sorts),
     });
   }
   return out;

@@ -26,8 +26,9 @@ export default async function BoardGamesPage({
   const resolvedParams = await searchParams;
   const explicit = parseVideoGamesViewParam(resolvedParams.view);
   const view = explicit ?? (await loadUiSettings()).boardGamesDefaultView;
-  // Pre-applied filters from a home saved-filter card, if any.
+  // Pre-applied filters and sort levels from a home saved-filter card, if any.
   const initialFiltersParam = resolvedParams.filters;
+  const initialSortsParam = resolvedParams.sorts;
 
   return (
     <>
@@ -54,9 +55,15 @@ export default async function BoardGamesPage({
 
       <main className={styles.content}>
         {view === "shelf" ? (
-          <BoardGameBoxesManager initialFiltersParam={initialFiltersParam} />
+          <BoardGameBoxesManager
+            initialFiltersParam={initialFiltersParam}
+            initialSortsParam={initialSortsParam}
+          />
         ) : (
-          <BoardGamesManager initialFiltersParam={initialFiltersParam} />
+          <BoardGamesManager
+            initialFiltersParam={initialFiltersParam}
+            initialSortsParam={initialSortsParam}
+          />
         )}
       </main>
     </>

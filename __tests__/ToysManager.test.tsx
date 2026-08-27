@@ -22,7 +22,10 @@ function installMobileViewport() {
     window.matchMedia = original;
   };
 }
-import { encodeFilterParam } from "@/components/filters/urlFilters";
+import {
+  encodeFilterParam,
+  encodeSortParam,
+} from "@/components/filters/urlFilters";
 
 jest.mock("next/navigation", () => ({
   useRouter: jest.fn(),
@@ -207,6 +210,34 @@ function renderManager(
   );
 }
 
+// The manager as a home saved-filter card opens it: with the card's `filters`
+// and `sorts` params.
+function renderDeepLinked(params: {
+  filters?: string;
+  sorts?: string;
+}) {
+  return render(
+    <ToastProvider>
+      <UiSettingsProvider initial={DEFAULT_UI_SETTINGS}>
+        <ToysManager
+          initialFiltersParam={params.filters}
+          initialSortsParam={params.sorts}
+        />
+      </UiSettingsProvider>
+    </ToastProvider>,
+  );
+}
+
+// The filters payload of every search POST the manager has made.
+function searchPayloads(): FilterRequestDto[][] {
+  return mockFetch.mock.calls
+    .filter(
+      ([url, init]) =>
+        url.includes("/api/toys/search") && init?.method === "POST",
+    )
+    .map(([, init]) => JSON.parse(init.body as string).filters);
+}
+
 describe("ToysManager", () => {
   beforeEach(() => {
     // Filters now persist in localStorage; clear so tests don't leak filters.
@@ -361,6 +392,75 @@ describe("ToysManager", () => {
     const body = JSON.parse(searches[0][1].body as string);
     expect(body.filters).toEqual([
       expect.objectContaining({ field: "name", operand: "Pikachu" }),
+    ]);
+  });
+
+  it("sorts by a saved filter's levels from the first query", async () => {
+    renderDeepLinked({
+      sorts: encodeSortParam([
+        { field: "name", label: "Name", direction: "desc" },
+        { field: "set", label: "Set", direction: "asc" },
+      ]),
+    });
+
+    await screen.findByText("R2-D2");
+
+    // One query, already carrying both sort levels in priority order — no
+    // unsorted first paint followed by a sorted re-query.
+    const payloads = searchPayloads();
+    expect(payloads).toHaveLength(1);
+    expect(payloads[0]).toEqual([
+      expect.objectContaining({ field: "name", operator: "order_by_desc" }),
+      expect.objectContaining({ field: "set", operator: "order_by" }),
+    ]);
+  });
+
+  it("lets a saved filter's sort override the page's remembered one", async () => {
+    localStorage.setItem(
+      "sorts:toy",
+      encodeSortParam([{ field: "set", label: "Set", direction: "asc" }]),
+    );
+
+    renderDeepLinked({
+      sorts: encodeSortParam([
+        { field: "name", label: "Name", direction: "desc" },
+      ]),
+    });
+
+    await screen.findByText("R2-D2");
+
+    expect(searchPayloads()[0]).toEqual([
+      expect.objectContaining({ field: "name", operator: "order_by_desc" }),
+    ]);
+    // The deep-linked sort is what the page remembers from now on.
+    expect(JSON.parse(localStorage.getItem("sorts:toy")!)).toEqual([
+      { field: "name", label: "Name", direction: "desc" },
+    ]);
+  });
+
+  it("keeps the page's remembered sort when the card saved none", async () => {
+    localStorage.setItem(
+      "sorts:toy",
+      encodeSortParam([{ field: "set", label: "Set", direction: "asc" }]),
+    );
+
+    renderDeepLinked({
+      filters: encodeFilterParam([
+        {
+          field: "name",
+          label: "Name",
+          kind: "text",
+          operator: "contains",
+          operand: "Pikachu",
+        },
+      ]),
+    });
+
+    await screen.findByText("Pikachu");
+
+    expect(searchPayloads()[0]).toEqual([
+      expect.objectContaining({ field: "name", operand: "Pikachu" }),
+      expect.objectContaining({ field: "set", operator: "order_by" }),
     ]);
   });
 

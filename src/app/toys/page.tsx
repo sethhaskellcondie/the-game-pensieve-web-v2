@@ -13,8 +13,10 @@ export default async function ToysPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  // Pre-applied filters from a home saved-filter card, if any.
-  const initialFiltersParam = (await searchParams).filters;
+  // Pre-applied filters and sort levels from a home saved-filter card, if any.
+  const resolvedParams = await searchParams;
+  const initialFiltersParam = resolvedParams.filters;
+  const initialSortsParam = resolvedParams.sorts;
 
   return (
     <>
@@ -27,7 +29,10 @@ export default async function ToysPage({
       />
 
       <main className={styles.content}>
-        <ToysManager initialFiltersParam={initialFiltersParam} />
+        <ToysManager
+          initialFiltersParam={initialFiltersParam}
+          initialSortsParam={initialSortsParam}
+        />
       </main>
     </>
   );

@@ -101,4 +101,35 @@ describe("usePersistentSorts", () => {
     const { result } = renderHook(() => usePersistentSorts("toy"));
     expect(result.current[0]).toEqual([]);
   });
+
+  // Arriving from a home saved-filter card: the card's sort levels are handed in
+  // as the seed (decoded from the `sorts` URL param).
+  describe("seeded from a saved filter", () => {
+    it("applies the seeded levels and hands them to the initial query", () => {
+      const seed = [makeSort({ id: "sort-0", direction: "desc" })];
+      const { result } = renderHook(() => usePersistentSorts("toy", seed));
+      expect(result.current[0]).toEqual(seed);
+      expect(result.current[2]).toEqual(seed);
+    });
+
+    it("wins over the page's remembered sort and replaces it", () => {
+      store([makeSort({ field: "set", label: "Set" })]);
+      const seed = [makeSort({ id: "sort-0", direction: "desc" })];
+
+      const { result } = renderHook(() => usePersistentSorts("toy", seed));
+
+      expect(result.current[0]).toEqual(seed);
+      // The deep-linked sort becomes what the page remembers next visit.
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!)).toEqual(
+        stripIds(seed),
+      );
+    });
+
+    it("leaves the remembered sort alone when the card saved none", () => {
+      const saved = [makeSort({ direction: "desc" })];
+      store(saved);
+      const { result } = renderHook(() => usePersistentSorts("toy", []));
+      expect(stripIds(result.current[0])).toEqual(stripIds(saved));
+    });
+  });
 });

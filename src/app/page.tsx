@@ -60,6 +60,12 @@ export default async function Home() {
           operand: c.operand,
           operandLabel: c.operandLabel,
         })),
+        sorts: f.sorts.map((s) => ({
+          id: s.id,
+          field: s.field,
+          label: s.label,
+          direction: s.direction,
+        })),
       },
     });
     grouped.set(cid, entry);

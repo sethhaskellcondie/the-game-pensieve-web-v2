@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CaretIcon, PlusIcon, XIcon } from "@/components/custom-fields/icons";
 import { SortIcon } from "@/components/toys/icons";
@@ -26,6 +26,8 @@ export default function SortControl({
   onChange,
   buttonClassName,
   ariaLabel = "Sort",
+  align = "right",
+  onOpenChange,
 }: {
   fields: FilterFieldDef[];
   sorts: ActiveSort[];
@@ -37,11 +39,24 @@ export default function SortControl({
   // "options"). Override it when several SortControls share a page — e.g. the
   // Options page's per-entity default sorts — so each stays distinguishable.
   ariaLabel?: string;
+  // Which edge of the trigger the popover aligns to. It defaults to "right"
+  // because the toolbar button sits near the bar's right edge; a left-aligned
+  // trigger (the saved-filter dialog's) passes "left" so the popover opens
+  // over the dialog instead of hanging off its side.
+  align?: "left" | "right";
+  // Fires whenever the popover opens or closes. Needed by a host that has its
+  // own Escape handling to defer to — the saved-filter dialog, which must not
+  // close itself while the popover is the thing being dismissed.
+  onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   // Viewport coordinates for the fixed popover, captured from the trigger's
-  // rect when it opens: below the button and right-aligned to it.
-  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  // rect when it opens: below the button, aligned to the `align` edge of it.
+  const [pos, setPos] = useState<{
+    top: number;
+    left?: number;
+    right?: number;
+  } | null>(null);
   const wrapRef = useRef<HTMLSpanElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   // Below the breakpoint the popover becomes a shelf: no trigger anchoring, a
@@ -49,22 +64,38 @@ export default function SortControl({
   // and sliding in from the right / back out to the right (via useMobileShelf).
   const { isMobile, requestClose, overlayStyle, slideStyle } = useMobileShelf();
 
-  const place = () => {
+  // Every open/close goes through here so the host is always told.
+  const changeOpen = useCallback(
+    (next: boolean) => {
+      setOpen(next);
+      onOpenChange?.(next);
+    },
+    [onOpenChange],
+  );
+
+  // Memoized because the open popover re-anchors on scroll/resize through this
+  // same function, so the effect below depends on it.
+  const place = useCallback(() => {
     const r = buttonRef.current?.getBoundingClientRect();
-    setPos(
-      r
-        ? { top: r.bottom + 8, right: window.innerWidth - r.right }
-        : { top: 8, right: 8 },
-    );
-  };
+    if (!r) {
+      setPos({ top: 8, right: 8 });
+      return;
+    }
+    setPos({
+      top: r.bottom + 8,
+      ...(align === "left"
+        ? { left: r.left }
+        : { right: window.innerWidth - r.right }),
+    });
+  }, [align]);
 
   const toggle = () => {
     if (open) {
-      setOpen(false);
+      changeOpen(false);
       return;
     }
     if (!isMobile) place();
-    setOpen(true);
+    changeOpen(true);
   };
 
   // Close on outside mousedown or Escape. The Listbox menus render inside the
@@ -80,7 +111,13 @@ export default function SortControl({
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") requestClose(() => setOpen(false));
+      if (e.key !== "Escape") return;
+      // Dismissed by keyboard, so hand focus back to the trigger rather than
+      // dropping it on the body when the popover unmounts.
+      requestClose(() => {
+        changeOpen(false);
+        buttonRef.current?.focus();
+      });
     };
     document.addEventListener("keydown", onKeyDown);
     if (isMobile) {
@@ -90,7 +127,7 @@ export default function SortControl({
     }
     const onDocMouseDown = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false);
+        changeOpen(false);
       }
     };
     document.addEventListener("mousedown", onDocMouseDown);
@@ -102,7 +139,7 @@ export default function SortControl({
       window.removeEventListener("scroll", place, true);
       window.removeEventListener("resize", place);
     };
-  }, [open, isMobile, requestClose]);
+  }, [open, isMobile, requestClose, changeOpen, place]);
 
   const used = new Set(sorts.map((s) => s.field));
 
@@ -191,7 +228,7 @@ export default function SortControl({
           style={
             isMobile
               ? { ...overlayStyle, ...slideStyle }
-              : { top: pos!.top, right: pos!.right }
+              : { top: pos!.top, left: pos!.left, right: pos!.right }
           }
         >
           {isMobile && (
@@ -221,7 +258,7 @@ export default function SortControl({
                 <button
                   type="button"
                   className={styles.panelDone}
-                  onClick={() => requestClose(() => setOpen(false))}
+                  onClick={() => requestClose(() => changeOpen(false))}
                 >
                   Done
                 </button>

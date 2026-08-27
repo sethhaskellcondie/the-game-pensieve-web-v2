@@ -181,6 +181,12 @@
   outline-offset: 2px;
 }
 
+/* The sorting row: just the Sort button (its popover positions itself). */
+.sorting {
+  display: flex;
+  align-items: center;
+}
+
 .hint {
   margin: 0;
   font-size: 12.5px;

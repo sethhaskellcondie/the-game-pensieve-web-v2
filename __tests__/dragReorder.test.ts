@@ -8,7 +8,7 @@ import type { FilterCategory, SavedFilter } from "@/components/home/types";
 
 // A minimal filter — only the id matters to the reorder math.
 function f(id: string): SavedFilter {
-  return { id, name: id, entity: "toy", conditions: [] };
+  return { id, name: id, entity: "toy", conditions: [], sorts: [] };
 }
 
 // Three categories: a full one, a single-card one, and an empty Uncategorized.

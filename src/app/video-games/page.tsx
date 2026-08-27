@@ -26,8 +26,9 @@ export default async function VideoGamesPage({
   const resolvedParams = await searchParams;
   const explicit = parseVideoGamesViewParam(resolvedParams.view);
   const view = explicit ?? (await loadUiSettings()).videoGamesDefaultView;
-  // Pre-applied filters from a home saved-filter card, if any.
+  // Pre-applied filters and sort levels from a home saved-filter card, if any.
   const initialFiltersParam = resolvedParams.filters;
+  const initialSortsParam = resolvedParams.sorts;
 
   return (
     <>
@@ -54,9 +55,15 @@ export default async function VideoGamesPage({
 
       <main className={styles.content}>
         {view === "shelf" ? (
-          <VideoGameBoxesManager initialFiltersParam={initialFiltersParam} />
+          <VideoGameBoxesManager
+            initialFiltersParam={initialFiltersParam}
+            initialSortsParam={initialSortsParam}
+          />
         ) : (
-          <VideoGamesManager initialFiltersParam={initialFiltersParam} />
+          <VideoGamesManager
+            initialFiltersParam={initialFiltersParam}
+            initialSortsParam={initialSortsParam}
+          />
         )}
       </main>
     </>

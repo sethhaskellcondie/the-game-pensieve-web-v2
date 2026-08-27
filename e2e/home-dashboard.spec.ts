@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { AUTH_STATE } from "./authState";
 
 // Saved-filter card reorder on the home dashboard. Regression pin for a bug
@@ -18,6 +18,142 @@ test.skip(
   ({ browserName }) => browserName !== "chromium",
   "shared saved-filters store: run the drag-persistence pin in one browser",
 );
+
+// Both specs here seed the saved-filters store with a wholesale POST, and the
+// config runs tests fully parallel — so run this file serially, or the two
+// seeds race and clobber each other.
+test.describe.configure({ mode: "serial" });
+
+// Three systems whose default (backend) order is deliberately not alphabetical,
+// so a sorted order is distinguishable from an unsorted one.
+const SYSTEMS = ["NES", "SNES", "Game Boy"].map((name, i) => ({
+  id: i + 1,
+  key: "system",
+  name,
+  generation: 3,
+  handheld: false,
+  customFieldValues: [],
+  createdAt: "",
+  updatedAt: "",
+  deletedAt: null,
+}));
+
+type StubFilter = { key: string; field: string; operator: string; operand: string };
+
+// The systems page, stubbed: the search honors a name sort filter the way the
+// backend does, so the rows read out whatever sort the page actually sent. The
+// home dashboard itself is NOT stubbed — it loads server-side from the real
+// metadata store, which is why the saved filter is seeded over the API.
+async function stubSystems(page: Page) {
+  const json = (route: Parameters<Parameters<Page["route"]>[1]>[0], body: unknown) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+
+  await page.route("**/api/systems**", (route) => {
+    const req = route.request();
+    if (req.url().includes("/search") && req.method() === "POST") {
+      const { filters } = req.postDataJSON() as { filters: StubFilter[] };
+      const sort = (filters ?? []).find(
+        (f) => f.field === "name" && f.operator.startsWith("order_by"),
+      );
+      const rows = [...SYSTEMS];
+      if (sort) {
+        rows.sort((a, b) =>
+          sort.operator === "order_by_desc"
+            ? b.name.localeCompare(a.name)
+            : a.name.localeCompare(b.name),
+        );
+      }
+      return json(route, { status: "ok", data: rows });
+    }
+    return json(route, { status: "ok", data: SYSTEMS });
+  });
+  await page.route("**/api/filters/system", (route) =>
+    json(route, {
+      status: "ok",
+      data: {
+        type: "system_filters",
+        // all_fields: "sort" is the capability marker that turns on the Sort
+        // control; sort filters themselves carry the real field name.
+        fields: { name: "text", all_fields: "sort" },
+        filters: {
+          name: ["equals", "contains"],
+          all_fields: ["order_by", "order_by_desc"],
+        },
+      },
+    }),
+  );
+  await page.route("**/api/custom-fields/entity/system", (route) =>
+    json(route, { status: "ok", data: [] }),
+  );
+  // No stored default sort, so the only sort in play is the saved filter's.
+  await page.route("**/api/default-sort-options", (route) =>
+    json(route, {
+      toy: [],
+      system: [],
+      videoGame: [],
+      videoGameBox: [],
+      boardGame: [],
+      boardGameBox: [],
+    }),
+  );
+}
+
+// ui_settings load server-side (page.route can't stub them); pin both mass
+// modes off so the systems grid renders in its normal form. Shared backend
+// state, so every spec touching these settings pins the same values — see
+// systems-sort.spec.ts.
+async function pinNormalMode(page: Page) {
+  const current = await (await page.request.get("/api/ui-settings")).json();
+  await page.request.post("/api/ui-settings", {
+    data: { ...current, massInputMode: false, massEditMode: false },
+  });
+}
+
+test("a saved filter's sort levels are applied when its card is opened", async ({
+  page,
+}) => {
+  await pinNormalMode(page);
+  const salt = Date.now();
+  const name = `Sorted systems ${salt}`;
+  await page.request.post("/api/saved-filters", {
+    data: [
+      {
+        id: `sf-sort-${salt}`,
+        name,
+        entity: "system",
+        categoryId: "__uncategorized__",
+        order: 0,
+        conditions: [],
+        sorts: [{ id: "s-1", field: "name", label: "Name", direction: "desc" }],
+      },
+    ],
+  });
+
+  await stubSystems(page);
+  await page.goto("/");
+
+  // The card advertises the sort it will apply…
+  const card = page.locator("article").filter({ hasText: name });
+  await expect(card.getByLabel("Name descending")).toBeVisible();
+
+  // …and opening it lands on the systems page already sorted.
+  await page.getByRole("link", { name }).click();
+  await expect(page).toHaveURL(/\/systems\?.*sorts=/);
+  await expect(page.locator("tbody tr td:first-child")).toHaveText([
+    "SNES",
+    "NES",
+    "Game Boy",
+  ]);
+  // The level shows in the Sort control's count, so it can be edited/cleared
+  // like any hand-entered sort.
+  await expect(
+    page.getByRole("button", { name: "Sort", exact: true }),
+  ).toContainText("1");
+});
 
 test("dragging a saved-filter card persists the new order across a reload", async ({
   page,

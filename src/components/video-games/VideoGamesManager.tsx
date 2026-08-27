@@ -34,7 +34,10 @@ import {
 } from "@/components/filters/defaultSorts";
 import { buildFieldList, supportsSorting } from "@/components/filters/fieldList";
 import { toFilterRequest, toSortRequest } from "@/components/filters/serialize";
-import { decodeFilterParam } from "@/components/filters/urlFilters";
+import {
+  decodeFilterParam,
+  decodeSortParam,
+} from "@/components/filters/urlFilters";
 import { usePersistentFilters } from "@/components/filters/usePersistentFilters";
 import { usePersistentSorts } from "@/components/filters/usePersistentSorts";
 import type { ActiveSort } from "@/components/filters/types";
@@ -139,14 +142,22 @@ function loadErrorMessage(error: unknown): string {
 
 export default function VideoGamesManager({
   initialFiltersParam,
+  initialSortsParam,
 }: {
   // The `filters` URL param when opened from a home saved-filter card; seeds the
   // filter bar so the page loads already filtered. Editable/removable afterward.
   initialFiltersParam?: string | string[];
+  // The `sorts` URL param from the same card; seeds the sort levels so the page
+  // loads already sorted. Editable/clearable afterward, like any page sort.
+  initialSortsParam?: string | string[];
 }) {
   const initialFilters = useMemo(
     () => decodeFilterParam(initialFiltersParam),
     [initialFiltersParam],
+  );
+  const initialSorts = useMemo(
+    () => decodeSortParam(initialSortsParam),
+    [initialSortsParam],
   );
   const router = useRouter();
   const { showToast, showSnackbar } = useToast();
@@ -178,12 +189,13 @@ export default function VideoGamesManager({
     initialFilters,
   );
   // The sort levels the user entered on this page (the Sort button's state).
-  // Starts empty even when a default sort is stored — the default never shows
+  // Seeded from the `sorts` URL param when opened from a saved-filter card,
+  // otherwise empty even when a default sort is stored — the default never shows
   // here; it is folded into the search request only while this is empty. The
   // button renders only when the spec advertises sorting (its "all_fields"
   // capability marker).
   const [sorts, setSorts, initialResolvedSorts] =
-    usePersistentSorts("video-game");
+    usePersistentSorts("video-game", initialSorts);
   // The stored default sort, resolved against the field list at mount. Every
   // search without page sorts (initial load, and after "Clear sorting") sends
   // these instead; any page sort wins outright.

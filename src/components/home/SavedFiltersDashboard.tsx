@@ -81,6 +81,12 @@ function toStoredFilters(rows: FilterCategory[]): StoredFilter[] {
           ? { operandLabel: cond.operandLabel }
           : {}),
       })),
+      sorts: f.sorts.map((s) => ({
+        id: s.id,
+        field: s.field,
+        label: s.label,
+        direction: s.direction,
+      })),
     })),
   );
 }

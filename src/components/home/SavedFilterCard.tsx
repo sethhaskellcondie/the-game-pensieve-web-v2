@@ -5,14 +5,23 @@ import Link from "next/link";
 import { PencilIcon } from "@/components/custom-fields/icons";
 import FieldGlyph from "@/components/filters/FieldGlyph";
 import { operatorLabel } from "@/components/filters/operators";
-import { encodeFilterParam, FILTERS_PARAM } from "@/components/filters/urlFilters";
+import {
+  encodeFilterParam,
+  encodeSortParam,
+  FILTERS_PARAM,
+  SORTS_PARAM,
+} from "@/components/filters/urlFilters";
+import type { ActiveSort } from "@/components/filters/types";
 import type { SavedFilterCondition, SavedFilter } from "./types";
 import { ENTITY_ROUTES } from "./entityRoutes";
 import { useMatchCount } from "./matchCount";
 import styles from "./SavedFilterCard.module.css";
 
 // The collection-page URL a card opens: its route, the list/shelf view for
-// shared pages, and the conditions pre-applied via the `filters` param.
+// shared pages, the conditions pre-applied via the `filters` param, and the sort
+// levels via `sorts`. A filter that saved no sorting omits the param entirely —
+// non-empty wins, exactly as with the conditions — so the page keeps whatever
+// sort it remembers (or the entity default) instead of being cleared.
 function hrefFor(filter: SavedFilter): string {
   const { route, view } = ENTITY_ROUTES[filter.entity];
   const params = new URLSearchParams();
@@ -20,8 +29,17 @@ function hrefFor(filter: SavedFilter): string {
   if (filter.conditions.length > 0) {
     params.set(FILTERS_PARAM, encodeFilterParam(filter.conditions));
   }
+  if (filter.sorts.length > 0) {
+    params.set(SORTS_PARAM, encodeSortParam(filter.sorts));
+  }
   const query = params.toString();
   return query ? `${route}?${query}` : route;
+}
+
+// How one sort level reads to assistive tech ("Release Date descending"); the
+// pill itself shows an arrow instead.
+function sortLabel(sort: ActiveSort): string {
+  return `${sort.label} ${sort.direction === "asc" ? "ascending" : "descending"}`;
 }
 
 // How a condition's value reads on its pill: an id operand shows its
@@ -57,8 +75,8 @@ function ConditionPill({ condition }: { condition: SavedFilterCondition }) {
 }
 
 // A saved-filter card. Clicking anywhere on the card opens the target
-// collection page with these conditions pre-applied (the title link is
-// stretched over the whole card). The trailing pencil floats above that link
+// collection page with these conditions pre-applied and these sort levels in
+// effect (the title link is stretched over the whole card). The trailing pencil floats above that link
 // and opens the edit screen instead — the only place a saved filter is renamed,
 // re-scoped, or deleted.
 //
@@ -115,6 +133,24 @@ export default function SavedFilterCard({
           <ConditionPill key={condition.id} condition={condition} />
         ))}
       </div>
+
+      {filter.sorts.length > 0 && (
+        <div className={styles.sorts}>
+          <span className={styles.sortsLabel}>Sorted by</span>
+          {filter.sorts.map((sort) => (
+            <span
+              key={sort.id}
+              className={styles.sortPill}
+              aria-label={sortLabel(sort)}
+            >
+              <span className={styles.sortDir} aria-hidden="true">
+                {sort.direction === "asc" ? "↑" : "↓"}
+              </span>
+              {sort.label}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className={styles.foot}>
         <span className={styles.count}>
