@@ -44,7 +44,9 @@ export default function Header({
       </div>
       <div className={styles.content}>
         <div className={styles.heroTop}>
-          <div className={styles.heroMark}>{icon}</div>
+          <div className={styles.heroMark} data-testid="hero-mark">
+            {icon}
+          </div>
           <div className={styles.heroText}>
             <h1 className={styles.heroTitle}>
               {title}

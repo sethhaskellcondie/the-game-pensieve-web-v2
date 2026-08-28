@@ -91,32 +91,27 @@
   display: none;
 }
 
-/* On a phone the whole header has to stay one row, so the bar keeps its
-   display: contents and every control collapses to its glyph: the buttons then
-   fit beside the entity count and the New button instead of taking a second
-   row of their own. The applied-filter chips still drop to their own line(s)
-   below (the base .chips rule already does that). Keep in sync with
-   MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
-@media (max-width: 767px) {
-  /* No quick-search on phones — it only ever produced a name-contains filter,
-     which the Filter button covers. */
+/* The header row narrows in three stages, so it never wraps onto a second line.
+   The content column is much narrower than the viewport while the sidebar is
+   docked (220px) — hence the first two bands land well above the phone
+   breakpoint. Keep the 767px band in sync with MOBILE_BREAKPOINT in
+   src/lib/useMediaQuery.ts, and the other two with the matching bands in
+   ToysManager.module.css and NewButton.module.css. */
+
+/* Stage 1 — drop the quick-search. It is by far the widest control, and it only
+   ever produced a name-contains chip that the Filter button can make just as
+   well, so it is the cheapest thing to lose. */
+@media (max-width: 1100px) {
   .search {
     display: none;
   }
+}
 
-  .addBtn.mobileOnly {
-    display: inline-flex;
-  }
-
-  /* Tighter than desktop: three collapsed buttons plus the New button have to
-     share the row with the entity count on a narrow phone. */
-  .controls {
-    gap: 8px;
-  }
-
-  /* Icon-only: just the glyph plus padding, matching the collapsed New button
-     (see NewButton.module.css). Doubled so it outranks the base .addBtn rule
-     further down the file, which would otherwise win on source order. */
+/* Stage 2 — collapse the controls to their glyphs, the same treatment the New
+   button gets at this width. */
+@media (max-width: 900px) {
+  /* Doubled so it outranks the base .addBtn rule further down the file, which
+     would otherwise win on equal specificity by source order. */
   .addBtn.addBtn {
     padding: 0 12px;
   }
@@ -134,6 +129,22 @@
     overflow: hidden;
     white-space: nowrap;
     clip-path: inset(50%);
+  }
+}
+
+/* Stage 3 — a phone. The bar keeps its display: contents so the collapsed
+   controls sit beside the entity count and the New button on the header's one
+   row; the applied-filter chips still drop to their own line(s) below (the base
+   .chips rule already does that). */
+@media (max-width: 767px) {
+  .addBtn.mobileOnly {
+    display: inline-flex;
+  }
+
+  /* Tighter than desktop: the field-name toggle joins Sort, Filter and the New
+     button on the row, and a phone has the least room to spare. */
+  .controls {
+    gap: 8px;
   }
 }
 

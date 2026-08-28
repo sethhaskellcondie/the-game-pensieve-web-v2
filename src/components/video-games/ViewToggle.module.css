@@ -67,11 +67,24 @@
   .toggle {
     position: static;
     transform: none;
+    flex: 0 0 auto;
   }
 
   .segment {
     min-width: 64px;
     padding: 9px 12px;
     font-size: 9px;
+  }
+}
+
+/* Small phones: the pill shares the hero row with the mark and the title, and
+   below ~400px the title's column gets too thin to hold a word of the pixel
+   font. Give the pill back ~24px so the title keeps wrapping instead of
+   breaking mid-word. */
+@media (max-width: 400px) {
+  .segment {
+    min-width: 0;
+    padding: 8px 9px;
+    font-size: 8px;
   }
 }

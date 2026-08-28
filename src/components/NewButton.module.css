@@ -24,9 +24,13 @@
   }
 }
 
-/* On a phone the header has to stay a single row, so the button shrinks to its
-   "+" glyph. Keep in sync with MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts. */
-@media (max-width: 767px) {
+/* The header has to stay a single row, so once the window is narrow the button
+   shrinks to its "+" glyph. This starts well above the phone breakpoint: the
+   docked 220px sidebar leaves the content column much narrower than the
+   viewport, and the list headers already wrap around here. Keep in sync with
+   the matching band in FilterBar.module.css, which collapses the Sort / Filter
+   / field-name buttons at the same width. */
+@media (max-width: 900px) {
   .newBtn.newBtn {
     padding: 0 12px;
   }

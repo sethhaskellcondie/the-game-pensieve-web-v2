@@ -207,8 +207,8 @@
    MOBILE_BREAKPOINT in src/lib/useMediaQuery.ts): the desktop padding and
    88px mark would eat most of a phone screen before any content appears.
    Mobile shows only the icon and title — the tagline is dropped, and header
-   children (the List/Shelf cluster, home-page stats) flow inline after the
-   hero, wrapping left underneath it when they don't fit. */
+   children (the home-page stats) flow inline after the hero, wrapping left
+   underneath it when they don't fit. */
 @media (max-width: 767px) {
   .header {
     padding: 18px 16px;
@@ -222,12 +222,20 @@
     row-gap: 12px;
   }
 
-  /* A heroAside has no room beside a phone-width hero, so let the row wrap and
-     drop it onto its own line underneath (still right-aligned by its
-     margin-left: auto), matching how the rest of the header content wraps. */
+  /* The hero stays a single row on a phone: mark, then title, then whatever
+     the page pins to the right (the beginner hint, the collection pages'
+     List/Shelf cluster). The title block is the only flexible part, so a title
+     too wide for what's left wraps onto extra lines inside its own column
+     instead of the row breaking and dropping the aside underneath it. */
   .heroTop {
-    gap: 12px 14px;
-    flex-wrap: wrap;
+    gap: 12px;
+    flex-wrap: nowrap;
+  }
+
+  /* Take the space the mark and aside don't, and shrink below the title's
+     intrinsic width so the wrap happens here. */
+  .heroText {
+    flex: 1 1 auto;
   }
 
   .heroMark {
@@ -247,8 +255,13 @@
     height: 48px;
   }
 
+  /* Scales with the viewport so the title keeps a usable column beside the
+     mark and the aside all the way down to the narrowest phones. break-word is
+     the last resort, for a single word wider than the column that's left
+     (a long entity name on a detail page). */
   .heroTitle {
-    font-size: 20px;
+    font-size: clamp(13px, 4.4vw, 20px);
+    overflow-wrap: break-word;
   }
 
   .tag {
