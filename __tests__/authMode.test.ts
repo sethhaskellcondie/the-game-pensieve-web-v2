@@ -1,5 +1,5 @@
 import { getAuthMode, resetAuthModeForTests } from "@/lib/authMode";
-import { checkHeartbeat } from "@/lib/api";
+import { checkHeartbeat, type HeartbeatResult } from "@/lib/api";
 
 jest.mock("@/lib/api", () => ({
   checkHeartbeat: jest.fn(),
@@ -16,17 +16,17 @@ describe("getAuthMode", () => {
   });
 
   it("resolves unsecured when the heartbeat reports secureMode false", async () => {
-    mockCheckHeartbeat.mockResolvedValue({ ok: true, secureMode: false });
+    mockCheckHeartbeat.mockResolvedValue({ ok: true, secureMode: false, version: null });
     expect(await getAuthMode()).toBe("unsecured");
   });
 
   it("resolves secured when the heartbeat reports secureMode true", async () => {
-    mockCheckHeartbeat.mockResolvedValue({ ok: true, secureMode: true });
+    mockCheckHeartbeat.mockResolvedValue({ ok: true, secureMode: true, version: null });
     expect(await getAuthMode()).toBe("secured");
   });
 
   it("caches a definitive answer for the life of the process", async () => {
-    mockCheckHeartbeat.mockResolvedValue({ ok: true, secureMode: false });
+    mockCheckHeartbeat.mockResolvedValue({ ok: true, secureMode: false, version: null });
     expect(await getAuthMode()).toBe("unsecured");
     expect(await getAuthMode()).toBe("unsecured");
     expect(mockCheckHeartbeat).toHaveBeenCalledTimes(1);
@@ -34,10 +34,10 @@ describe("getAuthMode", () => {
 
   it("fails closed to secured on an unknown flag, without caching it", async () => {
     // Backend unreachable / older backend: restrictive answer now...
-    mockCheckHeartbeat.mockResolvedValueOnce({ ok: false, secureMode: null });
+    mockCheckHeartbeat.mockResolvedValueOnce({ ok: false, secureMode: null, version: null });
     expect(await getAuthMode()).toBe("secured");
     // ...but the next call re-probes and picks up the real mode.
-    mockCheckHeartbeat.mockResolvedValueOnce({ ok: true, secureMode: false });
+    mockCheckHeartbeat.mockResolvedValueOnce({ ok: true, secureMode: false, version: null });
     expect(await getAuthMode()).toBe("unsecured");
     expect(mockCheckHeartbeat).toHaveBeenCalledTimes(2);
   });
@@ -48,7 +48,7 @@ describe("getAuthMode", () => {
   });
 
   it("shares one probe across concurrent callers", async () => {
-    let release!: (value: { ok: boolean; secureMode: boolean | null }) => void;
+    let release!: (value: HeartbeatResult) => void;
     mockCheckHeartbeat.mockReturnValue(
       new Promise((resolve) => {
         release = resolve;
@@ -56,7 +56,7 @@ describe("getAuthMode", () => {
     );
     const first = getAuthMode();
     const second = getAuthMode();
-    release({ ok: true, secureMode: true });
+    release({ ok: true, secureMode: true, version: null });
     expect(await first).toBe("secured");
     expect(await second).toBe("secured");
     expect(mockCheckHeartbeat).toHaveBeenCalledTimes(1);

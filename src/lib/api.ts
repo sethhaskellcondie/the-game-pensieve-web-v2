@@ -1146,9 +1146,12 @@ export function getBoardGameBoxById(
 // heartbeat payload: true when the backend runs the authenticated (`secured`
 // profile) build, false for the default permit-all build, and null when it
 // can't be determined (backend unreachable, or a body without the flag).
+// `version` is the release version the backend reports for itself, null on the
+// same can't-determine cases (including an older backend that predates it).
 export type HeartbeatResult = {
   ok: boolean;
   secureMode: boolean | null;
+  version: string | null;
 };
 
 export async function checkHeartbeat(
@@ -1165,22 +1168,24 @@ export async function checkHeartbeat(
   }
 
   if (!res.ok) {
-    return { ok: false, secureMode: null };
+    return { ok: false, secureMode: null, version: null };
   }
 
-  // The envelope's `data` is `{ message, secureMode }`. Parse defensively —
-  // a malformed body still counts as online (the service answered), just with
-  // an unknown security posture.
+  // The envelope's `data` is `{ message, secureMode, version }`. Parse
+  // defensively — a malformed body still counts as online (the service
+  // answered), just with an unknown security posture and version.
   try {
     const body = (await res.json()) as {
-      data?: { secureMode?: unknown } | null;
+      data?: { secureMode?: unknown; version?: unknown } | null;
     };
     const secureMode = body.data?.secureMode;
+    const version = body.data?.version;
     return {
       ok: true,
       secureMode: typeof secureMode === "boolean" ? secureMode : null,
+      version: typeof version === "string" && version ? version : null,
     };
   } catch {
-    return { ok: true, secureMode: null };
+    return { ok: true, secureMode: null, version: null };
   }
 }

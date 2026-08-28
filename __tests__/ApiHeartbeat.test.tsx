@@ -40,19 +40,6 @@ describe("ApiHeartbeat", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows ONLINE with a latency reading on a successful ping", async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ status: "online", secureMode: null }),
-    } as Response);
-
-    renderWithDeveloperMode();
-    fireEvent.click(screen.getByRole("button", { name: "Check Heartbeat" }));
-
-    expect(await screen.findByText(/ONLINE/)).toBeInTheDocument();
-    expect(screen.getByText(/ms$/)).toBeInTheDocument();
-  });
-
   it("reports SECURED when the backend enforces auth", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
@@ -62,7 +49,7 @@ describe("ApiHeartbeat", () => {
     renderWithDeveloperMode();
     fireEvent.click(screen.getByRole("button", { name: "Check Heartbeat" }));
 
-    expect(await screen.findByText(/ONLINE .* SECURED$/)).toBeInTheDocument();
+    expect(await screen.findByText("SECURED")).toBeInTheDocument();
   });
 
   it("reports UNSECURED when the backend runs the permit-all build", async () => {
@@ -74,19 +61,63 @@ describe("ApiHeartbeat", () => {
     renderWithDeveloperMode();
     fireEvent.click(screen.getByRole("button", { name: "Check Heartbeat" }));
 
-    expect(await screen.findByText(/ONLINE .* UNSECURED$/)).toBeInTheDocument();
+    expect(await screen.findByText("UNSECURED")).toBeInTheDocument();
   });
 
-  it("omits the security readout when the backend doesn't report it", async () => {
+  it("omits the ONLINE label and the round-trip time on a successful ping", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ status: "online" }),
+      json: async () => ({ status: "online", secureMode: true, version: "1.0.5" }),
     } as Response);
 
     renderWithDeveloperMode();
     fireEvent.click(screen.getByRole("button", { name: "Check Heartbeat" }));
 
-    expect(await screen.findByText(/ms$/)).toBeInTheDocument();
+    await screen.findByText("SECURED");
+    expect(screen.queryByText(/ONLINE/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/ms$/)).not.toBeInTheDocument();
+  });
+
+  it("stacks the security readout and the version in a single column", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: "online", secureMode: true, version: "1.0.5" }),
+    } as Response);
+
+    renderWithDeveloperMode();
+    fireEvent.click(screen.getByRole("button", { name: "Check Heartbeat" }));
+
+    // Both readouts are their own element rather than one concatenated line,
+    // so each renders on its own row of the status column.
+    const secured = await screen.findByText("SECURED");
+    const version = screen.getByText("v1.0.5");
+    expect(version).toBeInTheDocument();
+    expect(secured.parentElement).toBe(version.parentElement);
+  });
+
+  it("omits the version readout when the backend doesn't report it", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: "online", secureMode: false }),
+    } as Response);
+
+    renderWithDeveloperMode();
+    fireEvent.click(screen.getByRole("button", { name: "Check Heartbeat" }));
+
+    expect(await screen.findByText("UNSECURED")).toBeInTheDocument();
+    expect(screen.queryByText(/^v/)).not.toBeInTheDocument();
+  });
+
+  it("omits the security readout when the backend doesn't report it", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: "online", version: "1.0.5" }),
+    } as Response);
+
+    renderWithDeveloperMode();
+    fireEvent.click(screen.getByRole("button", { name: "Check Heartbeat" }));
+
+    expect(await screen.findByText("v1.0.5")).toBeInTheDocument();
     expect(screen.queryByText(/SECURED/)).not.toBeInTheDocument();
   });
 

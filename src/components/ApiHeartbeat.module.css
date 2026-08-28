@@ -54,6 +54,13 @@
   letter-spacing: 0.5px;
 }
 
+/* The secure state and the version stack rather than sharing one line. */
+.statusLines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .online {
   color: var(--success);
 }
@@ -62,7 +69,9 @@
   color: var(--cannon-red);
 }
 
+/* Sized so the dot stays put against the multi-line readout it labels. */
 .dot {
+  flex: 0 0 auto;
   width: 8px;
   height: 8px;
   border-radius: 50%;

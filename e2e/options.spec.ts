@@ -262,7 +262,7 @@ test("the API Tools section is hidden for non-admin accounts", async ({
   await expect(
     page.getByRole("button", { name: "Check Heartbeat" }),
   ).toBeHidden();
-  await expect(page.getByText(/ONLINE|OFFLINE/)).toHaveCount(0);
+  await expect(page.getByText(/SECURED|OFFLINE/)).toHaveCount(0);
 });
 
 test("the standard UI Settings toggles stay available to non-admin accounts", async ({

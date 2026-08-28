@@ -9,41 +9,46 @@ import styles from "./ApiHeartbeat.module.css";
 type Status = "idle" | "online" | "offline";
 
 // Pings the backend health check via our /api/heartbeat Route Handler (which
-// proxies the real backend server-side) and reports ONLINE/OFFLINE plus the
-// measured round-trip time and the backend's security posture (SECURED when
-// the `secured` profile enforces auth, UNSECURED for the permit-all build —
-// omitted when the backend didn't report it).
+// proxies the real backend server-side). A healthy ping shows a green dot
+// beside a stacked readout of the backend's security posture (SECURED when the
+// `secured` profile enforces auth, UNSECURED for the permit-all build — omitted
+// when the backend didn't report it) and its release version (also omitted when
+// unreported, e.g. a backend older than the version field); a failed ping shows
+// OFFLINE.
 export default function ApiHeartbeat() {
   const { settings } = useUiSettings();
   const [status, setStatus] = useState<Status>("idle");
-  const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [secureMode, setSecureMode] = useState<boolean | null>(null);
+  const [version, setVersion] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const runHeartbeat = async () => {
     setLoading(true);
-    const startedAt = performance.now();
     try {
       const res = await fetch(
         settings.developerMode ? "/api/heartbeat?debug=1" : "/api/heartbeat",
       );
-      const elapsed = Math.round(performance.now() - startedAt);
       const body = (await res.json()) as {
         status?: string;
         secureMode?: boolean | null;
+        version?: string | null;
       };
       const online = res.ok && body.status === "online";
       setStatus(online ? "online" : "offline");
-      setLatencyMs(online ? elapsed : null);
       setSecureMode(
         online && typeof body.secureMode === "boolean"
           ? body.secureMode
           : null,
       );
+      setVersion(
+        online && typeof body.version === "string" && body.version
+          ? body.version
+          : null,
+      );
     } catch {
       setStatus("offline");
-      setLatencyMs(null);
       setSecureMode(null);
+      setVersion(null);
     } finally {
       setLoading(false);
     }
@@ -74,22 +79,21 @@ export default function ApiHeartbeat() {
         </div>
 
         <output className={styles.status} aria-live="polite">
-          {status !== "idle" && (
-            <span
-              className={`${styles.statusPill} ${
-                status === "online" ? styles.online : styles.offline
-              }`}
-            >
+          {status === "online" && (
+            <span className={`${styles.statusPill} ${styles.online}`}>
               <span className={styles.dot} />
-              {status === "online"
-                ? `ONLINE · ${latencyMs}ms${
-                    secureMode === null
-                      ? ""
-                      : secureMode
-                        ? " · SECURED"
-                        : " · UNSECURED"
-                  }`
-                : "OFFLINE"}
+              <span className={styles.statusLines}>
+                {secureMode !== null && (
+                  <span>{secureMode ? "SECURED" : "UNSECURED"}</span>
+                )}
+                {version !== null && <span>{`v${version}`}</span>}
+              </span>
+            </span>
+          )}
+          {status === "offline" && (
+            <span className={`${styles.statusPill} ${styles.offline}`}>
+              <span className={styles.dot} />
+              OFFLINE
             </span>
           )}
         </output>
