@@ -228,6 +228,14 @@ describe("BoardGamesManager", () => {
       restoreViewport();
     });
 
+    it("shortens the count heading to \"Games\"", async () => {
+      renderManager();
+
+      expect(
+        await screen.findByRole("heading", { level: 2, name: "2 Games" }),
+      ).toBeInTheDocument();
+    });
+
     it("renders tappable cards with the board game's fields in their slots", async () => {
       renderManager();
 

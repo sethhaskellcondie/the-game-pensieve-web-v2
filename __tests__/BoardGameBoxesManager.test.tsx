@@ -271,6 +271,14 @@ describe("BoardGameBoxesManager", () => {
       restoreViewport();
     });
 
+    it("shortens the count heading to \"Boxes\"", async () => {
+      renderManager();
+
+      expect(
+        await screen.findByRole("heading", { level: 2, name: "3 Boxes" }),
+      ).toBeInTheDocument();
+    });
+
     it("renders tappable cards with Expansion as the corner badge", async () => {
       renderManager();
 

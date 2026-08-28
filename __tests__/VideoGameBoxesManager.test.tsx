@@ -272,6 +272,14 @@ describe("VideoGameBoxesManager", () => {
       restoreViewport();
     });
 
+    it("shortens the count heading to \"Boxes\"", async () => {
+      renderManager();
+
+      expect(
+        await screen.findByRole("heading", { level: 2, name: "2 Boxes" }),
+      ).toBeInTheDocument();
+    });
+
     it("renders tappable cards with Physical as the corner badge", async () => {
       renderManager();
 

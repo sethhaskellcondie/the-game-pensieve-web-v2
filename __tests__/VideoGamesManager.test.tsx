@@ -259,6 +259,14 @@ describe("VideoGamesManager", () => {
       restoreViewport();
     });
 
+    it("shortens the count heading to \"Games\"", async () => {
+      renderManager();
+
+      expect(
+        await screen.findByRole("heading", { level: 2, name: "2 Games" }),
+      ).toBeInTheDocument();
+    });
+
     it("renders tappable cards instead of the table, with the custom fields in their slots", async () => {
       renderManager();
 

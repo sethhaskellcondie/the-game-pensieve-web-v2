@@ -528,7 +528,7 @@ export default function BoardGamesManager({
       <div className={styles.head}>
         <div className={styles.titleWrap}>
           <div className={styles.titleRow}>
-            <h2 className={styles.entName}>{loading || searching ? "Loading…" : <><b>{games.length}</b> {games.length === 1 ? "Board Game" : "Board Games"}</>}</h2>
+            <h2 className={styles.entName}>{loading || searching ? "Loading…" : <><b>{games.length}</b> {games.length === 1 ? (isMobile ? "Game" : "Board Game") : isMobile ? "Games" : "Board Games"}</>}</h2>
             {massEditable && (
               <BeginnerHint
                 placement="bottom-start"

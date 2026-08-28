@@ -726,7 +726,7 @@ export default function VideoGameBoxesManager({
       <div className={styles.head}>
         <div className={styles.titleWrap}>
           <div className={styles.titleRow}>
-            <h2 className={styles.entName}>{loading || searching ? "Loading…" : <><b>{boxes.length}</b> {boxes.length === 1 ? "Video Game Box" : "Video Game Boxes"}</>}</h2>
+            <h2 className={styles.entName}>{loading || searching ? "Loading…" : <><b>{boxes.length}</b> {boxes.length === 1 ? (isMobile ? "Box" : "Video Game Box") : isMobile ? "Boxes" : "Video Game Boxes"}</>}</h2>
             {massEditable && (
               <BeginnerHint
                 placement="bottom-start"
